@@ -39,3 +39,6 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# pr-review-fix state
+.claude/pr-review-fix-state.json

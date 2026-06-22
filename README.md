@@ -22,6 +22,14 @@ npm run android    # open in Android emulator
 npm run typecheck  # tsc --noEmit
 ```
 
+**Smoke test before relying on a build:** the scaffold typechecks and bundles
+(`npx expo export`) in CI, but booting the app isn't verified there. After
+`npm install`, run `npm run ios` and `npm run android` and confirm the tab shell
+(Browse / Inventory / Transactions / Portfolio) renders before building on top.
+
+Build config for both platforms lives in `eas.json` (EAS managed workflow);
+the store builds are wired up in the distribution issue.
+
 ## Structure
 
 ```
