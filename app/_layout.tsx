@@ -32,9 +32,14 @@ function RootNavigator() {
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="sign-in" />
+    <Stack>
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="sign-in" options={{ headerShown: false }} />
+      <Stack.Screen name="set/[code]" options={{ headerBackTitle: "Back" }} />
+      <Stack.Screen
+        name="card/[setCode]/[number]"
+        options={{ headerBackTitle: "Back" }}
+      />
     </Stack>
   );
 }

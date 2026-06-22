@@ -12,6 +12,20 @@ See Phase 7.1 in the web repo's `ROADMAP.md` for the plan and decisions.
 - **Auth**: JWT bearer token in `expo-secure-store`; sign-in via `POST /api/v1/auth/login`
 - **API client**: typed, generated from the backend OpenAPI spec (`openapi-typescript` + `openapi-fetch`)
 
+## Browse
+
+- `app/(tabs)/index.tsx` - Browse tab: a search box that lists **sets** when
+  empty and **card search results** (by name) when typed; both infinite-scroll.
+- `app/set/[code].tsx` - cards in a set (infinite-scroll).
+- `app/card/[setCode]/[number].tsx` - card detail: image, prices (normal/foil),
+  type, rarity, mana cost, oracle text, artist.
+- Data layer: `lib/api/catalog.ts` (typed request helpers over the generated
+  client) + `lib/api/types.ts` (response shapes - see the note in API client).
+- Card images come from Scryfall (`lib/images.ts`): `{base}/{size}/front/{imgSrc}`.
+
+> Card **legality** is not shown on detail - the API doesn't return per-card
+> legalities (only as a search *filter*). Surfacing it needs a backend change.
+
 ## Getting started
 
 ```bash
@@ -60,6 +74,13 @@ OPENAPI_URL=http://localhost:3000/api/openapi.json npm run gen:api  # from a loc
 `lib/api/schema.ts` is generated and committed - do not edit it by hand. CI
 regenerates it and fails if the committed copy is stale, so when the backend API
 changes, run `npm run gen:api` and commit the result.
+
+> **Response typing gap:** the backend OpenAPI spec currently declares only
+> *request* DTOs, not response bodies, so the generated client can't type
+> responses. Until the backend adds response annotations, response shapes live
+> in `lib/api/types.ts` (hand-written to mirror the live API) and are unwrapped
+> in `lib/api/catalog.ts`. Swap these for generated types once the spec carries
+> response schemas.
 
 Use the client from TanStack Query:
 
