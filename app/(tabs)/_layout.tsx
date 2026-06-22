@@ -1,9 +1,28 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
+import { Pressable } from "react-native";
+
+import { useAuth } from "../../lib/auth/AuthContext";
 
 export default function TabsLayout() {
+  const { signOut } = useAuth();
+
   return (
-    <Tabs screenOptions={{ tabBarActiveTintColor: "#6d28d9" }}>
+    <Tabs
+      screenOptions={{
+        tabBarActiveTintColor: "#6d28d9",
+        headerRight: () => (
+          <Pressable
+            onPress={() => signOut()}
+            hitSlop={12}
+            style={{ paddingHorizontal: 16 }}
+            accessibilityLabel="Sign out"
+          >
+            <Ionicons name="log-out-outline" size={24} color="#6d28d9" />
+          </Pressable>
+        ),
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{

@@ -1,0 +1,75 @@
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+
+import { setAuthTokenGetter, setOnUnauthorized } from "../api/client";
+import { login as loginRequest } from "./loginRequest";
+import { clearToken, getStoredToken, storeToken } from "./tokenStore";
+
+type AuthState = {
+  /** True until the stored token has been loaded on startup. */
+  initializing: boolean;
+  isAuthenticated: boolean;
+  signIn: (email: string, password: string) => Promise<void>;
+  signOut: () => Promise<void>;
+};
+
+const AuthContext = createContext<AuthState | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [token, setToken] = useState<string | null>(null);
+  const [initializing, setInitializing] = useState(true);
+
+  // Keep a ref so the API client's token getter always reads the latest token
+  // without re-registering the middleware on every change.
+  const tokenRef = useRef<string | null>(null);
+  tokenRef.current = token;
+
+  useEffect(() => {
+    setAuthTokenGetter(() => tokenRef.current);
+    setOnUnauthorized(() => {
+      tokenRef.current = null;
+      setToken(null);
+      void clearToken();
+    });
+  }, []);
+
+  useEffect(() => {
+    getStoredToken()
+      .then((stored) => setToken(stored))
+      .finally(() => setInitializing(false));
+  }, []);
+
+  const value = useMemo<AuthState>(
+    () => ({
+      initializing,
+      isAuthenticated: token != null,
+      async signIn(email, password) {
+        const newToken = await loginRequest(email, password);
+        await storeToken(newToken);
+        setToken(newToken);
+      },
+      async signOut() {
+        await clearToken();
+        setToken(null);
+      },
+    }),
+    [initializing, token],
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function useAuth(): AuthState {
+  const ctx = useContext(AuthContext);
+  if (!ctx) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return ctx;
+}
