@@ -27,7 +27,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "gen:api": "openapi-typescript ${OPENAPI_URL:-https://iwantmymtg.net/api/openapi.json} -o lib/api/schema.ts"
+    "gen:api": "node scripts/gen-api.mjs"
   },
   "private": true
 }
