@@ -3,7 +3,7 @@
 Where the v1 build stands and how to pick it up. See the web repo's
 `ROADMAP.md` §7.1 for the overall plan.
 
-_Last updated: 2026-06-23 (transactions)._
+_Last updated: 2026-06-23 (portfolio)._
 
 ## What this is
 
@@ -24,8 +24,8 @@ Expo (SDK 56), TypeScript, expo-router, TanStack Query. It consumes the existing
 - generated-types cleanup - **done** (#14)
 - #5 inventory (view / add / edit / finish) - **done**
 - #6 transactions (log buy/sell + history) - **done**
-- #7 portfolio overview - **next, not started**
-- #8 distribution (TestFlight + Play internal) - not started
+- #7 portfolio overview - **done**
+- #8 distribution (TestFlight + Play internal) - **next, not started**
 
 ## Inventory (#5) notes
 
@@ -74,12 +74,31 @@ registered in `app/_layout.tsx`) opened from the card detail "Log a transaction"
 button. `date` is a date-only string (`YYYY-MM-DD`); the form uses a plain text
 field defaulting to today (no date-picker dep, to stay Expo Go-compatible).
 
-## Next: issue #7 (portfolio)
+## Portfolio (#7) notes
 
-Portfolio overview (current value). `PortfolioSummaryApiDto` /
-`PortfolioHistoryPointDto` / `CardPerformanceApiDto` are already typed in the
-spec. Follow the same pattern: typed helpers in `lib/api/`, fill the
-`app/(tabs)/portfolio.tsx` placeholder.
+Read-only, so no backend change was needed (the response DTOs were already
+typed). Minimal free-tier overview per the issue.
+
+- `GET /api/v1/portfolio` -> `PortfolioSummaryApiDto | null`. **`data` is null**
+  until the portfolio has been computed for the user, so the screen shows a
+  "Calculate portfolio" action in that state.
+- `POST /api/v1/portfolio/refresh` recomputes server-side (no body, 200). It's
+  **rate-limited (~1/hour)**; the 429 surfaces as an alert ("wait N minutes"),
+  so the recalc mutation has an `onError`. Don't let it fail silently.
+- The deeper endpoints (`/history`, `/performance`, `/cash-flow`,
+  `/breakdown`, ...) are typed but **not built** - deferred analytics.
+
+UI (`app/(tabs)/portfolio.tsx`): hero total value + stats (cards, quantity, and
+cost basis / realized gain when present), pull-to-refresh (re-GETs), and a
+"Recalculate" button (POST refresh). Logging a transaction syncs inventory and
+flows into the portfolio totals.
+
+## Next: issue #8 (distribution)
+
+TestFlight (iOS) + Play internal testing. `eas.json` exists (managed workflow,
+`autoIncrement` on production); EAS build/submit is not set up yet. This is
+calendar-bound (Apple enrollment, Google's 14-day closed-test gate) - see the
+web repo's `ROADMAP.md` §7.1 "Store readiness".
 
 ## Architecture / key files
 
