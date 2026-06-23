@@ -8,3 +8,6 @@ export type ApiCardPrices = components["schemas"]["CardPriceDto"];
 export type ApiSet = components["schemas"]["SetApiResponseDto"];
 export type ApiSetPrices = components["schemas"]["SetPriceApiDto"];
 export type ApiPaginationMeta = components["schemas"]["PaginationMeta"];
+export type ApiInventoryItem = components["schemas"]["InventoryItemApiDto"];
+export type ApiInventoryWrite = components["schemas"]["InventoryRequestApiDto"];
+export type ApiInventoryQuantity = components["schemas"]["InventoryQuantityApiDto"];

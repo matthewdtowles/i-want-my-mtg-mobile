@@ -3,7 +3,7 @@
 Where the v1 build stands and how to pick it up. See the web repo's
 `ROADMAP.md` §7.1 for the overall plan.
 
-_Last updated: 2026-06-23._
+_Last updated: 2026-06-23 (inventory)._
 
 ## What this is
 
@@ -21,28 +21,43 @@ Expo (SDK 56), TypeScript, expo-router, TanStack Query. It consumes the existing
 - #3 auth - **done** (#11)
 - #4 browse (sets / cards / search / detail) - **done** (#13)
 - CI versioning - **done** (#12)
-- generated-types cleanup - **in review** (#14)
-- #5 inventory (view / add / edit / finish) - **next, not started**
-- #6 transactions (log buy/sell + history) - not started
+- generated-types cleanup - **done** (#14)
+- #5 inventory (view / add / edit / finish) - **done**
+- #6 transactions (log buy/sell + history) - **next, not started**
 - #7 portfolio overview - not started
 - #8 distribution (TestFlight + Play internal) - not started
 
-## Next: issue #5 (inventory)
+## Inventory (#5) notes
 
-Builds on the typed client. Relevant endpoints (typed in the spec):
+Endpoints (typed in the spec; the write bodies were corrected in backend PR #549
+- the OpenAPI annotations were missing, so add/update bodies generated as
+`string[]` and delete had no body):
 
-- `GET /api/v1/inventory` -> `InventoryItemApiDto[]` (paginated; sort keys via the inventory sort set)
-- `POST /api/v1/inventory` (201) add `InventoryRequestApiDto[]` -> `InventoryItemApiDto[]`
-- `PUT /api/v1/inventory` update -> `InventoryItemApiDto[]`
-- `DELETE /api/v1/inventory/:id` -> `{ deleted: boolean }`
-- `GET /api/v1/inventory/quantities?cardIds=` -> `InventoryQuantityApiDto[]`
+- `GET /api/v1/inventory` -> `InventoryItemApiDto[]` (paginated). The item
+  **embeds card fields** (name, set, number, price, rarity, `imgSrc`) - no join
+  needed. Note `imgSrc` is a **full** Scryfall URL here (browse returns just the
+  tail); `cardImageUrl` normalizes both.
+- `POST` (201) / `PATCH` (200) `/api/v1/inventory` with `InventoryRequestApiDto[]`
+  (`{ cardId, quantity, isFoil }`) -> `InventoryItemApiDto[]`. Both are
+  **server-identical upserts** (absolute quantity, keyed by cardId+isFoil;
+  quantity 0 removes the row), so `lib/api/inventory.ts` uses one `saveInventory`
+  (PATCH) for both add and edit.
+- `DELETE /api/v1/inventory` with body `{ cardId, isFoil }` -> `{ deleted }`
+  (not a `/:id` path).
+- `GET /api/v1/inventory/quantities?cardIds=` -> `InventoryQuantityApiDto[]`.
 
-Inventory requires auth (the app already sends the bearer token). Follow the
-browse pattern: typed helpers in `lib/api/` over `api.GET/POST`, screens use
-`useInfiniteQuery`/`useQuery`, fill in the `app/(tabs)/inventory.tsx` placeholder,
-reuse `CardThumb` / `CardListItem` / `formatPrice`. Check the
-`InventoryItemApiDto` shape in `lib/api/schema.ts` for whether it embeds card
-fields or just a `cardId` (may need to join card data).
+UI: inventory tab (`app/(tabs)/inventory.tsx`) lists rows with an optimistic
+quantity stepper + remove (`InventoryListItem`). Adding is done from the card
+detail screen via `AddToInventory` (Normal/Foil steppers seeded from
+`/quantities`, optimistic upsert). The whole app is auth-gated, so the bearer
+token is always present.
+
+## Next: issue #6 (transactions)
+
+Log buy/sell + history. `TransactionApiController` is annotated
+(`TransactionRequestDto` single-object bodies generate correctly). Follow the
+inventory pattern: typed helpers in `lib/api/`, optimistic mutations, fill in the
+`app/(tabs)/transactions.tsx` placeholder.
 
 ## Architecture / key files
 

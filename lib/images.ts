@@ -10,5 +10,11 @@ export function cardImageUrl(
   size: CardImageSize = "normal",
 ): string | null {
   if (!imgSrc) return null;
-  return `${IMAGE_BASE}/${size}/front/${imgSrc}`;
+  // Most endpoints return just the `a/b/<id>.jpg` tail, but some (inventory)
+  // return a full Scryfall URL with the size baked in. Normalize to the tail so
+  // we always control the requested size.
+  const tail = imgSrc.includes("/front/")
+    ? imgSrc.slice(imgSrc.indexOf("/front/") + "/front/".length)
+    : imgSrc;
+  return `${IMAGE_BASE}/${size}/front/${tail}`;
 }

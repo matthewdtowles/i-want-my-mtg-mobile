@@ -12,6 +12,7 @@ import {
 import { fetchCard } from "../../../lib/api/catalog";
 import { formatPrice } from "../../../lib/format";
 import { CardThumb } from "../../../components/CardThumb";
+import { AddToInventory } from "../../../components/AddToInventory";
 
 export default function CardDetailScreen() {
   const params = useLocalSearchParams<{
@@ -70,6 +71,12 @@ export default function CardDetailScreen() {
         <Price label="Normal" value={card.prices?.normal} show={card.hasNonFoil} />
         <Price label="Foil" value={card.prices?.foil} show={card.hasFoil} />
       </View>
+
+      <AddToInventory
+        cardId={card.id}
+        hasNonFoil={card.hasNonFoil}
+        hasFoil={card.hasFoil}
+      />
 
       {card.oracleText ? (
         <Text style={styles.oracle}>{card.oracleText}</Text>
