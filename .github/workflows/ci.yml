@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      # Regenerate the typed API client from the live OpenAPI spec and fail if
+      # the committed schema is stale (the backend API changed without a
+      # corresponding `npm run gen:api` + commit here).
+      - name: Check generated API client is up to date
+        run: |
+          npm run gen:api
+          if ! git diff --exit-code lib/api/schema.ts; then
+            echo "::error::lib/api/schema.ts is out of date. Run 'npm run gen:api' and commit the result."
+            exit 1
+          fi
+
+      - run: npm run typecheck

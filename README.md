@@ -10,7 +10,7 @@ See Phase 7.1 in the web repo's `ROADMAP.md` for the plan and decisions.
 - **expo-router** - file-based navigation (`app/`)
 - **TanStack Query** - server state
 - Auth (later): JWT bearer token in `expo-secure-store`
-- API client (later): generated from the backend OpenAPI spec
+- **API client**: typed, generated from the backend OpenAPI spec (`openapi-typescript` + `openapi-fetch`)
 
 ## Getting started
 
@@ -46,3 +46,29 @@ lib/                   app-wide singletons (query client, ...)
 ```
 
 The tab screens are placeholders today; each is filled in by its own v1 issue.
+
+## API client
+
+The typed client is generated from the backend OpenAPI spec
+(`https://iwantmymtg.net/api/openapi.json`, the same spec the MCP server uses):
+
+```bash
+npm run gen:api                 # regenerate lib/api/schema.ts from the live spec
+OPENAPI_URL=http://localhost:3000/api/openapi.json npm run gen:api  # from a local backend
+```
+
+`lib/api/schema.ts` is generated and committed - do not edit it by hand. CI
+regenerates it and fails if the committed copy is stale, so when the backend API
+changes, run `npm run gen:api` and commit the result.
+
+Use the client from TanStack Query:
+
+```ts
+import { api } from "../lib/api/client";
+
+const { data, error } = await api.GET("/api/v1/sets");
+```
+
+Auth (issue #3) calls `setAuthTokenGetter(...)` to attach the bearer token from
+secure storage; until then requests go out unauthenticated.
+
