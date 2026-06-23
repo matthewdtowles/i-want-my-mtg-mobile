@@ -1,33 +1,26 @@
 import { api } from "./client";
-import type {
-  ApiCard,
-  ApiEnvelope,
-  ApiPaginationMeta,
-  ApiSet,
-} from "./types";
+import type { ApiCard, ApiPaginationMeta, ApiSet } from "./types";
 
 export interface Page<T> {
   items: T[];
   meta?: ApiPaginationMeta;
 }
 
-// The generated client types these responses as `never` (no OpenAPI response
-// schema yet), so we assert the known envelope shape in one place.
-function unwrap<T>(data: unknown): ApiEnvelope<T> {
-  return (data ?? {}) as ApiEnvelope<T>;
-}
-
-function pageFrom<T>(data: unknown): Page<T> {
-  const env = unwrap<T[]>(data);
-  return { items: env.data ?? [], meta: env.meta };
+// Non-2xx bodies still carry the { error } envelope field; surface it if present.
+function errMessage(error: unknown, fallback: string): string {
+  if (error && typeof error === "object" && "error" in error) {
+    const e = (error as { error?: unknown }).error;
+    if (typeof e === "string") return e;
+  }
+  return fallback;
 }
 
 export async function fetchSets(page = 1, limit = 50): Promise<Page<ApiSet>> {
   const { data, error, response } = await api.GET("/api/v1/sets", {
     params: { query: { page, limit } },
   });
-  if (!response.ok) throw new Error(unwrap(error).error ?? "Failed to load sets.");
-  return pageFrom<ApiSet>(data);
+  if (!response.ok) throw new Error(errMessage(error, "Failed to load sets."));
+  return { items: data?.data ?? [], meta: data?.meta };
 }
 
 export async function fetchSetCards(
@@ -38,9 +31,8 @@ export async function fetchSetCards(
   const { data, error, response } = await api.GET("/api/v1/sets/{code}/cards", {
     params: { path: { code }, query: { page, limit } },
   });
-  if (!response.ok)
-    throw new Error(unwrap(error).error ?? "Failed to load set cards.");
-  return pageFrom<ApiCard>(data);
+  if (!response.ok) throw new Error(errMessage(error, "Failed to load set cards."));
+  return { items: data?.data ?? [], meta: data?.meta };
 }
 
 export async function searchCards(
@@ -51,9 +43,8 @@ export async function searchCards(
   const { data, error, response } = await api.GET("/api/v1/cards", {
     params: { query: { q, page, limit, groupBy: "name" } },
   });
-  if (!response.ok)
-    throw new Error(unwrap(error).error ?? "Search failed.");
-  return pageFrom<ApiCard>(data);
+  if (!response.ok) throw new Error(errMessage(error, "Search failed."));
+  return { items: data?.data ?? [], meta: data?.meta };
 }
 
 export async function fetchCard(
@@ -65,9 +56,8 @@ export async function fetchCard(
     { params: { path: { setCode, setNumber } } },
   );
   if (response.status === 404) throw new Error("Card not found.");
-  if (!response.ok)
-    throw new Error(unwrap(error).error ?? "Failed to load card.");
-  const card = unwrap<ApiCard>(data).data;
+  if (!response.ok) throw new Error(errMessage(error, "Failed to load card."));
+  const card = data?.data;
   if (!card) throw new Error("Card not found.");
   return card;
 }
