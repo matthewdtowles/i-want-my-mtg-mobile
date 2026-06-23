@@ -14,36 +14,47 @@ type Props = {
 
 export function InventoryListItem({ item, onIncrement, onDecrement, onRemove }: Props) {
   const price = item.isFoil ? item.priceFoil : item.priceNormal;
+  // setCode/cardNumber are optional on the DTO (absent for orphan rows whose
+  // card relation is null); only link to the card detail when both are present.
+  const navigable = !!item.setCode && !!item.cardNumber;
+  const cardContent = (
+    <>
+      <CardThumb imgSrc={item.imgSrc} size="small" width={44} />
+      <View style={styles.body}>
+        <Text style={styles.name} numberOfLines={1}>
+          {item.cardName ?? item.cardId}
+        </Text>
+        <View style={styles.subRow}>
+          <Text style={styles.sub} numberOfLines={1}>
+            {(item.setCode ?? "").toUpperCase()}
+            {item.cardNumber ? ` #${item.cardNumber}` : ""}
+          </Text>
+          <View style={[styles.badge, item.isFoil && styles.foilBadge]}>
+            <Text style={[styles.badgeText, item.isFoil && styles.foilBadgeText]}>
+              {item.isFoil ? "Foil" : "Normal"}
+            </Text>
+          </View>
+        </View>
+        <Text style={styles.price}>{formatPrice(price)} each</Text>
+      </View>
+    </>
+  );
+
   return (
     <View style={styles.row}>
-      <Link
-        href={{
-          pathname: "/card/[setCode]/[number]",
-          params: { setCode: item.setCode ?? "", number: item.cardNumber ?? "" },
-        }}
-        asChild
-      >
-        <Pressable style={styles.cardLink}>
-          <CardThumb imgSrc={item.imgSrc} size="small" width={44} />
-          <View style={styles.body}>
-            <Text style={styles.name} numberOfLines={1}>
-              {item.cardName ?? item.cardId}
-            </Text>
-            <View style={styles.subRow}>
-              <Text style={styles.sub} numberOfLines={1}>
-                {(item.setCode ?? "").toUpperCase()}
-                {item.cardNumber ? ` #${item.cardNumber}` : ""}
-              </Text>
-              <View style={[styles.badge, item.isFoil && styles.foilBadge]}>
-                <Text style={[styles.badgeText, item.isFoil && styles.foilBadgeText]}>
-                  {item.isFoil ? "Foil" : "Normal"}
-                </Text>
-              </View>
-            </View>
-            <Text style={styles.price}>{formatPrice(price)} each</Text>
-          </View>
-        </Pressable>
-      </Link>
+      {navigable ? (
+        <Link
+          href={{
+            pathname: "/card/[setCode]/[number]",
+            params: { setCode: item.setCode, number: item.cardNumber },
+          }}
+          asChild
+        >
+          <Pressable style={styles.cardLink}>{cardContent}</Pressable>
+        </Link>
+      ) : (
+        <View style={styles.cardLink}>{cardContent}</View>
+      )}
 
       <View style={styles.stepper}>
         <Pressable

@@ -29,9 +29,9 @@ Expo (SDK 56), TypeScript, expo-router, TanStack Query. It consumes the existing
 
 ## Inventory (#5) notes
 
-Endpoints (typed in the spec; the write bodies were corrected in backend PR #549
-- the OpenAPI annotations were missing, so add/update bodies generated as
-`string[]` and delete had no body):
+Endpoints (typed in the spec; the write bodies were corrected in backend PR #549,
+which added the missing OpenAPI annotations - before it, add/update bodies
+generated as `string[]` and delete had no body):
 
 - `GET /api/v1/inventory` -> `InventoryItemApiDto[]` (paginated). The item
   **embeds card fields** (name, set, number, price, rarity, `imgSrc`) - no join

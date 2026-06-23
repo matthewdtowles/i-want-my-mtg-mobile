@@ -71,6 +71,10 @@ export function AddToInventory({ cardId, hasNonFoil, hasFoil }: Props) {
       <Text style={styles.heading}>In your inventory</Text>
       {query.isPending ? (
         <ActivityIndicator style={styles.loading} />
+      ) : query.isError ? (
+        // Don't fall through to the steppers: they'd seed from 0, and a tap
+        // would upsert an absolute quantity that clobbers the real owned count.
+        <Text style={styles.error}>Couldn't load your quantities for this card.</Text>
       ) : (
         <View style={styles.rows}>
           {hasNonFoil ? (
@@ -139,6 +143,7 @@ const styles = StyleSheet.create({
   },
   heading: { fontSize: 16, fontWeight: "700", marginBottom: 8 },
   loading: { marginVertical: 8 },
+  error: { color: "#b91c1c", fontSize: 14 },
   rows: { gap: 12 },
   finishRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   finishLabel: { fontSize: 15, color: "#374151" },
