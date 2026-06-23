@@ -7,18 +7,19 @@
 #   anything else (fix:, docs:, ..) -> patch
 #   ! before the colon (feat!:) or at the end of the title -> major
 #
-# The current version is the highest existing semver git tag — package.json
-# stays at its 0.0.0-dev placeholder and is stamped at Docker build time.
+# The current version is the highest existing semver git tag. This is an Expo
+# app: app.json stays a placeholder and the EAS build stamps the version +
+# native build numbers (ios.buildNumber / android.versionCode) from the tag.
 #
-# Idempotent: if HEAD is already tagged (e.g. a workflow re-run after the tag
-# job), that tag is reused instead of bumping again.
+# Idempotent: if HEAD is already tagged (e.g. a workflow re-run after the
+# release job), the highest such tag is reused instead of bumping again.
 #
 # Prints "version=X.Y.Z" (suitable for $GITHUB_OUTPUT).
 set -euo pipefail
 
 semver='^[0-9]+\.[0-9]+\.[0-9]+$'
 
-existing=$(git tag --points-at HEAD | grep -E "$semver" | head -1 || true)
+existing=$(git tag --points-at HEAD --sort=-v:refname | grep -E "$semver" | head -1 || true)
 if [ -n "$existing" ]; then
     echo "version=$existing"
     exit 0
