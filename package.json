@@ -1,6 +1,6 @@
 {
   "name": "i-want-my-mtg-mobile",
-  "version": "0.1.0",
+  "version": "0.0.0-dev",
   "main": "expo-router/entry",
   "dependencies": {
     "@expo/vector-icons": "^15.1.1",
