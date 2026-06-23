@@ -18,7 +18,14 @@ function one(v: string | string[] | undefined): string {
   return Array.isArray(v) ? v[0] : v ?? "";
 }
 
-const TODAY = new Date().toISOString().slice(0, 10);
+// Local calendar date as YYYY-MM-DD. toISOString() would use UTC, defaulting to
+// the wrong day for users whose local date differs from UTC.
+function todayLocal(): string {
+  const d = new Date();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${mm}-${dd}`;
+}
 
 export default function NewTransactionScreen() {
   const params = useLocalSearchParams();
@@ -36,13 +43,23 @@ export default function NewTransactionScreen() {
   const [quantity, setQuantity] = useState("1");
   const [price, setPrice] = useState("");
   const [isFoil, setIsFoil] = useState(canBeFoil && !canBeNonFoil);
-  const [date, setDate] = useState(TODAY);
+  const [date, setDate] = useState(todayLocal);
   const [notes, setNotes] = useState("");
 
-  const qty = Number.parseInt(quantity, 10);
-  const unitPrice = Number.parseFloat(price);
+  // Number() (unlike parseInt/parseFloat) returns NaN for trailing garbage like
+  // "1abc" / "1.2.3" instead of truncating; the trim()!=="" guards stop an empty
+  // field from coercing to 0.
+  const qty = Number(quantity.trim());
+  const unitPrice = Number(price.trim());
+  const dateValid = /^\d{4}-\d{2}-\d{2}$/.test(date) && !Number.isNaN(Date.parse(date));
   const valid =
-    Number.isInteger(qty) && qty >= 1 && Number.isFinite(unitPrice) && unitPrice >= 0 && !!date;
+    quantity.trim() !== "" &&
+    Number.isInteger(qty) &&
+    qty >= 1 &&
+    price.trim() !== "" &&
+    Number.isFinite(unitPrice) &&
+    unitPrice >= 0 &&
+    dateValid;
 
   const mutation = useMutation({
     mutationFn: createTransaction,
