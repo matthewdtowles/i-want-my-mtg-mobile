@@ -47,6 +47,16 @@ See Phase 7.1 in the web repo's `ROADMAP.md` for the plan and decisions.
   server-side, so creating one invalidates both `["transactions"]` and
   `["inventory"]`.
 
+## Portfolio
+
+- `app/(tabs)/portfolio.tsx` - Portfolio tab: total value + stats (cards,
+  quantity, cost basis / realized gain when present), pull-to-refresh, and a
+  "Recalculate" button.
+- Data layer: `lib/api/portfolio.ts`. `GET /portfolio` returns `null` until the
+  portfolio is computed (a "Calculate" action handles that). `POST
+  /portfolio/refresh` recomputes server-side and is **rate-limited (~1/hour)** -
+  the recalc mutation surfaces the 429 via an alert.
+
 ## Getting started
 
 ```bash
@@ -80,8 +90,8 @@ components/            shared UI
 lib/                   app-wide singletons (query client, ...)
 ```
 
-Browse (#4), Inventory (#5), and Transactions (#6) are implemented; Portfolio
-(#7) is still a placeholder, filled in by its own v1 issue.
+Browse (#4), Inventory (#5), Transactions (#6), and Portfolio (#7) are
+implemented. Distribution (#8) is the remaining v1 issue.
 
 ## API client
 
