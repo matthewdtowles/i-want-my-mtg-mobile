@@ -13,19 +13,30 @@ function nextPage(last: Page<ApiCard>): number | undefined {
 }
 
 export default function SetDetailScreen() {
-  const { code } = useLocalSearchParams<{ code: string }>();
+  const params = useLocalSearchParams<{ code: string | string[] }>();
+  const code = Array.isArray(params.code) ? params.code[0] : params.code;
 
   const query = useInfiniteQuery({
     queryKey: ["set", code, "cards"],
-    queryFn: ({ pageParam }) => fetchSetCards(code, pageParam),
+    queryFn: ({ pageParam }) => fetchSetCards(code as string, pageParam),
     initialPageParam: 1,
     getNextPageParam: nextPage,
+    enabled: !!code,
   });
 
   const cards = useMemo(
     () => query.data?.pages.flatMap((p) => p.items) ?? [],
     [query.data],
   );
+
+  if (!code) {
+    return (
+      <>
+        <Stack.Screen options={{ title: "Set" }} />
+        <Text style={styles.message}>Set not found.</Text>
+      </>
+    );
+  }
 
   return (
     <>

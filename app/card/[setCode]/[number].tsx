@@ -14,17 +14,28 @@ import { formatPrice } from "../../../lib/format";
 import { CardThumb } from "../../../components/CardThumb";
 
 export default function CardDetailScreen() {
-  const { setCode, number } = useLocalSearchParams<{
-    setCode: string;
-    number: string;
+  const params = useLocalSearchParams<{
+    setCode: string | string[];
+    number: string | string[];
   }>();
+  const setCode = Array.isArray(params.setCode) ? params.setCode[0] : params.setCode;
+  const number = Array.isArray(params.number) ? params.number[0] : params.number;
   const { width } = useWindowDimensions();
 
   const query = useQuery({
     queryKey: ["card", setCode, number],
-    queryFn: () => fetchCard(setCode, number),
+    queryFn: () => fetchCard(setCode as string, number as string),
+    enabled: !!setCode && !!number,
   });
 
+  if (!setCode || !number) {
+    return (
+      <>
+        <Stack.Screen options={{ title: "Card" }} />
+        <Text style={styles.message}>Card not found.</Text>
+      </>
+    );
+  }
   if (query.isPending) {
     return <ActivityIndicator style={styles.center} size="large" />;
   }
