@@ -88,7 +88,13 @@ export default function SignInScreen() {
 
       <View style={styles.signupRow}>
         <Text style={styles.signupText}>New here? </Text>
-        <Pressable onPress={() => WebBrowser.openBrowserAsync(SIGN_UP_URL)}>
+        <Pressable
+          onPress={() => {
+            WebBrowser.openBrowserAsync(SIGN_UP_URL).catch(() => {
+              Alert.alert("Couldn't open the browser", "Please try again.");
+            });
+          }}
+        >
           <Text style={styles.signupLink}>Create an account</Text>
         </Pressable>
       </View>

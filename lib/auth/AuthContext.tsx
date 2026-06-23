@@ -36,7 +36,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setOnUnauthorized(() => {
       tokenRef.current = null;
       setToken(null);
-      void clearToken();
+      // Fire-and-forget; never let a SecureStore failure surface as an
+      // unhandled rejection. In-memory state is already cleared above.
+      clearToken().catch(() => {});
     });
   }, []);
 
@@ -56,8 +58,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setToken(newToken);
       },
       async signOut() {
-        await clearToken();
+        // Clear in-memory state first so sign-out always completes, even if
+        // SecureStore deletion fails (can happen on some devices / web).
         setToken(null);
+        try {
+          await clearToken();
+        } catch {
+          // ignore - the token is already cleared from memory
+        }
       },
     }),
     [initializing, token],
