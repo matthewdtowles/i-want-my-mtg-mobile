@@ -16,6 +16,16 @@ export function setAuthTokenGetter(getter: TokenGetter): void {
   getToken = getter;
 }
 
+/**
+ * Called when the API rejects a request with 401 (expired/invalid token).
+ * Auth wires this to sign the user out.
+ */
+let onUnauthorized: () => void = () => {};
+
+export function setOnUnauthorized(handler: () => void): void {
+  onUnauthorized = handler;
+}
+
 const authMiddleware: Middleware = {
   async onRequest({ request }) {
     const token = await getToken();
@@ -23,6 +33,12 @@ const authMiddleware: Middleware = {
       request.headers.set("Authorization", `Bearer ${token}`);
     }
     return request;
+  },
+  onResponse({ response }) {
+    if (response.status === 401) {
+      onUnauthorized();
+    }
+    return response;
   },
 };
 

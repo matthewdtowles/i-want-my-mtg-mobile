@@ -9,7 +9,7 @@ See Phase 7.1 in the web repo's `ROADMAP.md` for the plan and decisions.
 - **Expo** (managed) + **React Native**, TypeScript
 - **expo-router** - file-based navigation (`app/`)
 - **TanStack Query** - server state
-- Auth (later): JWT bearer token in `expo-secure-store`
+- **Auth**: JWT bearer token in `expo-secure-store`; sign-in via `POST /api/v1/auth/login`
 - **API client**: typed, generated from the backend OpenAPI spec (`openapi-typescript` + `openapi-fetch`)
 
 ## Getting started
@@ -69,6 +69,19 @@ import { api } from "../lib/api/client";
 const { data, error } = await api.GET("/api/v1/sets");
 ```
 
-Auth (issue #3) calls `setAuthTokenGetter(...)` to attach the bearer token from
-secure storage; until then requests go out unauthenticated.
+Auth (`lib/auth/`) calls `setAuthTokenGetter(...)` to attach the bearer token
+from secure storage on every request, and `setOnUnauthorized(...)` to sign out
+on a 401.
+
+## Auth
+
+- `lib/auth/AuthContext.tsx` - session state (`useAuth()`): `signIn`, `signOut`,
+  `isAuthenticated`, `initializing`. Loads the stored token on startup and wires
+  the API client's token getter + 401 handler.
+- `lib/auth/tokenStore.ts` - token persistence in `expo-secure-store`.
+- `app/sign-in.tsx` - sign-in screen. The root layout redirects unauthenticated
+  users here and authenticated users back to the tabs.
+- **Sign-up** opens the web registration page (`/user/create`) in a browser:
+  there is no API signup endpoint because registration requires email
+  verification, handled by the web app.
 
