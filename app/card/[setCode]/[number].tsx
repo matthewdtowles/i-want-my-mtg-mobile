@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { Stack, useLocalSearchParams } from "expo-router";
+import { Link, Stack, useLocalSearchParams } from "expo-router";
 import {
   ActivityIndicator,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -78,6 +79,25 @@ export default function CardDetailScreen() {
         hasFoil={card.hasFoil}
       />
 
+      <Link
+        href={{
+          pathname: "/transaction/new",
+          params: {
+            cardId: card.id,
+            name: card.name,
+            setCode: card.setCode,
+            number: card.number,
+            hasFoil: String(card.hasFoil),
+            hasNonFoil: String(card.hasNonFoil),
+          },
+        }}
+        asChild
+      >
+        <Pressable style={styles.logBtn}>
+          <Text style={styles.logBtnText}>Log a transaction</Text>
+        </Pressable>
+      </Link>
+
       {card.oracleText ? (
         <Text style={styles.oracle}>{card.oracleText}</Text>
       ) : null}
@@ -128,4 +148,13 @@ const styles = StyleSheet.create({
   priceValue: { fontSize: 18, fontWeight: "700", color: "#047857", marginTop: 2 },
   oracle: { fontSize: 15, lineHeight: 22, marginTop: 8 },
   artist: { fontSize: 13, color: "#9ca3af", marginTop: 12 },
+  logBtn: {
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: "#6d28d9",
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+  logBtnText: { color: "#6d28d9", fontSize: 16, fontWeight: "600" },
 });

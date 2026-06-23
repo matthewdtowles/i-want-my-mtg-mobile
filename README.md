@@ -20,11 +20,32 @@ See Phase 7.1 in the web repo's `ROADMAP.md` for the plan and decisions.
 - `app/card/[setCode]/[number].tsx` - card detail: image, prices (normal/foil),
   type, rarity, mana cost, oracle text, artist.
 - Data layer: `lib/api/catalog.ts` (typed request helpers over the generated
-  client) + `lib/api/types.ts` (response shapes - see the note in API client).
+  client) + `lib/api/types.ts` (generated response-shape aliases).
 - Card images come from Scryfall (`lib/images.ts`): `{base}/{size}/front/{imgSrc}`.
 
 > Card **legality** is not shown on detail - the API doesn't return per-card
 > legalities (only as a search *filter*). Surfacing it needs a backend change.
+
+## Inventory
+
+- `app/(tabs)/inventory.tsx` - Inventory tab: lists owned rows (card + finish)
+  with an optimistic quantity stepper and remove (`components/InventoryListItem.tsx`).
+- Adding is done from card detail via `components/AddToInventory.tsx`
+  (Normal/Foil steppers seeded from `/inventory/quantities`, optimistic upsert).
+- Data layer: `lib/api/inventory.ts`. `POST`/`PATCH` are server-identical upserts
+  (absolute quantity, keyed by card + finish; quantity 0 removes), so one
+  `saveInventory` covers both add and edit.
+
+## Transactions
+
+- `app/(tabs)/transactions.tsx` - Transactions tab: buy/sell **history**
+  (`components/TransactionListItem.tsx`). The server applies the free-tier
+  30-day window, so the client just renders what it returns.
+- `app/transaction/new.tsx` - modal **log** form (type, quantity, price, finish,
+  date, notes), opened from the card detail "Log a transaction" button.
+- Data layer: `lib/api/transactions.ts`. A logged transaction syncs inventory
+  server-side, so creating one invalidates both `["transactions"]` and
+  `["inventory"]`.
 
 ## Getting started
 
@@ -59,7 +80,8 @@ components/            shared UI
 lib/                   app-wide singletons (query client, ...)
 ```
 
-The tab screens are placeholders today; each is filled in by its own v1 issue.
+Browse (#4), Inventory (#5), and Transactions (#6) are implemented; Portfolio
+(#7) is still a placeholder, filled in by its own v1 issue.
 
 ## API client
 
@@ -75,12 +97,12 @@ OPENAPI_URL=http://localhost:3000/api/openapi.json npm run gen:api  # from a loc
 regenerates it and fails if the committed copy is stale, so when the backend API
 changes, run `npm run gen:api` and commit the result.
 
-> **Response typing gap:** the backend OpenAPI spec currently declares only
-> *request* DTOs, not response bodies, so the generated client can't type
-> responses. Until the backend adds response annotations, response shapes live
-> in `lib/api/types.ts` (hand-written to mirror the live API) and are unwrapped
-> in `lib/api/catalog.ts`. Swap these for generated types once the spec carries
-> response schemas.
+The backend spec now declares response bodies too (via `ApiOkEnvelope`), so the
+generated client types both requests and responses. `lib/api/types.ts` just
+aliases the generated `components["schemas"][...]` shapes, and the typed request
+helpers (`lib/api/catalog.ts`, `lib/api/inventory.ts`) unwrap the `{ data }`
+envelope. Controllers without response annotations yet (deck, buy-list, etc.)
+get the same `ApiOkEnvelope` decorator in the backend when a feature needs them.
 
 Use the client from TanStack Query:
 
