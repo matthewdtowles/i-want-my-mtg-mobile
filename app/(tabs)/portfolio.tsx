@@ -11,7 +11,6 @@ import {
 } from "react-native";
 
 import { fetchPortfolioSummary, refreshPortfolio } from "../../lib/api/portfolio";
-import type { ApiPortfolioSummary } from "../../lib/api/types";
 import { formatPrice } from "../../lib/format";
 
 const KEY = ["portfolio", "summary"] as const;
