@@ -40,6 +40,7 @@ function RootNavigator() {
         name="card/[setCode]/[number]"
         options={{ headerBackTitle: "Back" }}
       />
+      <Stack.Screen name="transaction/new" options={{ presentation: "modal" }} />
     </Stack>
   );
 }

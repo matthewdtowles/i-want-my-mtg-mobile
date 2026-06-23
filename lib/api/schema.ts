@@ -1418,8 +1418,36 @@ export interface components {
             cardNumber?: string;
             editable?: boolean;
         };
-        TransactionRequestDto: Record<string, never>;
-        TransactionUpdateRequestDto: Record<string, never>;
+        TransactionRequestDto: {
+            cardId: string;
+            /** @enum {string} */
+            type: "BUY" | "SELL";
+            quantity: number;
+            pricePerUnit: number;
+            isFoil: boolean;
+            /**
+             * Format: date
+             * @description Date-only string (YYYY-MM-DD)
+             */
+            date: string;
+            source?: string;
+            fees?: number;
+            notes?: string;
+            /** @description Don't auto-adjust inventory from this transaction */
+            skipInventorySync?: boolean;
+        };
+        TransactionUpdateRequestDto: {
+            quantity?: number;
+            pricePerUnit?: number;
+            /**
+             * Format: date
+             * @description Date-only string (YYYY-MM-DD)
+             */
+            date?: string;
+            source?: string;
+            fees?: number;
+            notes?: string;
+        };
         CostBasisApiDto: {
             totalCost: number;
             totalQuantity: number;

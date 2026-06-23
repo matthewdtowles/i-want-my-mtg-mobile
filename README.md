@@ -36,6 +36,17 @@ See Phase 7.1 in the web repo's `ROADMAP.md` for the plan and decisions.
   (absolute quantity, keyed by card + finish; quantity 0 removes), so one
   `saveInventory` covers both add and edit.
 
+## Transactions
+
+- `app/(tabs)/transactions.tsx` - Transactions tab: buy/sell **history**
+  (`components/TransactionListItem.tsx`). The server applies the free-tier
+  30-day window, so the client just renders what it returns.
+- `app/transaction/new.tsx` - modal **log** form (type, quantity, price, finish,
+  date, notes), opened from the card detail "Log a transaction" button.
+- Data layer: `lib/api/transactions.ts`. A logged transaction syncs inventory
+  server-side, so creating one invalidates both `["transactions"]` and
+  `["inventory"]`.
+
 ## Getting started
 
 ```bash
@@ -69,8 +80,8 @@ components/            shared UI
 lib/                   app-wide singletons (query client, ...)
 ```
 
-Browse (#4) and Inventory (#5) are implemented; Transactions (#6) and Portfolio
-(#7) are still placeholders, filled in by their own v1 issues.
+Browse (#4), Inventory (#5), and Transactions (#6) are implemented; Portfolio
+(#7) is still a placeholder, filled in by its own v1 issue.
 
 ## API client
 

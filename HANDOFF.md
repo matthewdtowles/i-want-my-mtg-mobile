@@ -3,7 +3,7 @@
 Where the v1 build stands and how to pick it up. See the web repo's
 `ROADMAP.md` §7.1 for the overall plan.
 
-_Last updated: 2026-06-23 (inventory)._
+_Last updated: 2026-06-23 (transactions)._
 
 ## What this is
 
@@ -23,8 +23,8 @@ Expo (SDK 56), TypeScript, expo-router, TanStack Query. It consumes the existing
 - CI versioning - **done** (#12)
 - generated-types cleanup - **done** (#14)
 - #5 inventory (view / add / edit / finish) - **done**
-- #6 transactions (log buy/sell + history) - **next, not started**
-- #7 portfolio overview - not started
+- #6 transactions (log buy/sell + history) - **done**
+- #7 portfolio overview - **next, not started**
 - #8 distribution (TestFlight + Play internal) - not started
 
 ## Inventory (#5) notes
@@ -52,12 +52,34 @@ detail screen via `AddToInventory` (Normal/Foil steppers seeded from
 `/quantities`, optimistic upsert). The whole app is auth-gated, so the bearer
 token is always present.
 
-## Next: issue #6 (transactions)
+## Transactions (#6) notes
 
-Log buy/sell + history. `TransactionApiController` is annotated
-(`TransactionRequestDto` single-object bodies generate correctly). Follow the
-inventory pattern: typed helpers in `lib/api/`, optimistic mutations, fill in the
-`app/(tabs)/transactions.tsx` placeholder.
+Like inventory, the write DTO generated empty (`Record<string, never>`) until the
+backend annotations landed in PR #550 (`TransactionRequestDto` /
+`TransactionUpdateRequestDto` lacked `@ApiProperty`). Now typed:
+
+- `GET /api/v1/transactions` -> `TransactionApiItemDto[]` (paginated; the server
+  applies the free-tier 30-day window, so the client just renders what it gets).
+- `POST /api/v1/transactions` with `TransactionRequestDto`
+  (`{ cardId, type: 'BUY'|'SELL', quantity, pricePerUnit, isFoil, date, ... }`)
+  -> `TransactionApiItemDto`. A transaction **syncs inventory server-side**
+  (unless `skipInventorySync`), so the create invalidates both `["transactions"]`
+  and `["inventory"]`.
+- `PUT`/`DELETE /api/v1/transactions/{id}` exist but edit/delete are **not built
+  yet** (out of #6 scope - log + history only).
+
+UI: Transactions tab (`app/(tabs)/transactions.tsx`) is the history list
+(`TransactionListItem`). Logging is a modal form (`app/transaction/new.tsx`,
+registered in `app/_layout.tsx`) opened from the card detail "Log a transaction"
+button. `date` is a date-only string (`YYYY-MM-DD`); the form uses a plain text
+field defaulting to today (no date-picker dep, to stay Expo Go-compatible).
+
+## Next: issue #7 (portfolio)
+
+Portfolio overview (current value). `PortfolioSummaryApiDto` /
+`PortfolioHistoryPointDto` / `CardPerformanceApiDto` are already typed in the
+spec. Follow the same pattern: typed helpers in `lib/api/`, fill the
+`app/(tabs)/portfolio.tsx` placeholder.
 
 ## Architecture / key files
 
