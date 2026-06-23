@@ -30,3 +30,52 @@ jobs:
           fi
 
       - run: npm run typecheck
+
+  # On merge to main, compute the next version from the squash-merged PR title
+  # (feat -> minor, ! -> major, anything else -> patch) and cut a tag + GitHub
+  # release. Git tags are the source of truth for the version; app.json stays a
+  # placeholder and the EAS build (issue #8) stamps the real version + native
+  # build numbers from the tag.
+  version:
+    needs: [verify]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.next.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Compute next version from PR title
+        id: next
+        run: ./.github/scripts/next-version.sh >> "$GITHUB_OUTPUT"
+
+  release:
+    needs: [version]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Skip if tag already exists
+        id: check
+        run: |
+          if git ls-remote --tags origin "refs/tags/${{ needs.version.outputs.version }}" | grep -q .; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create tag and GitHub release
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          gh release create "${{ needs.version.outputs.version }}" \
+            --target "${{ github.sha }}" \
+            --generate-notes \
+            --title "${{ needs.version.outputs.version }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

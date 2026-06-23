@@ -85,3 +85,19 @@ on a 401.
   there is no API signup endpoint because registration requires email
   verification, handled by the web app.
 
+## Versioning & releases
+
+Versioning is automatic on merge to `main`, driven by the squash-merged **PR
+title** (same scheme as the web, scry, and MCP repos):
+
+- `feat:` / `feat(scope):` -> **minor**
+- `!` before the colon (`feat!:`) or at the end of the title -> **major**
+- anything else (`fix:`, `docs:`, `chore:`, ...) -> **patch**
+
+The `version` + `release` jobs in `.github/workflows/ci.yml` run
+`.github/scripts/next-version.sh` to compute the next semver from the latest git
+tag + the PR title, then create a matching git tag and GitHub release. **Git tags
+are the source of truth** - `app.json` stays a placeholder; the EAS build (issue
+#8) stamps the real version and native build numbers (`ios.buildNumber`,
+`android.versionCode`) from the tag.
+
