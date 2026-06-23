@@ -1,18 +1,10 @@
 import { api } from "./client";
+import { errMessage } from "./envelope";
 import type { ApiCard, ApiPaginationMeta, ApiSet } from "./types";
 
 export interface Page<T> {
   items: T[];
   meta?: ApiPaginationMeta;
-}
-
-// Non-2xx bodies still carry the { error } envelope field; surface it if present.
-function errMessage(error: unknown, fallback: string): string {
-  if (error && typeof error === "object" && "error" in error) {
-    const e = (error as { error?: unknown }).error;
-    if (typeof e === "string") return e;
-  }
-  return fallback;
 }
 
 export async function fetchSets(page = 1, limit = 50): Promise<Page<ApiSet>> {

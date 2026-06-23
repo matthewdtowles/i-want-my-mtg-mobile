@@ -38,7 +38,10 @@ const authMiddleware: Middleware = {
     if (response.status === 401) {
       onUnauthorized();
     }
-    return response;
+    // Return nothing: openapi-fetch only wants a value here when *replacing*
+    // the response, and it validates that value with `instanceof Response` -
+    // which fails under React Native's fetch polyfill, so returning the
+    // original response trips its "must return new Response()" guard.
   },
 };
 

@@ -1286,6 +1286,12 @@ export interface components {
             foilQuantity: number;
             normalQuantity: number;
         };
+        InventoryRequestApiDto: {
+            cardId: string;
+            /** @description Absolute quantity to set; 0 removes the row */
+            quantity: number;
+            isFoil: boolean;
+        };
         InventoryImportResponseDto: {
             /** @description Number of inventory rows saved (created or updated to exact qty) */
             saved: number;
@@ -1302,6 +1308,10 @@ export interface components {
              * @enum {string}
              */
             detectedFormat?: "native" | "archidekt" | "moxfield" | "deckbox" | "tcgplayer";
+        };
+        InventoryDeleteApiDto: {
+            cardId: string;
+            isFoil: boolean;
         };
         PortfolioSummaryApiDto: {
             totalValue: number;
@@ -2307,7 +2317,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": string[];
+                "application/json": components["schemas"]["InventoryRequestApiDto"][];
             };
         };
         responses: {
@@ -2335,7 +2345,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InventoryDeleteApiDto"];
+            };
+        };
         responses: {
             /** @description Item deleted */
             200: {
@@ -2355,7 +2369,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": string[];
+                "application/json": components["schemas"]["InventoryRequestApiDto"][];
             };
         };
         responses: {
