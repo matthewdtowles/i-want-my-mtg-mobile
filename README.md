@@ -72,8 +72,9 @@ npm run typecheck  # tsc --noEmit
 `npm install`, run `npm run ios` and `npm run android` and confirm the tab shell
 (Browse / Inventory / Transactions / Portfolio) renders before building on top.
 
-Build config for both platforms lives in `eas.json` (EAS managed workflow);
-the store builds are wired up in the distribution issue.
+Build config for both platforms lives in `eas.json` (EAS managed workflow). iOS
+is wired up end-to-end (build -> TestFlight); Android is not set up yet. See
+**Distribution** below for how builds and store uploads actually happen.
 
 ## Structure
 
@@ -91,7 +92,8 @@ lib/                   app-wide singletons (query client, ...)
 ```
 
 Browse (#4), Inventory (#5), Transactions (#6), and Portfolio (#7) are
-implemented. Distribution (#8) is the remaining v1 issue.
+implemented. Distribution (#8) is in progress: iOS ships to TestFlight; the
+Android / Play internal track is the remaining piece.
 
 ## API client
 
@@ -150,7 +152,48 @@ title** (same scheme as the web, scry, and MCP repos):
 The `version` + `release` jobs in `.github/workflows/ci.yml` run
 `.github/scripts/next-version.sh` to compute the next semver from the latest git
 tag + the PR title, then create a matching git tag and GitHub release. **Git tags
-are the source of truth** - `app.json` stays a placeholder; the EAS build (issue
-#8) stamps the real version and native build numbers (`ios.buildNumber`,
+are the source of truth** - `app.json` stays a placeholder; the EAS build
+stamps the real version and native build numbers (`ios.buildNumber`,
 `android.versionCode`) from the tag.
+
+## Distribution (builds & store uploads)
+
+**Merging a PR to `main` does NOT build the app or ship anything to Apple or
+Google.** CI only computes a version and tags a release (above) - there is no
+`eas build` or `eas submit` step in `.github/workflows/ci.yml`. Builds and store
+uploads only happen when you run these commands yourself from a terminal (each
+needs an interactive Apple/Google login):
+
+```bash
+eas build  --platform ios --profile production   # produce a signed build (EAS cloud)
+eas submit --platform ios --profile production   # upload that build to TestFlight
+```
+
+**`eas submit` uploads to TestFlight only - never the public App Store.**
+TestFlight is the private beta channel (you + invited testers). A public App
+Store release is a separate, deliberate action you take by hand in App Store
+Connect: pick a build, complete the store listing, **Submit for Review**, wait
+for Apple's review (~1-3 days), then **Release**. None of that is automated.
+
+iOS setup is one-time and already done (App ID `com.matthewdtowles.iwantmymtg`,
+App Store Connect app `6784075307`, signing certs/profile + an App Store Connect
+API key all managed on EAS servers; `ITSAppUsesNonExemptEncryption: false` in
+`app.json` skips the per-build encryption-compliance prompt). So a new TestFlight
+build is just the two commands above. The same flow for Android (`--platform
+android`, uploads to Play internal testing) is not set up yet.
+
+### Inviting TestFlight testers
+
+In App Store Connect -> your app -> **TestFlight**:
+- **Internal testers** (fastest, no Apple review of the build): add the person
+  under **Users and Access** with a role first, then add them to an internal
+  group. Up to 100, builds available to them immediately. Best for yourself +
+  close collaborators.
+- **External testers** (anyone, up to 10,000): create an external group, add
+  testers by email or share the group's **public TestFlight link**. The first
+  build for external testing goes through a light Apple **Beta App Review**
+  (usually a day); later builds in the same train are available right away.
+
+Each invited tester installs the **TestFlight** app on their device, accepts the
+email invite (or opens the public link), and the build appears there.
 
