@@ -10,7 +10,10 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.matthewdtowles.iwantmymtg"
+      "bundleIdentifier": "com.matthewdtowles.iwantmymtg",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.matthewdtowles.iwantmymtg",
@@ -30,6 +33,13 @@
       "expo-router",
       "expo-secure-store",
       "expo-web-browser"
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "7a3c639a-6f37-45d5-aab5-a66f59b01650"
+      }
+    },
+    "owner": "mtengineer"
   }
 }
