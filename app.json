@@ -10,7 +10,10 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.matthewdtowles.iwantmymtg"
+      "bundleIdentifier": "com.matthewdtowles.iwantmymtg",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.matthewdtowles.iwantmymtg",
