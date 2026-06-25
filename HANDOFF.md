@@ -3,7 +3,7 @@
 Where the v1 build stands and how to pick it up. See the web repo's
 `ROADMAP.md` §7.1 for the overall plan.
 
-_Last updated: 2026-06-23 (portfolio)._
+_Last updated: 2026-06-24 (iOS distribution / TestFlight)._
 
 ## What this is
 
@@ -25,7 +25,8 @@ Expo (SDK 56), TypeScript, expo-router, TanStack Query. It consumes the existing
 - #5 inventory (view / add / edit / finish) - **done**
 - #6 transactions (log buy/sell + history) - **done**
 - #7 portfolio overview - **done**
-- #8 distribution (TestFlight + Play internal) - **next, not started**
+- #8 distribution (TestFlight + Play internal) - **in progress**: iOS ships to
+  TestFlight (done 2026-06-24); Android / Play internal track not started
 
 ## Inventory (#5) notes
 
@@ -93,12 +94,32 @@ cost basis / realized gain when present), pull-to-refresh (re-GETs), and a
 "Recalculate" button (POST refresh). Logging a transaction syncs inventory and
 flows into the portfolio totals.
 
-## Next: issue #8 (distribution)
+## Distribution: issue #8
 
-TestFlight (iOS) + Play internal testing. `eas.json` exists (managed workflow,
-`autoIncrement` on production); EAS build/submit is not set up yet. This is
-calendar-bound (Apple enrollment, Google's 14-day closed-test gate) - see the
-web repo's `ROADMAP.md` §7.1 "Store readiness".
+**iOS is done (2026-06-24):** the app builds on EAS and ships to TestFlight.
+One-time setup landed in PR #18 - App ID `com.matthewdtowles.iwantmymtg`, App
+Store Connect app `6784075307` (pinned as `submit.production.ios.ascAppId` in
+`eas.json`), signing certs/profile + an App Store Connect API key (the `.p8`
+secret stays on EAS servers, never in the repo), and
+`ios.infoPlist.ITSAppUsesNonExemptEncryption: false` in `app.json` to skip the
+per-build encryption-compliance prompt. Expo account: **mtengineer**.
+
+Cutting a new TestFlight build is two manual commands (interactive Apple login):
+
+```bash
+eas build  --platform ios --profile production
+eas submit --platform ios --profile production
+```
+
+**Merging to `main` does NOT build or ship anything** - CI only tags a version
+(no `eas build`/`eas submit` in the workflow). And `eas submit` reaches
+**TestFlight only**, not the public App Store; a public release is a separate
+manual Submit-for-Review in App Store Connect. (See the README "Distribution"
+section for the full rundown, incl. inviting testers.)
+
+**Remaining: Android / Play internal track** - not started. Calendar-bound
+(Google's 14-day closed-test gate for new individual accounts) - see the web
+repo's `ROADMAP.md` §7.1 "Store readiness".
 
 ## Architecture / key files
 
@@ -139,5 +160,4 @@ web repo's `ROADMAP.md` §7.1 "Store readiness".
   sealed, api-keys) are not annotated yet - apply the same `ApiOkEnvelope`
   decorator in the backend when a feature needs them.
 - `app.json` version is `0.1.0` but EAS `appVersionSource: remote` ignores it.
-- EAS build/submit (issue #8) is not set up; `eas.json` exists (managed workflow,
-  `autoIncrement` on production).
+- iOS EAS build/submit is set up (see Distribution above); Android is not.
