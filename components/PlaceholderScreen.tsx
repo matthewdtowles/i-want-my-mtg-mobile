@@ -1,4 +1,8 @@
+import { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
+
+import { useTheme } from "../lib/theme/ThemeContext";
+import type { ThemeColors } from "../lib/theme/colors";
 
 type Props = {
   title: string;
@@ -11,6 +15,8 @@ type Props = {
  * in a later issue; this keeps the navigation shell runnable now.
  */
 export function PlaceholderScreen({ title, note }: Props) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.container}>
       <Text style={styles.title}>{title}</Text>
@@ -19,21 +25,24 @@ export function PlaceholderScreen({ title, note }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 24,
-    gap: 8,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: "600",
-  },
-  note: {
-    fontSize: 14,
-    color: "#6b7280",
-    textAlign: "center",
-  },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 24,
+      gap: 8,
+      backgroundColor: colors.background,
+    },
+    title: {
+      fontSize: 20,
+      fontWeight: "600",
+      color: colors.textPrimary,
+    },
+    note: {
+      fontSize: 14,
+      color: colors.textMuted,
+      textAlign: "center",
+    },
+  });

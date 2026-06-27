@@ -16,6 +16,8 @@ import { fetchSets, searchCards, type Page } from "../../lib/api/catalog";
 import type { ApiCard, ApiSet } from "../../lib/api/types";
 import { CardListItem } from "../../components/CardListItem";
 import { useDebounce } from "../../lib/useDebounce";
+import { useTheme } from "../../lib/theme/ThemeContext";
+import type { ThemeColors } from "../../lib/theme/colors";
 
 function nextPage<T>(last: Page<T>): number | undefined {
   const m = last.meta;
@@ -23,6 +25,8 @@ function nextPage<T>(last: Page<T>): number | undefined {
 }
 
 export default function BrowseScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const [query, setQuery] = useState("");
   const q = useDebounce(query.trim(), 350);
@@ -51,6 +55,7 @@ export default function BrowseScreen() {
       <TextInput
         style={styles.search}
         placeholder="Search cards by name"
+        placeholderTextColor={colors.placeholder}
         value={query}
         onChangeText={setQuery}
         autoCapitalize="none"
@@ -60,15 +65,15 @@ export default function BrowseScreen() {
       />
 
       {active.isPending ? (
-        <ActivityIndicator style={styles.center} size="large" />
+        <ActivityIndicator style={styles.center} size="large" color={colors.accent} />
       ) : active.isError ? (
         <Text style={styles.message}>
           {active.error instanceof Error ? active.error.message : "Something went wrong."}
         </Text>
       ) : searching ? (
-        <CardResults query={cardsQuery} />
+        <CardResults query={cardsQuery} styles={styles} accent={colors.accent} />
       ) : (
-        <SetResults query={setsQuery} />
+        <SetResults query={setsQuery} styles={styles} accent={colors.accent} />
       )}
     </View>
   );
@@ -76,8 +81,12 @@ export default function BrowseScreen() {
 
 function SetResults({
   query,
+  styles,
+  accent,
 }: {
   query: ReturnType<typeof useInfiniteQuery<Page<ApiSet>>>;
+  styles: ReturnType<typeof createStyles>;
+  accent: string;
 }) {
   const sets = useMemo(
     () => query.data?.pages.flatMap((p) => p.items) ?? [],
@@ -87,18 +96,26 @@ function SetResults({
     <FlatList
       data={sets}
       keyExtractor={(s) => s.code}
-      renderItem={({ item }) => <SetRow set={item} />}
+      renderItem={({ item }) => <SetRow set={item} styles={styles} />}
       onEndReached={() => query.hasNextPage && query.fetchNextPage()}
       onEndReachedThreshold={0.5}
-      ListFooterComponent={query.isFetchingNextPage ? <ActivityIndicator style={styles.footer} /> : null}
+      ListFooterComponent={
+        query.isFetchingNextPage ? (
+          <ActivityIndicator style={styles.footer} color={accent} />
+        ) : null
+      }
     />
   );
 }
 
 function CardResults({
   query,
+  styles,
+  accent,
 }: {
   query: ReturnType<typeof useInfiniteQuery<Page<ApiCard>>>;
+  styles: ReturnType<typeof createStyles>;
+  accent: string;
 }) {
   const cards = useMemo(
     () => query.data?.pages.flatMap((p) => p.items) ?? [],
@@ -114,12 +131,22 @@ function CardResults({
       renderItem={({ item }) => <CardListItem card={item} />}
       onEndReached={() => query.hasNextPage && query.fetchNextPage()}
       onEndReachedThreshold={0.5}
-      ListFooterComponent={query.isFetchingNextPage ? <ActivityIndicator style={styles.footer} /> : null}
+      ListFooterComponent={
+        query.isFetchingNextPage ? (
+          <ActivityIndicator style={styles.footer} color={accent} />
+        ) : null
+      }
     />
   );
 }
 
-function SetRow({ set }: { set: ApiSet }) {
+function SetRow({
+  set,
+  styles,
+}: {
+  set: ApiSet;
+  styles: ReturnType<typeof createStyles>;
+}) {
   return (
     <Link href={{ pathname: "/set/[code]", params: { code: set.code } }} asChild>
       <Pressable style={styles.setRow}>
@@ -139,30 +166,33 @@ function SetRow({ set }: { set: ApiSet }) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  search: {
-    marginHorizontal: 16,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: "#d1d5db",
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontSize: 16,
-  },
-  center: { marginTop: 40 },
-  footer: { marginVertical: 16 },
-  message: { textAlign: "center", marginTop: 40, color: "#6b7280" },
-  setRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#e5e7eb",
-  },
-  setName: { fontSize: 16, fontWeight: "600" },
-  setSub: { fontSize: 13, color: "#6b7280", marginTop: 2 },
-  chevron: { fontSize: 22, color: "#9ca3af", marginLeft: 8 },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
+    search: {
+      marginHorizontal: 16,
+      marginBottom: 8,
+      borderWidth: 1,
+      borderColor: colors.inputBorder,
+      borderRadius: 10,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      fontSize: 16,
+      color: colors.textPrimary,
+      backgroundColor: colors.surface,
+    },
+    center: { marginTop: 40 },
+    footer: { marginVertical: 16 },
+    message: { textAlign: "center", marginTop: 40, color: colors.textMuted },
+    setRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
+    },
+    setName: { fontSize: 16, fontWeight: "600", color: colors.textPrimary },
+    setSub: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
+    chevron: { fontSize: 22, color: colors.chevron, marginLeft: 8 },
+  });

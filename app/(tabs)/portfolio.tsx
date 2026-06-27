@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -12,10 +13,14 @@ import {
 
 import { fetchPortfolioSummary, refreshPortfolio } from "../../lib/api/portfolio";
 import { formatPrice } from "../../lib/format";
+import { useTheme } from "../../lib/theme/ThemeContext";
+import type { ThemeColors } from "../../lib/theme/colors";
 
 const KEY = ["portfolio", "summary"] as const;
 
 export default function PortfolioScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const queryClient = useQueryClient();
 
   const query = useQuery({
@@ -34,7 +39,7 @@ export default function PortfolioScreen() {
   });
 
   if (query.isPending) {
-    return <ActivityIndicator style={styles.center} size="large" />;
+    return <ActivityIndicator style={styles.center} size="large" color={colors.accent} />;
   }
   if (query.isError) {
     return (
@@ -65,9 +70,14 @@ export default function PortfolioScreen() {
 
   return (
     <ScrollView
+      style={styles.screen}
       contentContainerStyle={styles.content}
       refreshControl={
-        <RefreshControl refreshing={query.isFetching} onRefresh={() => query.refetch()} />
+        <RefreshControl
+          refreshing={query.isFetching}
+          onRefresh={() => query.refetch()}
+          tintColor={colors.accent}
+        />
       }
     >
       <View style={styles.hero}>
@@ -76,13 +86,24 @@ export default function PortfolioScreen() {
       </View>
 
       <View style={styles.stats}>
-        <Stat label="Cards" value={String(summary.totalCards)} />
-        <Stat label="Total quantity" value={String(summary.totalQuantity)} />
+        <Stat label="Cards" value={String(summary.totalCards)} styles={styles} colors={colors} />
+        <Stat
+          label="Total quantity"
+          value={String(summary.totalQuantity)}
+          styles={styles}
+          colors={colors}
+        />
         {summary.totalCost != null ? (
-          <Stat label="Cost basis" value={formatPrice(summary.totalCost)} />
+          <Stat label="Cost basis" value={formatPrice(summary.totalCost)} styles={styles} colors={colors} />
         ) : null}
         {summary.totalRealizedGain != null ? (
-          <Stat label="Realized gain" value={formatSigned(summary.totalRealizedGain)} signed={summary.totalRealizedGain} />
+          <Stat
+            label="Realized gain"
+            value={formatSigned(summary.totalRealizedGain)}
+            signed={summary.totalRealizedGain}
+            styles={styles}
+            colors={colors}
+          />
         ) : null}
       </View>
 
@@ -101,8 +122,21 @@ export default function PortfolioScreen() {
   );
 }
 
-function Stat({ label, value, signed }: { label: string; value: string; signed?: number }) {
-  const color = signed == null ? "#111827" : signed >= 0 ? "#047857" : "#b91c1c";
+function Stat({
+  label,
+  value,
+  signed,
+  styles,
+  colors,
+}: {
+  label: string;
+  value: string;
+  signed?: number;
+  styles: ReturnType<typeof createStyles>;
+  colors: ThemeColors;
+}) {
+  const color =
+    signed == null ? colors.textPrimary : signed >= 0 ? colors.success : colors.danger;
   return (
     <View style={styles.statRow}>
       <Text style={styles.statLabel}>{label}</Text>
@@ -120,38 +154,52 @@ function formatComputedAt(iso: string): string {
   return Number.isNaN(d.getTime()) ? iso : d.toLocaleString();
 }
 
-const styles = StyleSheet.create({
-  content: { padding: 24, gap: 20 },
-  center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24, gap: 16 },
-  message: { textAlign: "center", marginTop: 40, color: "#6b7280" },
-  empty: { fontSize: 16, fontWeight: "600", color: "#374151", textAlign: "center" },
-  hero: {
-    backgroundColor: "#ecfdf5",
-    borderRadius: 16,
-    padding: 24,
-    alignItems: "center",
-  },
-  heroLabel: { fontSize: 14, color: "#047857", fontWeight: "600" },
-  heroValue: { fontSize: 40, fontWeight: "800", color: "#047857", marginTop: 4 },
-  stats: { gap: 0 },
-  statRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#e5e7eb",
-  },
-  statLabel: { fontSize: 15, color: "#374151" },
-  statValue: { fontSize: 16, fontWeight: "700" },
-  updated: { fontSize: 13, color: "#9ca3af", textAlign: "center" },
-  button: {
-    borderWidth: 1,
-    borderColor: "#6d28d9",
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: "center",
-  },
-  buttonDisabled: { opacity: 0.5 },
-  buttonText: { color: "#6d28d9", fontSize: 16, fontWeight: "600" },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    screen: { backgroundColor: colors.background },
+    content: { padding: 24, gap: 20 },
+    center: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 24,
+      gap: 16,
+      backgroundColor: colors.background,
+    },
+    message: { textAlign: "center", marginTop: 40, color: colors.textMuted },
+    empty: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: colors.textSecondary,
+      textAlign: "center",
+    },
+    hero: {
+      backgroundColor: colors.successBg,
+      borderRadius: 16,
+      padding: 24,
+      alignItems: "center",
+    },
+    heroLabel: { fontSize: 14, color: colors.success, fontWeight: "600" },
+    heroValue: { fontSize: 40, fontWeight: "800", color: colors.success, marginTop: 4 },
+    stats: { gap: 0 },
+    statRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingVertical: 14,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
+    },
+    statLabel: { fontSize: 15, color: colors.textSecondary },
+    statValue: { fontSize: 16, fontWeight: "700" },
+    updated: { fontSize: 13, color: colors.textMuted, textAlign: "center" },
+    button: {
+      borderWidth: 1,
+      borderColor: colors.accent,
+      borderRadius: 12,
+      paddingVertical: 14,
+      alignItems: "center",
+    },
+    buttonDisabled: { opacity: 0.5 },
+    buttonText: { color: colors.accent, fontSize: 16, fontWeight: "600" },
+  });

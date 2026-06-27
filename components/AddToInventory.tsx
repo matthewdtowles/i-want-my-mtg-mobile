@@ -1,8 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { fetchQuantities, saveInventory } from "../lib/api/inventory";
 import type { ApiInventoryQuantity } from "../lib/api/types";
+import { useTheme } from "../lib/theme/ThemeContext";
+import type { ThemeColors } from "../lib/theme/colors";
 
 type Props = {
   cardId: string;
@@ -36,6 +39,8 @@ function upsertQty(
 }
 
 export function AddToInventory({ cardId, hasNonFoil, hasFoil }: Props) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const queryClient = useQueryClient();
   const key = qtyKey(cardId);
 
@@ -70,7 +75,7 @@ export function AddToInventory({ cardId, hasNonFoil, hasFoil }: Props) {
     <View style={styles.container}>
       <Text style={styles.heading}>In your inventory</Text>
       {query.isPending ? (
-        <ActivityIndicator style={styles.loading} />
+        <ActivityIndicator style={styles.loading} color={colors.accent} />
       ) : query.isError ? (
         // Don't fall through to the steppers: they'd seed from 0, and a tap
         // would upsert an absolute quantity that clobbers the real owned count.
@@ -82,6 +87,7 @@ export function AddToInventory({ cardId, hasNonFoil, hasFoil }: Props) {
               label="Normal"
               quantity={owned.normal}
               onChange={(quantity) => setQty.mutate({ isFoil: false, quantity })}
+              styles={styles}
             />
           ) : null}
           {hasFoil ? (
@@ -89,6 +95,7 @@ export function AddToInventory({ cardId, hasNonFoil, hasFoil }: Props) {
               label="Foil"
               quantity={owned.foil}
               onChange={(quantity) => setQty.mutate({ isFoil: true, quantity })}
+              styles={styles}
             />
           ) : null}
         </View>
@@ -101,10 +108,12 @@ function FinishStepper({
   label,
   quantity,
   onChange,
+  styles,
 }: {
   label: string;
   quantity: number;
   onChange: (quantity: number) => void;
+  styles: ReturnType<typeof createStyles>;
 }) {
   return (
     <View style={styles.finishRow}>
@@ -133,31 +142,43 @@ function FinishStepper({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    marginTop: 12,
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
-    borderRadius: 12,
-    padding: 16,
-  },
-  heading: { fontSize: 16, fontWeight: "700", marginBottom: 8 },
-  loading: { marginVertical: 8 },
-  error: { color: "#b91c1c", fontSize: 14 },
-  rows: { gap: 12 },
-  finishRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  finishLabel: { fontSize: 15, color: "#374151" },
-  stepper: { flexDirection: "row", alignItems: "center", gap: 12 },
-  stepBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: "#d1d5db",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  stepBtnDisabled: { opacity: 0.4 },
-  stepText: { fontSize: 20, color: "#374151" },
-  qty: { fontSize: 17, fontWeight: "600", minWidth: 24, textAlign: "center" },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      marginTop: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 12,
+      padding: 16,
+      backgroundColor: colors.surface,
+    },
+    heading: { fontSize: 16, fontWeight: "700", marginBottom: 8, color: colors.textPrimary },
+    loading: { marginVertical: 8 },
+    error: { color: colors.danger, fontSize: 14 },
+    rows: { gap: 12 },
+    finishRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    finishLabel: { fontSize: 15, color: colors.textSecondary },
+    stepper: { flexDirection: "row", alignItems: "center", gap: 12 },
+    stepBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: colors.inputBorder,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    stepBtnDisabled: { opacity: 0.4 },
+    stepText: { fontSize: 20, color: colors.textSecondary },
+    qty: {
+      fontSize: 17,
+      fontWeight: "600",
+      minWidth: 24,
+      textAlign: "center",
+      color: colors.textPrimary,
+    },
+  });

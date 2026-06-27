@@ -11,6 +11,8 @@ import { fetchInventory, saveInventory, deleteInventory } from "../../lib/api/in
 import type { Page } from "../../lib/api/catalog";
 import type { ApiInventoryItem } from "../../lib/api/types";
 import { InventoryListItem } from "../../components/InventoryListItem";
+import { useTheme } from "../../lib/theme/ThemeContext";
+import type { ThemeColors } from "../../lib/theme/colors";
 
 type InventoryData = InfiniteData<Page<ApiInventoryItem>>;
 
@@ -34,6 +36,8 @@ function nextPage(last: Page<ApiInventoryItem>): number | undefined {
 }
 
 export default function InventoryScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const queryClient = useQueryClient();
 
   const query = useInfiniteQuery({
@@ -86,7 +90,7 @@ export default function InventoryScreen() {
   );
 
   if (query.isPending) {
-    return <ActivityIndicator style={styles.center} size="large" />;
+    return <ActivityIndicator style={styles.center} size="large" color={colors.accent} />;
   }
   if (query.isError) {
     return (
@@ -108,6 +112,7 @@ export default function InventoryScreen() {
 
   return (
     <FlatList
+      style={styles.list}
       data={items}
       keyExtractor={(it) => `${it.cardId}-${it.isFoil}`}
       renderItem={({ item }) => (
@@ -121,16 +126,35 @@ export default function InventoryScreen() {
       onEndReached={() => query.hasNextPage && query.fetchNextPage()}
       onEndReachedThreshold={0.5}
       ListFooterComponent={
-        query.isFetchingNextPage ? <ActivityIndicator style={styles.footer} /> : null
+        query.isFetchingNextPage ? (
+          <ActivityIndicator style={styles.footer} color={colors.accent} />
+        ) : null
       }
     />
   );
 }
 
-const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
-  footer: { marginVertical: 16 },
-  message: { textAlign: "center", marginTop: 40, color: "#6b7280" },
-  empty: { fontSize: 16, fontWeight: "600", color: "#374151" },
-  emptyHint: { fontSize: 14, color: "#6b7280", marginTop: 6, textAlign: "center" },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    list: { backgroundColor: colors.background },
+    center: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 24,
+      backgroundColor: colors.background,
+    },
+    footer: { marginVertical: 16 },
+    message: {
+      textAlign: "center",
+      marginTop: 40,
+      color: colors.textMuted,
+    },
+    empty: { fontSize: 16, fontWeight: "600", color: colors.textSecondary },
+    emptyHint: {
+      fontSize: 14,
+      color: colors.textMuted,
+      marginTop: 6,
+      textAlign: "center",
+    },
+  });
