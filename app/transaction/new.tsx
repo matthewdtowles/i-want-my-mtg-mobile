@@ -94,9 +94,10 @@ export default function NewTransactionScreen() {
             notes: notes.trim() || undefined,
           }),
     onSuccess: () => {
-      // A transaction adjusts inventory server-side, so refresh both.
+      // A transaction adjusts inventory server-side and shifts portfolio totals.
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["portfolio"] });
       router.back();
     },
     onError: (e) =>
@@ -165,7 +166,13 @@ export default function NewTransactionScreen() {
         />
       </Field>
 
-      {canBeFoil && canBeNonFoil ? (
+      {editing ? (
+        // Finish is immutable on update, so show it read-only for clarity.
+        <View style={styles.switchRow}>
+          <Text style={styles.label}>Finish</Text>
+          <Text style={styles.readonlyValue}>{isFoil ? "Foil" : "Normal"}</Text>
+        </View>
+      ) : canBeFoil && canBeNonFoil ? (
         <View style={styles.switchRow}>
           <Text style={styles.label}>Foil</Text>
           <Switch value={isFoil} onValueChange={setIsFoil} />
@@ -248,6 +255,7 @@ const createStyles = (colors: ThemeColors) =>
     lockHint: { fontSize: 12, color: colors.textMuted, marginTop: -8 },
     field: { gap: 6 },
     label: { fontSize: 14, color: colors.textSecondary, fontWeight: "600" },
+    readonlyValue: { fontSize: 15, color: colors.textPrimary, fontWeight: "600" },
     input: {
       borderWidth: 1,
       borderColor: colors.inputBorder,

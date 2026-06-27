@@ -67,14 +67,18 @@ export default function TransactionsScreen() {
       );
       return { previous };
     },
-    onError(_err, _tx, ctx) {
+    onError(err, _tx, ctx) {
       if (ctx?.previous) queryClient.setQueryData(KEY, ctx.previous);
-      Alert.alert("Couldn't delete", "Please try again.");
+      Alert.alert(
+        "Couldn't delete",
+        err instanceof Error ? err.message : "Please try again.",
+      );
     },
     onSettled() {
-      // A deleted transaction re-syncs inventory server-side.
+      // A deleted transaction re-syncs inventory and shifts portfolio totals.
       queryClient.invalidateQueries({ queryKey: KEY });
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["portfolio"] });
     },
   });
 
