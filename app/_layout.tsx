@@ -25,6 +25,10 @@ function RootNavigator() {
     }
   }, [initializing, isAuthenticated, segments, router]);
 
+  // Render the themed status bar in every state (including the cold-start
+  // loader) so its style is correct from the first frame in dark mode.
+  const statusBar = <StatusBar style={scheme === "dark" ? "light" : "dark"} />;
+
   if (initializing) {
     return (
       <View
@@ -36,6 +40,7 @@ function RootNavigator() {
         }}
       >
         <ActivityIndicator size="large" color={colors.accent} />
+        {statusBar}
       </View>
     );
   }
@@ -59,7 +64,7 @@ function RootNavigator() {
         />
         <Stack.Screen name="transaction/new" options={{ presentation: "modal" }} />
       </Stack>
-      <StatusBar style={scheme === "dark" ? "light" : "dark"} />
+      {statusBar}
     </>
   );
 }
