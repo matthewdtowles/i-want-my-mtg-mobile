@@ -169,6 +169,13 @@ eas build  --platform ios --profile production   # produce a signed build (EAS c
 eas submit --platform ios --profile production   # upload that build to TestFlight
 ```
 
+**One-command shortcut:** `npm run ship:ios` (`scripts/ship-ios.sh`) does
+build + auto-submit in one go. It also **syncs the app version from the latest
+git tag** into `app.json` first - important because EAS `appVersionSource:
+remote` only manages the build *number*; the version string TestFlight shows
+comes from `app.json`, so without the sync every build keeps shipping as the old
+placeholder version. The script commits that version bump (push it afterward).
+
 **`eas submit` uploads to TestFlight only - never the public App Store.**
 TestFlight is the private beta channel (you + invited testers). A public App
 Store release is a separate, deliberate action you take by hand in App Store
