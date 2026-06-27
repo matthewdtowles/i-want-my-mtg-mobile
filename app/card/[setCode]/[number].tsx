@@ -15,6 +15,7 @@ import { fetchCard } from "../../../lib/api/catalog";
 import { formatPrice } from "../../../lib/format";
 import { CardThumb } from "../../../components/CardThumb";
 import { AddToInventory } from "../../../components/AddToInventory";
+import { ErrorState } from "../../../components/ErrorState";
 import { useTheme } from "../../../lib/theme/ThemeContext";
 import type { ThemeColors } from "../../../lib/theme/colors";
 
@@ -48,9 +49,13 @@ export default function CardDetailScreen() {
   }
   if (query.isError) {
     return (
-      <Text style={styles.message}>
-        {query.error instanceof Error ? query.error.message : "Failed to load."}
-      </Text>
+      <>
+        <Stack.Screen options={{ title: "Card" }} />
+        <ErrorState
+          message={query.error instanceof Error ? query.error.message : "Failed to load."}
+          onRetry={() => query.refetch()}
+        />
+      </>
     );
   }
 
