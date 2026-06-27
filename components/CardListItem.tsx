@@ -9,13 +9,12 @@ import { useTheme } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
 import { CardThumb } from "./CardThumb";
 
-type Props = {
-  card: ApiCard;
-  /** When true, the row toggles selection instead of navigating. */
-  selectable?: boolean;
-  selected?: boolean;
-  onToggleSelect?: () => void;
-};
+// Discriminated union: selection mode requires both `selected` and
+// `onToggleSelect`, so a selectable row can never be missing its handler.
+type Props = { card: ApiCard } & (
+  | { selectable?: false; selected?: never; onToggleSelect?: never }
+  | { selectable: true; selected: boolean; onToggleSelect: () => void }
+);
 
 export function CardListItem({ card, selectable, selected, onToggleSelect }: Props) {
   const { colors } = useTheme();

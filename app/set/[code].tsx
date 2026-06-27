@@ -52,12 +52,22 @@ export default function SetDetailScreen() {
   );
 
   const addMut = useMutation({
-    mutationFn: ({ ids, isFoil, qty }: { ids: string[]; isFoil: boolean; qty: number }) =>
-      bulkAddToInventory(ids, isFoil, qty),
+    mutationFn: ({
+      ids,
+      isFoil,
+      qty,
+    }: {
+      ids: string[];
+      isFoil: boolean;
+      qty: number;
+      total: number;
+    }) => bulkAddToInventory(ids, isFoil, qty),
     onSuccess: (added, vars) => {
       // ["inventory"] prefix also invalidates the per-card quantities caches.
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
-      const skipped = selectedCards.length - added;
+      // Counts are captured in `vars` at mutate() time, so a selection change
+      // while the request is in flight can't skew the message.
+      const skipped = vars.total - vars.ids.length;
       const finish = vars.isFoil ? "foil" : "normal";
       Alert.alert(
         "Added to inventory",
@@ -95,7 +105,12 @@ export default function SetDetailScreen() {
       );
       return;
     }
-    addMut.mutate({ ids: eligible.map((c) => c.id), isFoil, qty });
+    addMut.mutate({
+      ids: eligible.map((c) => c.id),
+      isFoil,
+      qty,
+      total: selectedCards.length,
+    });
   }
 
   const headerButton = code
@@ -137,14 +152,18 @@ export default function SetDetailScreen() {
           style={styles.list}
           data={cards}
           keyExtractor={(c) => c.id}
-          renderItem={({ item }) => (
-            <CardListItem
-              card={item}
-              selectable={selectMode}
-              selected={!!selected[item.id]}
-              onToggleSelect={() => toggle(item)}
-            />
-          )}
+          renderItem={({ item }) =>
+            selectMode ? (
+              <CardListItem
+                card={item}
+                selectable
+                selected={!!selected[item.id]}
+                onToggleSelect={() => toggle(item)}
+              />
+            ) : (
+              <CardListItem card={item} />
+            )
+          }
           onEndReached={() => query.hasNextPage && query.fetchNextPage()}
           onEndReachedThreshold={0.5}
           refreshControl={

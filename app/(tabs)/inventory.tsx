@@ -93,11 +93,14 @@ export default function InventoryScreen() {
   const summary = useMemo(() => {
     let qty = 0;
     let value = 0;
+    const cardIds = new Set<string>();
     for (const it of items) {
       qty += it.quantity;
       value += it.quantity * unitPrice(it);
+      cardIds.add(it.cardId);
     }
-    return { rows: items.length, qty, value };
+    // Distinct cards, not per-finish rows (a card owned in both finishes is one).
+    return { cards: cardIds.size, qty, value };
   }, [items]);
 
   const visible = useMemo(() => {
@@ -202,7 +205,7 @@ export default function InventoryScreen() {
     <View style={styles.screen}>
       <View style={styles.controls}>
         <Text style={styles.summary}>
-          {summary.rows} card{summary.rows === 1 ? "" : "s"} · {summary.qty} total ·{" "}
+          {summary.cards} card{summary.cards === 1 ? "" : "s"} · {summary.qty} total ·{" "}
           {formatPrice(summary.value)}
           {loadingMore ? " · loading…" : ""}
         </Text>
