@@ -91,7 +91,11 @@ export default function AccountScreen() {
         {profile.isPending ? (
           <ActivityIndicator style={styles.loading} color={colors.accent} />
         ) : profile.isError ? (
-          <Text style={styles.errorText}>Couldn't load your account.</Text>
+          <Text style={styles.errorText}>
+            {profile.error instanceof Error
+              ? profile.error.message
+              : "Couldn't load your account."}
+          </Text>
         ) : (
           <>
             {profile.data.name ? (

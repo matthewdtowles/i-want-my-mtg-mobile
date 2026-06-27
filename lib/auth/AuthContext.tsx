@@ -41,11 +41,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setAuthTokenGetter(() => tokenRef.current);
     setOnUnauthorized(() => {
+      // Only treat this as an expiry if we actually had a token; a 401 on an
+      // unauthenticated request (or right after a manual sign-out) shouldn't
+      // show the "session expired" notice.
+      const hadToken = tokenRef.current != null;
       tokenRef.current = null;
       setToken(null);
-      // Distinguish an expiry-driven sign-out from a manual one so the sign-in
-      // screen can explain why the user landed back there.
-      setSessionExpired(true);
+      if (hadToken) setSessionExpired(true);
       // Fire-and-forget; never let a SecureStore failure surface as an
       // unhandled rejection. In-memory state is already cleared above.
       clearToken().catch(() => {});
@@ -70,6 +72,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setToken(newToken);
       },
       async signOut() {
+        // Clear the ref synchronously so no in-flight request can attach the
+        // old bearer token before the next render syncs tokenRef.
+        tokenRef.current = null;
         // Clear in-memory state first so sign-out always completes, even if
         // SecureStore deletion fails (can happen on some devices / web).
         setSessionExpired(false);
