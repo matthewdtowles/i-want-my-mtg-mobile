@@ -16,3 +16,4 @@ export type ApiTransactionWrite = components["schemas"]["TransactionRequestDto"]
 export type ApiTransactionUpdate = components["schemas"]["TransactionUpdateRequestDto"];
 export type ApiPortfolioSummary = components["schemas"]["PortfolioSummaryApiDto"];
 export type ApiUser = components["schemas"]["UserApiResponseDto"];
+export type ApiPriceHistoryPoint = components["schemas"]["PriceHistoryPointDto"];

@@ -1,6 +1,11 @@
 import { api } from "./client";
 import { errMessage } from "./envelope";
-import type { ApiCard, ApiPaginationMeta, ApiSet } from "./types";
+import type {
+  ApiCard,
+  ApiPaginationMeta,
+  ApiPriceHistoryPoint,
+  ApiSet,
+} from "./types";
 
 export interface Page<T> {
   items: T[];
@@ -52,4 +57,16 @@ export async function fetchCard(
   const card = data?.data;
   if (!card) throw new Error("Card not found.");
   return card;
+}
+
+export async function fetchCardPriceHistory(
+  cardId: string,
+  days: number,
+): Promise<ApiPriceHistoryPoint[]> {
+  const { data, error, response } = await api.GET(
+    "/api/v1/cards/{cardId}/price-history",
+    { params: { path: { cardId }, query: { days: String(days) } } },
+  );
+  if (!response.ok) throw new Error(errMessage(error, "Failed to load price history."));
+  return data?.data ?? [];
 }

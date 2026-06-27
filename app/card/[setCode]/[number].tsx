@@ -15,6 +15,7 @@ import { fetchCard } from "../../../lib/api/catalog";
 import { formatPrice } from "../../../lib/format";
 import { CardThumb } from "../../../components/CardThumb";
 import { AddToInventory } from "../../../components/AddToInventory";
+import { CardPriceHistory } from "../../../components/CardPriceHistory";
 import { ErrorState } from "../../../components/ErrorState";
 import { useTheme } from "../../../lib/theme/ThemeContext";
 import type { ThemeColors } from "../../../lib/theme/colors";
@@ -84,6 +85,12 @@ export default function CardDetailScreen() {
       </View>
 
       <AddToInventory
+        cardId={card.id}
+        hasNonFoil={card.hasNonFoil}
+        hasFoil={card.hasFoil}
+      />
+
+      <CardPriceHistory
         cardId={card.id}
         hasNonFoil={card.hasNonFoil}
         hasFoil={card.hasFoil}
