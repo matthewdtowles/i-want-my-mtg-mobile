@@ -47,3 +47,27 @@ export async function fetchQuantities(
   if (!response.ok) throw new Error(errMessage(error, "Failed to load quantities."));
   return data?.data ?? [];
 }
+
+/**
+ * Add `addQty` of `isFoil` finish to each card's inventory. Because the write
+ * API sets an ABSOLUTE quantity (keyed by card + finish), we first read each
+ * card's current quantity and write `current + addQty` so existing counts are
+ * incremented, not clobbered. Returns the number of rows the server upserted.
+ */
+export async function bulkAddToInventory(
+  cardIds: string[],
+  isFoil: boolean,
+  addQty: number,
+): Promise<number> {
+  if (cardIds.length === 0 || addQty <= 0) return 0;
+  const current = await fetchQuantities(cardIds);
+  const byId = new Map(current.map((q) => [q.cardId, q]));
+  const writes: ApiInventoryWrite[] = cardIds.map((cardId) => {
+    const q = byId.get(cardId);
+    const existing = isFoil ? q?.foilQuantity ?? 0 : q?.normalQuantity ?? 0;
+    return { cardId, isFoil, quantity: existing + addQty };
+  });
+  // Report the server's authoritative upserted-row count, not the request size.
+  const saved = await saveInventory(writes);
+  return saved.length;
+}
