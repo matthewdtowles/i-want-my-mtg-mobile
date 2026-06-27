@@ -82,11 +82,16 @@ export function CardPriceHistory({ cardId, hasNonFoil, hasFoil }: Props) {
       ) : query.isError ? (
         <View style={styles.state}>
           <Text style={styles.muted}>Couldn’t load price history.</Text>
-          <Pressable onPress={() => query.refetch()} hitSlop={8}>
+          <Pressable
+            onPress={() => query.refetch()}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Retry"
+          >
             <Text style={styles.retry}>Retry</Text>
           </Pressable>
         </View>
-      ) : series.points.length < 2 ? (
+      ) : series.definedCount < 2 ? (
         <Text style={styles.empty}>Not enough price history yet.</Text>
       ) : (
         <Chart series={series} color={colors.accent} styles={styles} />
@@ -120,6 +125,8 @@ function Chip({
 
 type Series = {
   points: { date: string; value: number | undefined }[];
+  /** How many points actually have a value for the selected finish. */
+  definedCount: number;
   min: number;
   max: number;
   current: number | undefined;
@@ -144,6 +151,7 @@ function buildSeries(data: ApiPriceHistoryPoint[], finish: Finish): Series {
   }
   return {
     points,
+    definedCount: values.length,
     min,
     max,
     current,
