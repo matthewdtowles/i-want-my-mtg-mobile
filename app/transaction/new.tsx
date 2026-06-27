@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Alert,
   Pressable,
@@ -13,6 +13,8 @@ import {
 } from "react-native";
 
 import { createTransaction } from "../../lib/api/transactions";
+import { useTheme } from "../../lib/theme/ThemeContext";
+import type { ThemeColors } from "../../lib/theme/colors";
 
 function one(v: string | string[] | undefined): string {
   return Array.isArray(v) ? v[0] : v ?? "";
@@ -28,6 +30,8 @@ function todayLocal(): string {
 }
 
 export default function NewTransactionScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const params = useLocalSearchParams();
   const cardId = one(params.cardId);
   const name = one(params.name);
@@ -90,7 +94,11 @@ export default function NewTransactionScreen() {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+    >
       <Stack.Screen options={{ title: "Log transaction" }} />
 
       <Text style={styles.card}>
@@ -110,22 +118,24 @@ export default function NewTransactionScreen() {
         ))}
       </View>
 
-      <Field label="Quantity">
+      <Field label="Quantity" styles={styles}>
         <TextInput
           style={styles.input}
           value={quantity}
           onChangeText={setQuantity}
           keyboardType="number-pad"
+          placeholderTextColor={colors.placeholder}
         />
       </Field>
 
-      <Field label="Price per unit (USD)">
+      <Field label="Price per unit (USD)" styles={styles}>
         <TextInput
           style={styles.input}
           value={price}
           onChangeText={setPrice}
           keyboardType="decimal-pad"
           placeholder="0.00"
+          placeholderTextColor={colors.placeholder}
         />
       </Field>
 
@@ -136,22 +146,24 @@ export default function NewTransactionScreen() {
         </View>
       ) : null}
 
-      <Field label="Date (YYYY-MM-DD)">
+      <Field label="Date (YYYY-MM-DD)" styles={styles}>
         <TextInput
           style={styles.input}
           value={date}
           onChangeText={setDate}
           autoCapitalize="none"
           autoCorrect={false}
+          placeholderTextColor={colors.placeholder}
         />
       </Field>
 
-      <Field label="Notes (optional)">
+      <Field label="Notes (optional)" styles={styles}>
         <TextInput
           style={[styles.input, styles.notes]}
           value={notes}
           onChangeText={setNotes}
           multiline
+          placeholderTextColor={colors.placeholder}
         />
       </Field>
 
@@ -168,7 +180,15 @@ export default function NewTransactionScreen() {
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({
+  label,
+  children,
+  styles,
+}: {
+  label: string;
+  children: React.ReactNode;
+  styles: ReturnType<typeof createStyles>;
+}) {
   return (
     <View style={styles.field}>
       <Text style={styles.label}>{label}</Text>
@@ -177,40 +197,48 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-const styles = StyleSheet.create({
-  content: { padding: 24, gap: 16 },
-  card: { fontSize: 17, fontWeight: "700" },
-  typeRow: { flexDirection: "row", gap: 12 },
-  typeBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#d1d5db",
-    alignItems: "center",
-  },
-  typeBtnActive: { backgroundColor: "#6d28d9", borderColor: "#6d28d9" },
-  typeText: { fontSize: 15, fontWeight: "700", color: "#374151" },
-  typeTextActive: { color: "#fff" },
-  field: { gap: 6 },
-  label: { fontSize: 14, color: "#374151", fontWeight: "600" },
-  input: {
-    borderWidth: 1,
-    borderColor: "#d1d5db",
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 16,
-  },
-  notes: { minHeight: 72, textAlignVertical: "top" },
-  switchRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  submit: {
-    backgroundColor: "#6d28d9",
-    borderRadius: 8,
-    paddingVertical: 14,
-    alignItems: "center",
-    marginTop: 8,
-  },
-  submitDisabled: { opacity: 0.5 },
-  submitText: { color: "#fff", fontSize: 16, fontWeight: "600" },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    screen: { backgroundColor: colors.background },
+    content: { padding: 24, gap: 16, backgroundColor: colors.background },
+    card: { fontSize: 17, fontWeight: "700", color: colors.textPrimary },
+    typeRow: { flexDirection: "row", gap: 12 },
+    typeBtn: {
+      flex: 1,
+      paddingVertical: 12,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.inputBorder,
+      alignItems: "center",
+    },
+    typeBtnActive: { backgroundColor: colors.accent, borderColor: colors.accent },
+    typeText: { fontSize: 15, fontWeight: "700", color: colors.textSecondary },
+    typeTextActive: { color: colors.onAccent },
+    field: { gap: 6 },
+    label: { fontSize: 14, color: colors.textSecondary, fontWeight: "600" },
+    input: {
+      borderWidth: 1,
+      borderColor: colors.inputBorder,
+      borderRadius: 8,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      fontSize: 16,
+      color: colors.textPrimary,
+      backgroundColor: colors.surface,
+    },
+    notes: { minHeight: 72, textAlignVertical: "top" },
+    switchRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    submit: {
+      backgroundColor: colors.accent,
+      borderRadius: 8,
+      paddingVertical: 14,
+      alignItems: "center",
+      marginTop: 8,
+    },
+    submitDisabled: { opacity: 0.5 },
+    submitText: { color: colors.onAccent, fontSize: 16, fontWeight: "600" },
+  });

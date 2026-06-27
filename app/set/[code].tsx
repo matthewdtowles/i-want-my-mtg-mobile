@@ -6,6 +6,8 @@ import { ActivityIndicator, FlatList, StyleSheet, Text } from "react-native";
 import { fetchSetCards, type Page } from "../../lib/api/catalog";
 import type { ApiCard } from "../../lib/api/types";
 import { CardListItem } from "../../components/CardListItem";
+import { useTheme } from "../../lib/theme/ThemeContext";
+import type { ThemeColors } from "../../lib/theme/colors";
 
 function nextPage(last: Page<ApiCard>): number | undefined {
   const m = last.meta;
@@ -13,6 +15,8 @@ function nextPage(last: Page<ApiCard>): number | undefined {
 }
 
 export default function SetDetailScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const params = useLocalSearchParams<{ code: string | string[] }>();
   const code = Array.isArray(params.code) ? params.code[0] : params.code;
 
@@ -42,20 +46,23 @@ export default function SetDetailScreen() {
     <>
       <Stack.Screen options={{ title: code.toUpperCase() }} />
       {query.isPending ? (
-        <ActivityIndicator style={styles.center} size="large" />
+        <ActivityIndicator style={styles.center} size="large" color={colors.accent} />
       ) : query.isError ? (
         <Text style={styles.message}>
           {query.error instanceof Error ? query.error.message : "Failed to load."}
         </Text>
       ) : (
         <FlatList
+          style={styles.list}
           data={cards}
           keyExtractor={(c) => c.id}
           renderItem={({ item }) => <CardListItem card={item} />}
           onEndReached={() => query.hasNextPage && query.fetchNextPage()}
           onEndReachedThreshold={0.5}
           ListFooterComponent={
-            query.isFetchingNextPage ? <ActivityIndicator style={styles.footer} /> : null
+            query.isFetchingNextPage ? (
+              <ActivityIndicator style={styles.footer} color={colors.accent} />
+            ) : null
           }
         />
       )}
@@ -63,8 +70,14 @@ export default function SetDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  center: { marginTop: 40 },
-  footer: { marginVertical: 16 },
-  message: { textAlign: "center", marginTop: 40, color: "#6b7280" },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    list: { backgroundColor: colors.background },
+    center: { marginTop: 40 },
+    footer: { marginVertical: 16 },
+    message: {
+      textAlign: "center",
+      marginTop: 40,
+      color: colors.textMuted,
+    },
+  });

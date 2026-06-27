@@ -1,9 +1,14 @@
+import { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 import type { ApiTransaction } from "../lib/api/types";
 import { formatPrice } from "../lib/format";
+import { useTheme } from "../lib/theme/ThemeContext";
+import type { ThemeColors } from "../lib/theme/colors";
 
 export function TransactionListItem({ tx }: { tx: ApiTransaction }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const isSell = tx.type === "SELL";
   const total = tx.quantity * tx.pricePerUnit;
   return (
@@ -33,31 +38,32 @@ export function TransactionListItem({ tx }: { tx: ApiTransaction }) {
   );
 }
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#e5e7eb",
-  },
-  badge: {
-    width: 44,
-    paddingVertical: 3,
-    borderRadius: 6,
-    alignItems: "center",
-  },
-  buy: { backgroundColor: "#e0e7ff" },
-  sell: { backgroundColor: "#d1fae5" },
-  badgeText: { fontSize: 11, fontWeight: "700" },
-  buyText: { color: "#4338ca" },
-  sellText: { color: "#047857" },
-  body: { flex: 1 },
-  name: { fontSize: 15, fontWeight: "600" },
-  sub: { fontSize: 13, color: "#6b7280", marginTop: 2 },
-  amount: { alignItems: "flex-end" },
-  total: { fontSize: 15, fontWeight: "700" },
-  unit: { fontSize: 12, color: "#6b7280", marginTop: 2 },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    row: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      paddingVertical: 10,
+      paddingHorizontal: 16,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
+    },
+    badge: {
+      width: 44,
+      paddingVertical: 3,
+      borderRadius: 6,
+      alignItems: "center",
+    },
+    buy: { backgroundColor: colors.buyBg },
+    sell: { backgroundColor: colors.sellBg },
+    badgeText: { fontSize: 11, fontWeight: "700" },
+    buyText: { color: colors.buyText },
+    sellText: { color: colors.sellText },
+    body: { flex: 1 },
+    name: { fontSize: 15, fontWeight: "600", color: colors.textPrimary },
+    sub: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
+    amount: { alignItems: "flex-end" },
+    total: { fontSize: 15, fontWeight: "700", color: colors.textPrimary },
+    unit: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
+  });

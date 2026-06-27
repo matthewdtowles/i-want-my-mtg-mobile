@@ -6,6 +6,8 @@ import { fetchTransactions } from "../../lib/api/transactions";
 import type { Page } from "../../lib/api/catalog";
 import type { ApiTransaction } from "../../lib/api/types";
 import { TransactionListItem } from "../../components/TransactionListItem";
+import { useTheme } from "../../lib/theme/ThemeContext";
+import type { ThemeColors } from "../../lib/theme/colors";
 
 function nextPage(last: Page<ApiTransaction>): number | undefined {
   const m = last.meta;
@@ -13,6 +15,8 @@ function nextPage(last: Page<ApiTransaction>): number | undefined {
 }
 
 export default function TransactionsScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const query = useInfiniteQuery({
     queryKey: ["transactions"],
     queryFn: ({ pageParam }) => fetchTransactions(pageParam),
@@ -26,7 +30,7 @@ export default function TransactionsScreen() {
   );
 
   if (query.isPending) {
-    return <ActivityIndicator style={styles.center} size="large" />;
+    return <ActivityIndicator style={styles.center} size="large" color={colors.accent} />;
   }
   if (query.isError) {
     return (
@@ -48,22 +52,42 @@ export default function TransactionsScreen() {
 
   return (
     <FlatList
+      style={styles.list}
       data={items}
       keyExtractor={(tx) => String(tx.id)}
       renderItem={({ item }) => <TransactionListItem tx={item} />}
       onEndReached={() => query.hasNextPage && query.fetchNextPage()}
       onEndReachedThreshold={0.5}
       ListFooterComponent={
-        query.isFetchingNextPage ? <ActivityIndicator style={styles.footer} /> : null
+        query.isFetchingNextPage ? (
+          <ActivityIndicator style={styles.footer} color={colors.accent} />
+        ) : null
       }
     />
   );
 }
 
-const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
-  footer: { marginVertical: 16 },
-  message: { textAlign: "center", marginTop: 40, color: "#6b7280" },
-  empty: { fontSize: 16, fontWeight: "600", color: "#374151" },
-  emptyHint: { fontSize: 14, color: "#6b7280", marginTop: 6, textAlign: "center" },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    list: { backgroundColor: colors.background },
+    center: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 24,
+      backgroundColor: colors.background,
+    },
+    footer: { marginVertical: 16 },
+    message: {
+      textAlign: "center",
+      marginTop: 40,
+      color: colors.textMuted,
+    },
+    empty: { fontSize: 16, fontWeight: "600", color: colors.textSecondary },
+    emptyHint: {
+      fontSize: 14,
+      color: colors.textMuted,
+      marginTop: 6,
+      textAlign: "center",
+    },
+  });

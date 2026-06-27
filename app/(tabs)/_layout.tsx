@@ -3,14 +3,25 @@ import { Tabs } from "expo-router";
 import { Pressable } from "react-native";
 
 import { useAuth } from "../../lib/auth/AuthContext";
+import { useTheme } from "../../lib/theme/ThemeContext";
 
 export default function TabsLayout() {
   const { signOut } = useAuth();
+  const { colors } = useTheme();
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: "#6d28d9",
+        sceneStyle: { backgroundColor: colors.background },
+        tabBarActiveTintColor: colors.accent,
+        tabBarInactiveTintColor: colors.textMuted,
+        tabBarStyle: {
+          backgroundColor: colors.surface,
+          borderTopColor: colors.border,
+        },
+        headerStyle: { backgroundColor: colors.surface },
+        headerTintColor: colors.textPrimary,
+        headerTitleStyle: { color: colors.textPrimary },
         headerRight: () => (
           <Pressable
             onPress={() => signOut()}
@@ -18,7 +29,7 @@ export default function TabsLayout() {
             style={{ paddingHorizontal: 16 }}
             accessibilityLabel="Sign out"
           >
-            <Ionicons name="log-out-outline" size={24} color="#6d28d9" />
+            <Ionicons name="log-out-outline" size={24} color={colors.accent} />
           </Pressable>
         ),
       }}

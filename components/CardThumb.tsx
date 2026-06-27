@@ -1,6 +1,7 @@
 import { Image } from "react-native";
 
 import { cardImageUrl, type CardImageSize } from "../lib/images";
+import { useTheme } from "../lib/theme/ThemeContext";
 
 type Props = {
   imgSrc: string | null | undefined;
@@ -12,12 +13,18 @@ type Props = {
 const CARD_ASPECT = 0.717;
 
 export function CardThumb({ imgSrc, size = "small", width }: Props) {
+  const { colors } = useTheme();
   const uri = cardImageUrl(imgSrc, size);
   const height = width / CARD_ASPECT;
   return (
     <Image
       source={uri ? { uri } : undefined}
-      style={{ width, height, borderRadius: width * 0.06, backgroundColor: "#e5e7eb" }}
+      style={{
+        width,
+        height,
+        borderRadius: width * 0.06,
+        backgroundColor: colors.imagePlaceholder,
+      }}
       resizeMode="contain"
       accessibilityIgnoresInvertColors
     />

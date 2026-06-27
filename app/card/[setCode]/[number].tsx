@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, Stack, useLocalSearchParams } from "expo-router";
+import { useMemo } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -14,8 +15,12 @@ import { fetchCard } from "../../../lib/api/catalog";
 import { formatPrice } from "../../../lib/format";
 import { CardThumb } from "../../../components/CardThumb";
 import { AddToInventory } from "../../../components/AddToInventory";
+import { useTheme } from "../../../lib/theme/ThemeContext";
+import type { ThemeColors } from "../../../lib/theme/colors";
 
 export default function CardDetailScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const params = useLocalSearchParams<{
     setCode: string | string[];
     number: string | string[];
@@ -39,7 +44,7 @@ export default function CardDetailScreen() {
     );
   }
   if (query.isPending) {
-    return <ActivityIndicator style={styles.center} size="large" />;
+    return <ActivityIndicator style={styles.center} size="large" color={colors.accent} />;
   }
   if (query.isError) {
     return (
@@ -69,8 +74,8 @@ export default function CardDetailScreen() {
       </Text>
 
       <View style={styles.prices}>
-        <Price label="Normal" value={card.prices?.normal} show={card.hasNonFoil} />
-        <Price label="Foil" value={card.prices?.foil} show={card.hasFoil} />
+        <Price label="Normal" value={card.prices?.normal} show={card.hasNonFoil} styles={styles} />
+        <Price label="Foil" value={card.prices?.foil} show={card.hasFoil} styles={styles} />
       </View>
 
       <AddToInventory
@@ -113,10 +118,12 @@ function Price({
   label,
   value,
   show,
+  styles,
 }: {
   label: string;
   value: number | null | undefined;
   show: boolean;
+  styles: ReturnType<typeof createStyles>;
 }) {
   if (!show) return null;
   return (
@@ -127,34 +134,35 @@ function Price({
   );
 }
 
-const styles = StyleSheet.create({
-  content: { padding: 24, gap: 6 },
-  center: { marginTop: 40 },
-  message: { textAlign: "center", marginTop: 40, color: "#6b7280" },
-  imageWrap: { alignItems: "center", marginBottom: 12 },
-  name: { fontSize: 22, fontWeight: "700" },
-  meta: { fontSize: 15, color: "#4b5563" },
-  prices: { flexDirection: "row", gap: 12, marginVertical: 12 },
-  priceTile: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: "#d1fae5",
-    backgroundColor: "#ecfdf5",
-    borderRadius: 10,
-    padding: 12,
-    alignItems: "center",
-  },
-  priceLabel: { fontSize: 13, color: "#047857" },
-  priceValue: { fontSize: 18, fontWeight: "700", color: "#047857", marginTop: 2 },
-  oracle: { fontSize: 15, lineHeight: 22, marginTop: 8 },
-  artist: { fontSize: 13, color: "#9ca3af", marginTop: 12 },
-  logBtn: {
-    marginTop: 12,
-    borderWidth: 1,
-    borderColor: "#6d28d9",
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: "center",
-  },
-  logBtnText: { color: "#6d28d9", fontSize: 16, fontWeight: "600" },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    content: { padding: 24, gap: 6, backgroundColor: colors.background },
+    center: { marginTop: 40 },
+    message: { textAlign: "center", marginTop: 40, color: colors.textMuted },
+    imageWrap: { alignItems: "center", marginBottom: 12 },
+    name: { fontSize: 22, fontWeight: "700", color: colors.textPrimary },
+    meta: { fontSize: 15, color: colors.textSecondary },
+    prices: { flexDirection: "row", gap: 12, marginVertical: 12 },
+    priceTile: {
+      flex: 1,
+      borderWidth: 1,
+      borderColor: colors.successBorder,
+      backgroundColor: colors.successBg,
+      borderRadius: 10,
+      padding: 12,
+      alignItems: "center",
+    },
+    priceLabel: { fontSize: 13, color: colors.success },
+    priceValue: { fontSize: 18, fontWeight: "700", color: colors.success, marginTop: 2 },
+    oracle: { fontSize: 15, lineHeight: 22, marginTop: 8, color: colors.textPrimary },
+    artist: { fontSize: 13, color: colors.textMuted, marginTop: 12 },
+    logBtn: {
+      marginTop: 12,
+      borderWidth: 1,
+      borderColor: colors.accent,
+      borderRadius: 12,
+      paddingVertical: 14,
+      alignItems: "center",
+    },
+    logBtnText: { color: colors.accent, fontSize: 16, fontWeight: "600" },
+  });

@@ -1,5 +1,5 @@
 import * as WebBrowser from "expo-web-browser";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -15,12 +15,16 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "../lib/auth/AuthContext";
 import { API_BASE_URL } from "../lib/api/config";
+import { useTheme } from "../lib/theme/ThemeContext";
+import type { ThemeColors } from "../lib/theme/colors";
 
 // No API signup endpoint exists (registration needs email verification, which
 // is handled by the web app), so sign-up opens the web registration page.
 const SIGN_UP_URL = `${API_BASE_URL}/user/create`;
 
 export default function SignInScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { signIn } = useAuth();
   const insets = useSafeAreaInsets();
   const [email, setEmail] = useState("");
@@ -55,6 +59,7 @@ export default function SignInScreen() {
       <TextInput
         style={styles.input}
         placeholder="Email"
+        placeholderTextColor={colors.placeholder}
         autoCapitalize="none"
         autoComplete="email"
         keyboardType="email-address"
@@ -66,6 +71,7 @@ export default function SignInScreen() {
       <TextInput
         style={styles.input}
         placeholder="Password"
+        placeholderTextColor={colors.placeholder}
         autoCapitalize="none"
         secureTextEntry
         value={password}
@@ -80,7 +86,7 @@ export default function SignInScreen() {
         disabled={!canSubmit}
       >
         {submitting ? (
-          <ActivityIndicator color="#fff" />
+          <ActivityIndicator color={colors.onAccent} />
         ) : (
           <Text style={styles.buttonText}>Sign in</Text>
         )}
@@ -102,54 +108,59 @@ export default function SignInScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 24,
-    gap: 16,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "700",
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "#6b7280",
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#d1d5db",
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 16,
-  },
-  button: {
-    backgroundColor: "#6d28d9",
-    borderRadius: 8,
-    paddingVertical: 14,
-    alignItems: "center",
-    marginTop: 8,
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  signupRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    marginTop: 8,
-  },
-  signupText: {
-    color: "#6b7280",
-  },
-  signupLink: {
-    color: "#6d28d9",
-    fontWeight: "600",
-  },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      padding: 24,
+      gap: 16,
+      backgroundColor: colors.background,
+    },
+    title: {
+      fontSize: 28,
+      fontWeight: "700",
+      color: colors.textPrimary,
+    },
+    subtitle: {
+      fontSize: 16,
+      color: colors.textMuted,
+      marginBottom: 8,
+    },
+    input: {
+      borderWidth: 1,
+      borderColor: colors.inputBorder,
+      borderRadius: 8,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      fontSize: 16,
+      color: colors.textPrimary,
+      backgroundColor: colors.surface,
+    },
+    button: {
+      backgroundColor: colors.accent,
+      borderRadius: 8,
+      paddingVertical: 14,
+      alignItems: "center",
+      marginTop: 8,
+    },
+    buttonDisabled: {
+      opacity: 0.5,
+    },
+    buttonText: {
+      color: colors.onAccent,
+      fontSize: 16,
+      fontWeight: "600",
+    },
+    signupRow: {
+      flexDirection: "row",
+      justifyContent: "center",
+      marginTop: 8,
+    },
+    signupText: {
+      color: colors.textMuted,
+    },
+    signupLink: {
+      color: colors.accent,
+      fontWeight: "600",
+    },
+  });

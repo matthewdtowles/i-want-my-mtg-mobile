@@ -1,11 +1,16 @@
 import { Link } from "expo-router";
+import { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { ApiCard } from "../lib/api/types";
 import { formatPrice } from "../lib/format";
+import { useTheme } from "../lib/theme/ThemeContext";
+import type { ThemeColors } from "../lib/theme/colors";
 import { CardThumb } from "./CardThumb";
 
 export function CardListItem({ card }: { card: ApiCard }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <Link
       href={{
@@ -30,16 +35,17 @@ export function CardListItem({ card }: { card: ApiCard }) {
   );
 }
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-  },
-  body: { flex: 1 },
-  name: { fontSize: 15, fontWeight: "600" },
-  sub: { fontSize: 13, color: "#6b7280", marginTop: 2 },
-  price: { fontSize: 15, fontWeight: "600", color: "#047857" },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    row: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      paddingVertical: 8,
+      paddingHorizontal: 16,
+    },
+    body: { flex: 1 },
+    name: { fontSize: 15, fontWeight: "600", color: colors.textPrimary },
+    sub: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
+    price: { fontSize: 15, fontWeight: "600", color: colors.success },
+  });
