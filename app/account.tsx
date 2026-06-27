@@ -123,11 +123,15 @@ export default function AccountScreen() {
       </View>
 
       <Text style={styles.sectionLabel}>ACTIONS</Text>
-      <Pressable style={styles.row} onPress={confirmSignOut} accessibilityRole="button">
+      <Pressable
+        style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+        onPress={confirmSignOut}
+        accessibilityRole="button"
+      >
         <Text style={styles.rowText}>Sign out</Text>
       </Pressable>
       <Pressable
-        style={styles.row}
+        style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
         onPress={() => {
           WebBrowser.openBrowserAsync(PRIVACY_URL).catch(() => {
             Alert.alert("Couldn't open the browser", "Please try again.");
@@ -139,7 +143,7 @@ export default function AccountScreen() {
         <Text style={styles.rowHint}>Web ›</Text>
       </Pressable>
       <Pressable
-        style={styles.row}
+        style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
         onPress={confirmDelete}
         disabled={remove.isPending}
         accessibilityRole="button"
@@ -204,6 +208,7 @@ const createStyles = (colors: ThemeColors) =>
       paddingVertical: 16,
       paddingHorizontal: 16,
     },
+    rowPressed: { backgroundColor: colors.surfaceAlt },
     rowText: { fontSize: 16, color: colors.textPrimary },
     rowHint: { fontSize: 14, color: colors.textMuted },
     danger: { color: colors.danger, fontWeight: "600" },
