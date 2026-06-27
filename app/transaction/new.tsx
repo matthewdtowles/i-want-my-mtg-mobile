@@ -12,7 +12,7 @@ import {
   View,
 } from "react-native";
 
-import { createTransaction } from "../../lib/api/transactions";
+import { createTransaction, updateTransaction } from "../../lib/api/transactions";
 import { useTheme } from "../../lib/theme/ThemeContext";
 import type { ThemeColors } from "../../lib/theme/colors";
 
@@ -40,15 +40,25 @@ export default function NewTransactionScreen() {
   const canBeFoil = one(params.hasFoil) === "true";
   const canBeNonFoil = one(params.hasNonFoil) === "true";
 
+  // Edit mode: an `id` param means we're editing an existing transaction. The
+  // update API only accepts quantity/price/date/notes — type and finish are
+  // immutable — so those controls are locked when editing.
+  const editId = one(params.id);
+  const editing = editId !== "";
+
   const router = useRouter();
   const queryClient = useQueryClient();
 
-  const [type, setType] = useState<"BUY" | "SELL">("BUY");
-  const [quantity, setQuantity] = useState("1");
-  const [price, setPrice] = useState("");
-  const [isFoil, setIsFoil] = useState(canBeFoil && !canBeNonFoil);
-  const [date, setDate] = useState(todayLocal);
-  const [notes, setNotes] = useState("");
+  const [type, setType] = useState<"BUY" | "SELL">(
+    one(params.type) === "SELL" ? "SELL" : "BUY",
+  );
+  const [quantity, setQuantity] = useState(editing ? one(params.quantity) || "1" : "1");
+  const [price, setPrice] = useState(editing ? one(params.price) : "");
+  const [isFoil, setIsFoil] = useState(
+    editing ? one(params.isFoil) === "true" : canBeFoil && !canBeNonFoil,
+  );
+  const [date, setDate] = useState(editing ? one(params.date) || todayLocal() : todayLocal());
+  const [notes, setNotes] = useState(editing ? one(params.notes) : "");
 
   // Number() (unlike parseInt/parseFloat) returns NaN for trailing garbage like
   // "1abc" / "1.2.3" instead of truncating; the trim()!=="" guards stop an empty
@@ -66,31 +76,40 @@ export default function NewTransactionScreen() {
     dateValid;
 
   const mutation = useMutation({
-    mutationFn: createTransaction,
+    mutationFn: () =>
+      editing
+        ? updateTransaction(Number(editId), {
+            quantity: qty,
+            pricePerUnit: unitPrice,
+            date,
+            notes: notes.trim() || undefined,
+          })
+        : createTransaction({
+            cardId,
+            type,
+            quantity: qty,
+            pricePerUnit: unitPrice,
+            isFoil,
+            date,
+            notes: notes.trim() || undefined,
+          }),
     onSuccess: () => {
-      // A transaction adjusts inventory server-side, so refresh both.
+      // A transaction adjusts inventory server-side and shifts portfolio totals.
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["portfolio"] });
       router.back();
     },
     onError: (e) =>
       Alert.alert(
-        "Couldn't log transaction",
+        editing ? "Couldn't update transaction" : "Couldn't log transaction",
         e instanceof Error ? e.message : "Please try again.",
       ),
   });
 
   function onSubmit() {
     if (!valid) return;
-    mutation.mutate({
-      cardId,
-      type,
-      quantity: qty,
-      pricePerUnit: unitPrice,
-      isFoil,
-      date,
-      notes: notes.trim() || undefined,
-    });
+    mutation.mutate();
   }
 
   return (
@@ -99,7 +118,7 @@ export default function NewTransactionScreen() {
       contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled"
     >
-      <Stack.Screen options={{ title: "Log transaction" }} />
+      <Stack.Screen options={{ title: editing ? "Edit transaction" : "Log transaction" }} />
 
       <Text style={styles.card}>
         {name || cardId}
@@ -110,13 +129,21 @@ export default function NewTransactionScreen() {
         {(["BUY", "SELL"] as const).map((t) => (
           <Pressable
             key={t}
-            style={[styles.typeBtn, type === t && styles.typeBtnActive]}
+            style={[
+              styles.typeBtn,
+              type === t && styles.typeBtnActive,
+              editing && type !== t && styles.typeBtnLocked,
+            ]}
             onPress={() => setType(t)}
+            disabled={editing}
           >
             <Text style={[styles.typeText, type === t && styles.typeTextActive]}>{t}</Text>
           </Pressable>
         ))}
       </View>
+      {editing ? (
+        <Text style={styles.lockHint}>Type and finish can’t be changed when editing.</Text>
+      ) : null}
 
       <Field label="Quantity" styles={styles}>
         <TextInput
@@ -139,7 +166,13 @@ export default function NewTransactionScreen() {
         />
       </Field>
 
-      {canBeFoil && canBeNonFoil ? (
+      {editing ? (
+        // Finish is immutable on update, so show it read-only for clarity.
+        <View style={styles.switchRow}>
+          <Text style={styles.label}>Finish</Text>
+          <Text style={styles.readonlyValue}>{isFoil ? "Foil" : "Normal"}</Text>
+        </View>
+      ) : canBeFoil && canBeNonFoil ? (
         <View style={styles.switchRow}>
           <Text style={styles.label}>Foil</Text>
           <Switch value={isFoil} onValueChange={setIsFoil} />
@@ -173,7 +206,11 @@ export default function NewTransactionScreen() {
         disabled={!valid || mutation.isPending}
       >
         <Text style={styles.submitText}>
-          {mutation.isPending ? "Saving…" : `Log ${type.toLowerCase()}`}
+          {mutation.isPending
+            ? "Saving…"
+            : editing
+              ? "Save changes"
+              : `Log ${type.toLowerCase()}`}
         </Text>
       </Pressable>
     </ScrollView>
@@ -212,10 +249,13 @@ const createStyles = (colors: ThemeColors) =>
       alignItems: "center",
     },
     typeBtnActive: { backgroundColor: colors.accent, borderColor: colors.accent },
+    typeBtnLocked: { opacity: 0.4 },
     typeText: { fontSize: 15, fontWeight: "700", color: colors.textSecondary },
     typeTextActive: { color: colors.onAccent },
+    lockHint: { fontSize: 12, color: colors.textMuted, marginTop: -8 },
     field: { gap: 6 },
     label: { fontSize: 14, color: colors.textSecondary, fontWeight: "600" },
+    readonlyValue: { fontSize: 15, color: colors.textPrimary, fontWeight: "600" },
     input: {
       borderWidth: 1,
       borderColor: colors.inputBorder,

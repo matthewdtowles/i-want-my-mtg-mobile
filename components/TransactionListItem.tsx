@@ -7,7 +7,13 @@ import { formatPrice } from "../lib/format";
 import { useTheme } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
 
-export function TransactionListItem({ tx }: { tx: ApiTransaction }) {
+export function TransactionListItem({
+  tx,
+  onLongPress,
+}: {
+  tx: ApiTransaction;
+  onLongPress?: () => void;
+}) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const isSell = tx.type === "SELL";
@@ -43,6 +49,17 @@ export function TransactionListItem({ tx }: { tx: ApiTransaction }) {
   );
 
   if (!navigable) {
+    // Still allow long-press actions (edit/delete) even without a card link.
+    if (onLongPress) {
+      return (
+        <Pressable
+          style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+          onLongPress={onLongPress}
+        >
+          {content}
+        </Pressable>
+      );
+    }
     return <View style={styles.row}>{content}</View>;
   }
 
@@ -56,6 +73,7 @@ export function TransactionListItem({ tx }: { tx: ApiTransaction }) {
     >
       <Pressable
         style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+        onLongPress={onLongPress}
         accessibilityRole="button"
         accessibilityLabel={`View ${tx.cardName ?? "card"}`}
       >

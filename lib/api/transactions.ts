@@ -1,7 +1,11 @@
 import { api } from "./client";
 import type { Page } from "./catalog";
 import { errMessage } from "./envelope";
-import type { ApiTransaction, ApiTransactionWrite } from "./types";
+import type {
+  ApiTransaction,
+  ApiTransactionUpdate,
+  ApiTransactionWrite,
+} from "./types";
 
 export async function fetchTransactions(
   page = 1,
@@ -22,4 +26,25 @@ export async function createTransaction(
   const tx = data?.data;
   if (!tx) throw new Error("Failed to log transaction.");
   return tx;
+}
+
+export async function updateTransaction(
+  id: number,
+  body: ApiTransactionUpdate,
+): Promise<ApiTransaction> {
+  const { data, error, response } = await api.PUT("/api/v1/transactions/{id}", {
+    params: { path: { id } },
+    body,
+  });
+  if (!response.ok) throw new Error(errMessage(error, "Failed to update transaction."));
+  const tx = data?.data;
+  if (!tx) throw new Error("Failed to update transaction.");
+  return tx;
+}
+
+export async function deleteTransaction(id: number): Promise<void> {
+  const { error, response } = await api.DELETE("/api/v1/transactions/{id}", {
+    params: { path: { id } },
+  });
+  if (!response.ok) throw new Error(errMessage(error, "Failed to delete transaction."));
 }
