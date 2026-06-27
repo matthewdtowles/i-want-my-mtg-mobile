@@ -3,7 +3,8 @@
 Where the v1 build stands and how to pick it up. See the web repo's
 `ROADMAP.md` §7.1 for the overall plan.
 
-_Last updated: 2026-06-24 (iOS distribution / TestFlight)._
+_Last updated: 2026-06-27 (v2 UX wave: dark mode, account, inventory bulk/search,
+tx edit/delete, price history)._
 
 ## What this is
 
@@ -27,6 +28,40 @@ Expo (SDK 56), TypeScript, expo-router, TanStack Query. It consumes the existing
 - #7 portfolio overview - **done**
 - #8 distribution (TestFlight + Play internal) - **in progress**: iOS ships to
   TestFlight (done 2026-06-24); Android / Play internal track not started
+
+## v2 UX wave (2026-06-27)
+
+A round of UX issues (#21-#32) was scoped from a codebase review. Shipped as a
+stack of squash-merged PRs (#33, #34, #38, #39, #40, #41), each reviewed
+(Copilot) with fixes applied:
+
+- **#21 Dark mode** (#33) - `lib/theme/` token system (`colors.ts` light/dark
+  palettes + `ThemeContext.tsx` `ThemeProvider`/`useTheme()`), applied across
+  every screen/component via `createStyles(colors)` factories; themed nav chrome
+  + status bar. The mode override (`system`/`light`/`dark`) persists in
+  secure-store.
+- **#22 + #29 List UX** (#34) - transaction rows tap through to card detail;
+  shared `components/ErrorState.tsx` (message + Retry) and pull-to-refresh on
+  Browse / Inventory / Transactions / Set detail / Portfolio.
+- **#26 Account/Settings** (#38) - `app/account.tsx` (reached from a header
+  person icon): profile (`GET /user`), appearance toggle, confirmed sign-out,
+  **in-app account deletion** (`DELETE /user`, double-confirmed - satisfies the
+  App Store requirement in #20). Plus the **#25** client slice: `AuthContext`
+  tracks `sessionExpired` and the sign-in screen shows a notice on a 401.
+- **#24 + #28 Inventory** (#39) - multi-select **bulk add** from set detail
+  (`components/BulkAddBar.tsx`, `bulkAddToInventory` reads current qty then
+  writes `current + delta` so the absolute-quantity API doesn't clobber);
+  inventory **search / finish-filter / sort** + a distinct-card/qty/value
+  summary (auto-pages the full list so totals are complete).
+- **#27 Edit/delete transactions** (#40) - long-press a row for Edit/Delete;
+  the log form doubles as the edit form (`id` param -> `PUT`; type/finish locked
+  since the update DTO omits them); `updateTransaction`/`deleteTransaction`.
+- **#30 Price history** (#41) - `components/CardPriceHistory.tsx` on card detail:
+  range + finish toggles and a **dependency-free** bar chart (plain Views, no
+  `react-native-svg`) off the typed `GET /cards/{cardId}/price-history`.
+
+**Blocked, not built** (need backend - see "Cross-repo backend dependencies"):
+#23 decks, #31 buy-list, #32 price-alerts/notifications, and the #25 core.
 
 ## Inventory (#5) notes
 
@@ -129,11 +164,19 @@ repo's `ROADMAP.md` §7.1 "Store readiness".
   `setAuthTokenGetter`; signs out on 401 via `setOnUnauthorized`.
 - `lib/api/types.ts` - aliases over generated `components["schemas"][...]`.
 - `lib/api/catalog.ts` - typed request helpers (browse). Pattern to copy for #5+.
-- `lib/auth/` - `AuthContext` (`useAuth()`), token in `expo-secure-store`.
-  Sign-up opens the web `/user/create` page (no API signup endpoint).
+- `lib/auth/` - `AuthContext` (`useAuth()`, incl. `sessionExpired`), token in
+  `expo-secure-store`. `signOut` clears `tokenRef` synchronously; a 401 only
+  flags expiry when a token was present. Sign-up opens web `/user/create`.
+- `lib/theme/` - `colors.ts` (light/dark `ThemeColors` palettes) +
+  `ThemeContext.tsx` (`ThemeProvider`/`useTheme()`; persists the mode override).
+  Components read tokens via a `createStyles(colors)` factory + `useMemo`.
+- `lib/api/user.ts` - `fetchProfile` / `deleteAccount`.
 - `lib/images.ts` - card images: `https://cards.scryfall.io/{size}/front/{imgSrc}`.
-- `app/` - expo-router routes: `(tabs)` shell, `sign-in`, `set/[code]`,
-  `card/[setCode]/[number]`.
+- `app/` - expo-router routes: `(tabs)` shell, `sign-in`, `account`,
+  `set/[code]`, `card/[setCode]/[number]`, `transaction/new` (create + edit).
+- `components/` - shared UI incl. `ErrorState` (message + Retry), `BulkAddBar`
+  (multi-select add), `CardPriceHistory` (dependency-free bar chart),
+  `CardListItem` (optional discriminated-union selection mode).
 
 ## Conventions
 
@@ -155,9 +198,31 @@ repo's `ROADMAP.md` §7.1 "Store readiness".
 
 - Per-card **legality** is not in the API card response (only a search filter);
   card detail can't show it without a backend change.
-- Backend OpenAPI response schemas exist for card/set/inventory/transaction/
-  portfolio/user/auth. Other controllers (deck, buy-list, optimizer, price-alert,
-  sealed, api-keys) are not annotated yet - apply the same `ApiOkEnvelope`
-  decorator in the backend when a feature needs them.
-- `app.json` version is `0.1.0` but EAS `appVersionSource: remote` ignores it.
+- `app.json` version is `0.1.0` but EAS `appVersionSource: remote` ignores it
+  (the build version is stamped from the latest git tag, not app.json).
 - iOS EAS build/submit is set up (see Distribution above); Android is not.
+
+## Cross-repo backend dependencies (backend hand-off)
+
+Three mobile features are **blocked on the backend** (`matthewdtowles/i-want-my-mtg`).
+Each is tracked as a mobile issue with the exact, verified details:
+
+- **#35 - refresh token / long-lived session.** Login returns only
+  `accessToken` (no refresh token). Add `POST /api/v1/auth/refresh` (rotating,
+  revocable) or a long-lived mobile token. Unblocks the **#25** core.
+- **#36 - OpenAPI response annotations (`ApiOkEnvelope`).** Deck, buy-list,
+  **price-alert, and notification** GET responses serialize as
+  `content?: never` (request bodies are typed; responses are not). Annotate
+  them so the generated client gets return types. Unblocks **#23 / #31 / #32**.
+- **#37 - push device registration.** `POST /api/v1/notifications/devices`
+  (+ unregister) + Expo Push fan-out, for the push half of **#32**.
+
+**To continue this in a new session:** start a Claude Code session **scoped to
+both `i-want-my-mtg` and `i-want-my-mtg-mobile`** (so it can read mobile issues
+#35/#36/#37 and this repo's generated `lib/api/schema.ts` to see exactly which
+operations are untyped). In the backend, the response-annotation work mirrors
+the existing `ApiOkEnvelope` usage on card/set/inventory/transaction/portfolio/
+user/auth controllers. **Verification loop after each backend change:** here run
+`npm run gen:api` -> the previously-`content?: never` operations gain typed
+responses -> build the corresponding mobile feature. CI already fails on
+`schema.ts` drift, so regenerate + commit when the backend spec changes.
