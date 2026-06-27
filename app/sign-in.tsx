@@ -25,7 +25,7 @@ const SIGN_UP_URL = `${API_BASE_URL}/user/create`;
 export default function SignInScreen() {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const { signIn } = useAuth();
+  const { signIn, sessionExpired } = useAuth();
   const insets = useSafeAreaInsets();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -55,6 +55,14 @@ export default function SignInScreen() {
     >
       <Text style={styles.title}>I Want My MTG</Text>
       <Text style={styles.subtitle}>Sign in to your collection</Text>
+
+      {sessionExpired ? (
+        <View style={styles.notice}>
+          <Text style={styles.noticeText}>
+            Your session expired. Please sign in again.
+          </Text>
+        </View>
+      ) : null}
 
       <TextInput
         style={styles.input}
@@ -125,6 +133,17 @@ const createStyles = (colors: ThemeColors) =>
       fontSize: 16,
       color: colors.textMuted,
       marginBottom: 8,
+    },
+    notice: {
+      backgroundColor: colors.surfaceAlt,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 8,
+      padding: 12,
+    },
+    noticeText: {
+      color: colors.textSecondary,
+      fontSize: 14,
     },
     input: {
       borderWidth: 1,

@@ -1,12 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Tabs } from "expo-router";
+import { Link, Tabs } from "expo-router";
 import { Pressable } from "react-native";
 
-import { useAuth } from "../../lib/auth/AuthContext";
 import { useTheme } from "../../lib/theme/ThemeContext";
 
 export default function TabsLayout() {
-  const { signOut } = useAuth();
   const { colors } = useTheme();
 
   return (
@@ -23,14 +21,15 @@ export default function TabsLayout() {
         headerTintColor: colors.textPrimary,
         headerTitleStyle: { color: colors.textPrimary },
         headerRight: () => (
-          <Pressable
-            onPress={() => signOut()}
-            hitSlop={12}
-            style={{ paddingHorizontal: 16 }}
-            accessibilityLabel="Sign out"
-          >
-            <Ionicons name="log-out-outline" size={24} color={colors.accent} />
-          </Pressable>
+          <Link href="/account" asChild>
+            <Pressable
+              hitSlop={12}
+              style={{ paddingHorizontal: 16 }}
+              accessibilityLabel="Account and settings"
+            >
+              <Ionicons name="person-circle-outline" size={26} color={colors.accent} />
+            </Pressable>
+          </Link>
         ),
       }}
     >

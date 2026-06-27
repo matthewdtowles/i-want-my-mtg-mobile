@@ -14,3 +14,4 @@ export type ApiInventoryQuantity = components["schemas"]["InventoryQuantityApiDt
 export type ApiTransaction = components["schemas"]["TransactionApiItemDto"];
 export type ApiTransactionWrite = components["schemas"]["TransactionRequestDto"];
 export type ApiPortfolioSummary = components["schemas"]["PortfolioSummaryApiDto"];
+export type ApiUser = components["schemas"]["UserApiResponseDto"];
