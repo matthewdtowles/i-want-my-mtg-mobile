@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
   FlatList,
   Pressable,
+  RefreshControl,
   StyleSheet,
   Text,
   TextInput,
@@ -15,6 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { fetchSets, searchCards, type Page } from "../../lib/api/catalog";
 import type { ApiCard, ApiSet } from "../../lib/api/types";
 import { CardListItem } from "../../components/CardListItem";
+import { ErrorState } from "../../components/ErrorState";
 import { useDebounce } from "../../lib/useDebounce";
 import { useTheme } from "../../lib/theme/ThemeContext";
 import type { ThemeColors } from "../../lib/theme/colors";
@@ -67,9 +69,12 @@ export default function BrowseScreen() {
       {active.isPending ? (
         <ActivityIndicator style={styles.center} size="large" color={colors.accent} />
       ) : active.isError ? (
-        <Text style={styles.message}>
-          {active.error instanceof Error ? active.error.message : "Something went wrong."}
-        </Text>
+        <ErrorState
+          message={
+            active.error instanceof Error ? active.error.message : "Something went wrong."
+          }
+          onRetry={() => active.refetch()}
+        />
       ) : searching ? (
         <CardResults query={cardsQuery} styles={styles} accent={colors.accent} />
       ) : (
@@ -99,6 +104,13 @@ function SetResults({
       renderItem={({ item }) => <SetRow set={item} styles={styles} />}
       onEndReached={() => query.hasNextPage && query.fetchNextPage()}
       onEndReachedThreshold={0.5}
+      refreshControl={
+        <RefreshControl
+          refreshing={query.isRefetching && !query.isFetchingNextPage}
+          onRefresh={() => query.refetch()}
+          tintColor={accent}
+        />
+      }
       ListFooterComponent={
         query.isFetchingNextPage ? (
           <ActivityIndicator style={styles.footer} color={accent} />
@@ -131,6 +143,13 @@ function CardResults({
       renderItem={({ item }) => <CardListItem card={item} />}
       onEndReached={() => query.hasNextPage && query.fetchNextPage()}
       onEndReachedThreshold={0.5}
+      refreshControl={
+        <RefreshControl
+          refreshing={query.isRefetching && !query.isFetchingNextPage}
+          onRefresh={() => query.refetch()}
+          tintColor={accent}
+        />
+      }
       ListFooterComponent={
         query.isFetchingNextPage ? (
           <ActivityIndicator style={styles.footer} color={accent} />

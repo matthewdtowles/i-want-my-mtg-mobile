@@ -1,5 +1,6 @@
+import { Link } from "expo-router";
 import { useMemo } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { ApiTransaction } from "../lib/api/types";
 import { formatPrice } from "../lib/format";
@@ -11,8 +12,12 @@ export function TransactionListItem({ tx }: { tx: ApiTransaction }) {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const isSell = tx.type === "SELL";
   const total = tx.quantity * tx.pricePerUnit;
-  return (
-    <View style={styles.row}>
+  // Only link to card detail when we have both pieces of the route; some rows
+  // can have a null card relation (mirrors InventoryListItem's guard).
+  const navigable = !!tx.setCode && !!tx.cardNumber;
+
+  const content = (
+    <>
       <View style={[styles.badge, isSell ? styles.sell : styles.buy]}>
         <Text style={[styles.badgeText, isSell ? styles.sellText : styles.buyText]}>
           {tx.type}
@@ -34,7 +39,29 @@ export function TransactionListItem({ tx }: { tx: ApiTransaction }) {
           {tx.quantity} × {formatPrice(tx.pricePerUnit)}
         </Text>
       </View>
-    </View>
+    </>
+  );
+
+  if (!navigable) {
+    return <View style={styles.row}>{content}</View>;
+  }
+
+  return (
+    <Link
+      href={{
+        pathname: "/card/[setCode]/[number]",
+        params: { setCode: tx.setCode, number: tx.cardNumber },
+      }}
+      asChild
+    >
+      <Pressable
+        style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+        accessibilityRole="button"
+        accessibilityLabel={`View ${tx.cardName ?? "card"}`}
+      >
+        {content}
+      </Pressable>
+    </Link>
   );
 }
 
@@ -49,6 +76,7 @@ const createStyles = (colors: ThemeColors) =>
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.border,
     },
+    rowPressed: { backgroundColor: colors.surfaceAlt },
     badge: {
       width: 44,
       paddingVertical: 3,

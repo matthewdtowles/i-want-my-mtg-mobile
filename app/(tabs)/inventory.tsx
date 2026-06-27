@@ -5,12 +5,20 @@ import {
   type InfiniteData,
 } from "@tanstack/react-query";
 import { useMemo } from "react";
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
 import { fetchInventory, saveInventory, deleteInventory } from "../../lib/api/inventory";
 import type { Page } from "../../lib/api/catalog";
 import type { ApiInventoryItem } from "../../lib/api/types";
 import { InventoryListItem } from "../../components/InventoryListItem";
+import { ErrorState } from "../../components/ErrorState";
 import { useTheme } from "../../lib/theme/ThemeContext";
 import type { ThemeColors } from "../../lib/theme/colors";
 
@@ -94,9 +102,12 @@ export default function InventoryScreen() {
   }
   if (query.isError) {
     return (
-      <Text style={styles.message}>
-        {query.error instanceof Error ? query.error.message : "Failed to load inventory."}
-      </Text>
+      <ErrorState
+        message={
+          query.error instanceof Error ? query.error.message : "Failed to load inventory."
+        }
+        onRetry={() => query.refetch()}
+      />
     );
   }
   if (items.length === 0) {
@@ -125,6 +136,13 @@ export default function InventoryScreen() {
       )}
       onEndReached={() => query.hasNextPage && query.fetchNextPage()}
       onEndReachedThreshold={0.5}
+      refreshControl={
+        <RefreshControl
+          refreshing={query.isRefetching && !query.isFetchingNextPage}
+          onRefresh={() => query.refetch()}
+          tintColor={colors.accent}
+        />
+      }
       ListFooterComponent={
         query.isFetchingNextPage ? (
           <ActivityIndicator style={styles.footer} color={colors.accent} />
@@ -145,11 +163,6 @@ const createStyles = (colors: ThemeColors) =>
       backgroundColor: colors.background,
     },
     footer: { marginVertical: 16 },
-    message: {
-      textAlign: "center",
-      marginTop: 40,
-      color: colors.textMuted,
-    },
     empty: { fontSize: 16, fontWeight: "600", color: colors.textSecondary },
     emptyHint: {
       fontSize: 14,

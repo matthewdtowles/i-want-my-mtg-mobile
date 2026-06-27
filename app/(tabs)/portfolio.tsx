@@ -13,6 +13,7 @@ import {
 
 import { fetchPortfolioSummary, refreshPortfolio } from "../../lib/api/portfolio";
 import { formatPrice } from "../../lib/format";
+import { ErrorState } from "../../components/ErrorState";
 import { useTheme } from "../../lib/theme/ThemeContext";
 import type { ThemeColors } from "../../lib/theme/colors";
 
@@ -43,9 +44,12 @@ export default function PortfolioScreen() {
   }
   if (query.isError) {
     return (
-      <Text style={styles.message}>
-        {query.error instanceof Error ? query.error.message : "Failed to load portfolio."}
-      </Text>
+      <ErrorState
+        message={
+          query.error instanceof Error ? query.error.message : "Failed to load portfolio."
+        }
+        onRetry={() => query.refetch()}
+      />
     );
   }
 
@@ -166,7 +170,6 @@ const createStyles = (colors: ThemeColors) =>
       gap: 16,
       backgroundColor: colors.background,
     },
-    message: { textAlign: "center", marginTop: 40, color: colors.textMuted },
     empty: {
       fontSize: 16,
       fontWeight: "600",

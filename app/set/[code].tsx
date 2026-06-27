@@ -1,11 +1,12 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { useMemo } from "react";
-import { ActivityIndicator, FlatList, StyleSheet, Text } from "react-native";
+import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text } from "react-native";
 
 import { fetchSetCards, type Page } from "../../lib/api/catalog";
 import type { ApiCard } from "../../lib/api/types";
 import { CardListItem } from "../../components/CardListItem";
+import { ErrorState } from "../../components/ErrorState";
 import { useTheme } from "../../lib/theme/ThemeContext";
 import type { ThemeColors } from "../../lib/theme/colors";
 
@@ -48,9 +49,10 @@ export default function SetDetailScreen() {
       {query.isPending ? (
         <ActivityIndicator style={styles.center} size="large" color={colors.accent} />
       ) : query.isError ? (
-        <Text style={styles.message}>
-          {query.error instanceof Error ? query.error.message : "Failed to load."}
-        </Text>
+        <ErrorState
+          message={query.error instanceof Error ? query.error.message : "Failed to load."}
+          onRetry={() => query.refetch()}
+        />
       ) : (
         <FlatList
           style={styles.list}
@@ -59,6 +61,13 @@ export default function SetDetailScreen() {
           renderItem={({ item }) => <CardListItem card={item} />}
           onEndReached={() => query.hasNextPage && query.fetchNextPage()}
           onEndReachedThreshold={0.5}
+          refreshControl={
+            <RefreshControl
+              refreshing={query.isRefetching && !query.isFetchingNextPage}
+              onRefresh={() => query.refetch()}
+              tintColor={colors.accent}
+            />
+          }
           ListFooterComponent={
             query.isFetchingNextPage ? (
               <ActivityIndicator style={styles.footer} color={colors.accent} />
