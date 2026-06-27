@@ -16,6 +16,12 @@ type AuthState = {
   /** True until the stored token has been loaded on startup. */
   initializing: boolean;
   isAuthenticated: boolean;
+  /**
+   * True when the session ended because the token expired/was rejected (a 401),
+   * as opposed to an explicit sign-out. Lets the sign-in screen explain why the
+   * user is back here. Cleared on a successful sign-in or manual sign-out.
+   */
+  sessionExpired: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
 };
@@ -25,6 +31,7 @@ const AuthContext = createContext<AuthState | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [initializing, setInitializing] = useState(true);
+  const [sessionExpired, setSessionExpired] = useState(false);
 
   // Keep a ref so the API client's token getter always reads the latest token
   // without re-registering the middleware on every change.
@@ -34,8 +41,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setAuthTokenGetter(() => tokenRef.current);
     setOnUnauthorized(() => {
+      // Only treat this as an expiry if we actually had a token; a 401 on an
+      // unauthenticated request (or right after a manual sign-out) shouldn't
+      // show the "session expired" notice.
+      const hadToken = tokenRef.current != null;
       tokenRef.current = null;
       setToken(null);
+      if (hadToken) setSessionExpired(true);
       // Fire-and-forget; never let a SecureStore failure surface as an
       // unhandled rejection. In-memory state is already cleared above.
       clearToken().catch(() => {});
@@ -52,14 +64,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       initializing,
       isAuthenticated: token != null,
+      sessionExpired,
       async signIn(email, password) {
         const newToken = await loginRequest(email, password);
         await storeToken(newToken);
+        setSessionExpired(false);
         setToken(newToken);
       },
       async signOut() {
+        // Clear the ref synchronously so no in-flight request can attach the
+        // old bearer token before the next render syncs tokenRef.
+        tokenRef.current = null;
         // Clear in-memory state first so sign-out always completes, even if
         // SecureStore deletion fails (can happen on some devices / web).
+        setSessionExpired(false);
         setToken(null);
         try {
           await clearToken();
@@ -68,7 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       },
     }),
-    [initializing, token],
+    [initializing, token, sessionExpired],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
