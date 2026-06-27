@@ -96,11 +96,6 @@ const createStyles = (colors: ThemeColors) =>
       backgroundColor: colors.background,
     },
     footer: { marginVertical: 16 },
-    message: {
-      textAlign: "center",
-      marginTop: 40,
-      color: colors.textMuted,
-    },
     empty: { fontSize: 16, fontWeight: "600", color: colors.textSecondary },
     emptyHint: {
       fontSize: 14,
