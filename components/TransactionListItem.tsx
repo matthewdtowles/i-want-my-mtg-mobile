@@ -55,7 +55,7 @@ export function TransactionListItem({ tx }: { tx: ApiTransaction }) {
       asChild
     >
       <Pressable
-        style={styles.row}
+        style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
         accessibilityRole="button"
         accessibilityLabel={`View ${tx.cardName ?? "card"}`}
       >
@@ -76,6 +76,7 @@ const createStyles = (colors: ThemeColors) =>
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.border,
     },
+    rowPressed: { backgroundColor: colors.surfaceAlt },
     badge: {
       width: 44,
       paddingVertical: 3,
