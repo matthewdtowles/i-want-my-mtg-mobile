@@ -1,15 +1,37 @@
 import * as SecureStore from "expo-secure-store";
 
-const TOKEN_KEY = "iwmm.authToken";
+// Access token keeps its original key so sessions from before persistent-login
+// (#25) survive an app update. The refresh token is new.
+const ACCESS_KEY = "iwmm.authToken";
+const REFRESH_KEY = "iwmm.refreshToken";
 
-export async function getStoredToken(): Promise<string | null> {
-  return SecureStore.getItemAsync(TOKEN_KEY);
+export type StoredSession = {
+  accessToken: string;
+  refreshToken: string;
+};
+
+/** The persisted access + refresh tokens, if both are present. */
+export async function getStoredSession(): Promise<{
+  accessToken: string | null;
+  refreshToken: string | null;
+}> {
+  const [accessToken, refreshToken] = await Promise.all([
+    SecureStore.getItemAsync(ACCESS_KEY),
+    SecureStore.getItemAsync(REFRESH_KEY),
+  ]);
+  return { accessToken, refreshToken };
 }
 
-export async function storeToken(token: string): Promise<void> {
-  await SecureStore.setItemAsync(TOKEN_KEY, token);
+export async function storeSession(session: StoredSession): Promise<void> {
+  await Promise.all([
+    SecureStore.setItemAsync(ACCESS_KEY, session.accessToken),
+    SecureStore.setItemAsync(REFRESH_KEY, session.refreshToken),
+  ]);
 }
 
-export async function clearToken(): Promise<void> {
-  await SecureStore.deleteItemAsync(TOKEN_KEY);
+export async function clearSession(): Promise<void> {
+  await Promise.all([
+    SecureStore.deleteItemAsync(ACCESS_KEY),
+    SecureStore.deleteItemAsync(REFRESH_KEY),
+  ]);
 }

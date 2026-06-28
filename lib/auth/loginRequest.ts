@@ -1,7 +1,8 @@
-import { api } from "../api/client";
+import { authApi } from "../api/client";
+import type { StoredSession } from "./tokenStore";
 
-export async function login(email: string, password: string): Promise<string> {
-  const { data, response } = await api.POST("/api/v1/auth/login", {
+export async function login(email: string, password: string): Promise<StoredSession> {
+  const { data, response } = await authApi.POST("/api/v1/auth/login", {
     body: { email, password },
   });
 
@@ -12,9 +13,10 @@ export async function login(email: string, password: string): Promise<string> {
     throw new Error("Sign in failed. Please try again.");
   }
 
-  const token = data?.data?.accessToken;
-  if (!token) {
+  const accessToken = data?.data?.accessToken;
+  const refreshToken = data?.data?.refreshToken;
+  if (!accessToken || !refreshToken) {
     throw new Error("Sign in failed: no token returned.");
   }
-  return token;
+  return { accessToken, refreshToken };
 }
