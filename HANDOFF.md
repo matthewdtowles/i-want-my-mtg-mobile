@@ -62,10 +62,11 @@ stack of squash-merged PRs (#33, #34, #38, #39, #40, #41), each reviewed
   range + finish toggles and a **dependency-free** bar chart (plain Views, no
   `react-native-svg`) off the typed `GET /cards/{cardId}/price-history`.
 
-**Backend now landed, mobile UI not built yet** (see "Cross-repo backend
-dependencies"): the backend deps for #23 decks, #31 buy-list, #32
-price-alerts/notifications, and the #25 core have all merged - these are now
-buildable once the spec is regenerated.
+**Backend landed; mobile UI rolling out** (see "Cross-repo backend
+dependencies"). Backend deps for #23 decks, #31 buy-list, #32
+price-alerts/notifications, and the #25 core all merged + deployed. Built so
+far: **#25 persistent login** (PR #47) and **#31 buy-list** (PR open). Still to
+build: **#23 decks**, **#32 price-alerts/notifications**.
 
 ## Inventory (#5) notes
 
@@ -132,6 +133,26 @@ UI (`app/(tabs)/portfolio.tsx`): hero total value + stats (cards, quantity, and
 cost basis / realized gain when present), pull-to-refresh (re-GETs), and a
 "Recalculate" button (POST refresh). Logging a transaction syncs inventory and
 flows into the portfolio totals.
+
+## Buy-list (#31) notes
+
+Want-list backed by `/api/v1/buy-list` (GET list / POST add-increment / PATCH
+set-absolute-quantity where 0 removes / DELETE), all typed after backend #557.
+Mirrors inventory: `lib/api/buyList.ts` (`fetchBuyList` / `setBuyListQuantity` /
+`removeFromBuyList`), query key `["buy-list"]`. The list endpoint is **not**
+paginated (returns the whole list), so the screen uses a plain `useQuery`.
+
+UI: a 5th **Buy-list** tab (`app/(tabs)/buy-list.tsx`) with an optimistic
+stepper + remove (`BuyListListItem`, rows link to card detail) and a
+distinct-card / wanted-qty / value summary; add from card detail via
+`AddToBuyList` (per-finish steppers seeded from the shared `["buy-list"]`
+cache). Note: there are now **5 tabs** - adding the decks (#23) area will need a
+rethink (a menu/section) to avoid tab overflow.
+
+**Not built:** CSV import (`/buy-list/import`, `BuyListImportApiDto.text`) and
+the deck `missing-to-buy-list` action (belongs with #23). Heads-up:
+`/cards/{cardId}/buylist` is vendor sell-to *pricing*, not the want-list - don't
+confuse the two.
 
 ## Distribution: issue #8
 
