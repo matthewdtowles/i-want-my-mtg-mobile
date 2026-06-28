@@ -1,0 +1,174 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo } from "react";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+
+import { fetchBuyList, setBuyListQuantity } from "../lib/api/buyList";
+import type { ApiBuyListItem } from "../lib/api/types";
+import { useTheme } from "../lib/theme/ThemeContext";
+import type { ThemeColors } from "../lib/theme/colors";
+
+type Props = {
+  cardId: string;
+  hasNonFoil: boolean;
+  hasFoil: boolean;
+};
+
+const KEY = ["buy-list"] as const;
+
+function wanted(items: ApiBuyListItem[] | undefined, cardId: string, isFoil: boolean): number {
+  return items?.find((it) => it.cardId === cardId && it.isFoil === isFoil)?.quantity ?? 0;
+}
+
+function upsert(
+  items: ApiBuyListItem[] | undefined,
+  cardId: string,
+  isFoil: boolean,
+  quantity: number,
+): ApiBuyListItem[] {
+  const list = items ?? [];
+  const idx = list.findIndex((it) => it.cardId === cardId && it.isFoil === isFoil);
+  if (idx === -1) {
+    return quantity <= 0 ? list : [...list, { cardId, isFoil, quantity }];
+  }
+  const next = [...list];
+  if (quantity <= 0) next.splice(idx, 1);
+  else next[idx] = { ...next[idx], quantity };
+  return next;
+}
+
+export function AddToBuyList({ cardId, hasNonFoil, hasFoil }: Props) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const queryClient = useQueryClient();
+
+  const query = useQuery({ queryKey: KEY, queryFn: fetchBuyList });
+
+  const setQty = useMutation({
+    mutationFn: ({ isFoil, quantity }: { isFoil: boolean; quantity: number }) =>
+      setBuyListQuantity(cardId, isFoil, quantity),
+    async onMutate({ isFoil, quantity }) {
+      await queryClient.cancelQueries({ queryKey: KEY });
+      const previous = queryClient.getQueryData<ApiBuyListItem[]>(KEY);
+      queryClient.setQueryData<ApiBuyListItem[]>(KEY, (old) =>
+        upsert(old, cardId, isFoil, quantity),
+      );
+      return { previous };
+    },
+    onError(_err, _vars, ctx) {
+      if (ctx?.previous) queryClient.setQueryData(KEY, ctx.previous);
+    },
+    // Refetch so an optimistic insert picks up the card's name/price fields.
+    onSettled() {
+      queryClient.invalidateQueries({ queryKey: KEY });
+    },
+  });
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.heading}>On your buy-list</Text>
+      {query.isPending ? (
+        <ActivityIndicator style={styles.loading} color={colors.accent} />
+      ) : query.isError ? (
+        <Text style={styles.error}>Couldn't load your buy-list for this card.</Text>
+      ) : (
+        <View style={styles.rows}>
+          {hasNonFoil ? (
+            <FinishStepper
+              label="Normal"
+              quantity={wanted(query.data, cardId, false)}
+              onChange={(quantity) => setQty.mutate({ isFoil: false, quantity })}
+              styles={styles}
+            />
+          ) : null}
+          {hasFoil ? (
+            <FinishStepper
+              label="Foil"
+              quantity={wanted(query.data, cardId, true)}
+              onChange={(quantity) => setQty.mutate({ isFoil: true, quantity })}
+              styles={styles}
+            />
+          ) : null}
+        </View>
+      )}
+    </View>
+  );
+}
+
+function FinishStepper({
+  label,
+  quantity,
+  onChange,
+  styles,
+}: {
+  label: string;
+  quantity: number;
+  onChange: (quantity: number) => void;
+  styles: ReturnType<typeof createStyles>;
+}) {
+  return (
+    <View style={styles.finishRow}>
+      <Text style={styles.finishLabel}>{label}</Text>
+      <View style={styles.stepper}>
+        <Pressable
+          onPress={() => onChange(quantity - 1)}
+          disabled={quantity <= 0}
+          hitSlop={8}
+          style={[styles.stepBtn, quantity <= 0 && styles.stepBtnDisabled]}
+          accessibilityLabel={`Decrease ${label.toLowerCase()} buy-list quantity`}
+        >
+          <Text style={styles.stepText}>−</Text>
+        </Pressable>
+        <Text style={styles.qty}>{quantity}</Text>
+        <Pressable
+          onPress={() => onChange(quantity + 1)}
+          hitSlop={8}
+          style={styles.stepBtn}
+          accessibilityLabel={`Increase ${label.toLowerCase()} buy-list quantity`}
+        >
+          <Text style={styles.stepText}>+</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      marginTop: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 12,
+      padding: 16,
+      backgroundColor: colors.surface,
+    },
+    heading: { fontSize: 16, fontWeight: "700", marginBottom: 8, color: colors.textPrimary },
+    loading: { marginVertical: 8 },
+    error: { color: colors.danger, fontSize: 14 },
+    rows: { gap: 12 },
+    finishRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    finishLabel: { fontSize: 15, color: colors.textSecondary },
+    stepper: { flexDirection: "row", alignItems: "center", gap: 12 },
+    stepBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: colors.inputBorder,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    stepBtnDisabled: { opacity: 0.4 },
+    stepText: { fontSize: 20, color: colors.textSecondary },
+    qty: {
+      fontSize: 17,
+      fontWeight: "600",
+      minWidth: 24,
+      textAlign: "center",
+      color: colors.textPrimary,
+    },
+  });
