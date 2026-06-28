@@ -3,8 +3,10 @@
 Where the v1 build stands and how to pick it up. See the web repo's
 `ROADMAP.md` §7.1 for the overall plan.
 
-_Last updated: 2026-06-27 (v2 UX wave: dark mode, account, inventory bulk/search,
-tx edit/delete, price history)._
+_Last updated: 2026-06-28 (TestFlight build 2 shipped via `npm run ship:ios`;
+versioning notes corrected; all cross-repo backend deps merged - #25/#23/#31/#32
+now buildable after a spec regen). Prior: v2 UX wave (dark mode, account,
+inventory bulk/search, tx edit/delete, price history)._
 
 ## What this is
 
@@ -60,8 +62,10 @@ stack of squash-merged PRs (#33, #34, #38, #39, #40, #41), each reviewed
   range + finish toggles and a **dependency-free** bar chart (plain Views, no
   `react-native-svg`) off the typed `GET /cards/{cardId}/price-history`.
 
-**Blocked, not built** (need backend - see "Cross-repo backend dependencies"):
-#23 decks, #31 buy-list, #32 price-alerts/notifications, and the #25 core.
+**Backend now landed, mobile UI not built yet** (see "Cross-repo backend
+dependencies"): the backend deps for #23 decks, #31 buy-list, #32
+price-alerts/notifications, and the #25 core have all merged - these are now
+buildable once the spec is regenerated.
 
 ## Inventory (#5) notes
 
@@ -139,15 +143,18 @@ secret stays on EAS servers, never in the repo), and
 `ios.infoPlist.ITSAppUsesNonExemptEncryption: false` in `app.json` to skip the
 per-build encryption-compliance prompt. Expo account: **mtengineer**.
 
-Cutting a new TestFlight build is two manual commands (interactive Apple login):
-
-```bash
-eas build  --platform ios --profile production
-eas submit --platform ios --profile production
-```
+Cutting a new TestFlight build is one command (interactive Apple login the first
+time): `npm run ship:ios` (`scripts/ship-ios.sh`). It sanity-checks a clean
+`main`, syncs `app.json`'s `version` from the latest git tag (committing that
+bump), typechecks, then `eas build --auto-submit` -> TestFlight. EAS uses
+`appVersionSource: local` with `production.autoIncrement`, so it bumps the
+`buildNumber` in `app.json` during the build; **commit that bump after shipping**
+(the script does not - e.g. build 2 was committed by hand) so the next ship
+increments from the right number.
 
 **Merging to `main` does NOT build or ship anything** - CI only tags a version
-(no `eas build`/`eas submit` in the workflow). And `eas submit` reaches
+(no `eas build`/`eas submit` in the workflow). And `eas submit` (via `ship:ios`)
+reaches
 **TestFlight only**, not the public App Store; a public release is a separate
 manual Submit-for-Review in App Store Connect. (See the README "Distribution"
 section for the full rundown, incl. inviting testers.)
@@ -198,31 +205,31 @@ repo's `ROADMAP.md` §7.1 "Store readiness".
 
 - Per-card **legality** is not in the API card response (only a search filter);
   card detail can't show it without a backend change.
-- `app.json` version is `0.1.0` but EAS `appVersionSource: remote` ignores it
-  (the build version is stamped from the latest git tag, not app.json).
+- EAS uses `appVersionSource: local`: `ship:ios` writes the latest git tag into
+  `app.json`'s `version`, and `production.autoIncrement` bumps the `buildNumber`
+  there each build (commit it after shipping - see Distribution).
 - iOS EAS build/submit is set up (see Distribution above); Android is not.
 
 ## Cross-repo backend dependencies (backend hand-off)
 
-Three mobile features are **blocked on the backend** (`matthewdtowles/i-want-my-mtg`).
-Each is tracked as a mobile issue with the exact, verified details:
+The backend deps (`matthewdtowles/i-want-my-mtg`) that blocked the remaining
+features have **all merged** (2026-06-28). Each was tracked as a mobile issue:
 
-- **#35 - refresh token / long-lived session.** Login returns only
-  `accessToken` (no refresh token). Add `POST /api/v1/auth/refresh` (rotating,
-  revocable) or a long-lived mobile token. Unblocks the **#25** core.
-- **#36 - OpenAPI response annotations (`ApiOkEnvelope`).** Deck, buy-list,
-  **price-alert, and notification** GET responses serialize as
-  `content?: never` (request bodies are typed; responses are not). Annotate
-  them so the generated client gets return types. Unblocks **#23 / #31 / #32**.
-- **#37 - push device registration.** `POST /api/v1/notifications/devices`
-  (+ unregister) + Expo Push fan-out, for the push half of **#32**.
+- **#35 - refresh token / long-lived session.** Done - backend PR #558. Unblocks
+  the **#25** core.
+- **#36 - OpenAPI response annotations (`ApiOkEnvelope`).** Done - backend PR
+  #557 (deck + buy-list) and #562 (price-alert + notification; the latter were
+  missed by #557 and still serialized as `content?: never`). Unblocks
+  **#23 / #31 / #32**.
+- **#37 - push device registration.** Done - backend PR #559
+  (`POST/DELETE /api/v1/notifications/devices`). Expo Push fan-out on alert
+  firing is a documented backend follow-up, not required for the #32 UI.
 
-**To continue this in a new session:** start a Claude Code session **scoped to
-both `i-want-my-mtg` and `i-want-my-mtg-mobile`** (so it can read mobile issues
-#35/#36/#37 and this repo's generated `lib/api/schema.ts` to see exactly which
-operations are untyped). In the backend, the response-annotation work mirrors
-the existing `ApiOkEnvelope` usage on card/set/inventory/transaction/portfolio/
-user/auth controllers. **Verification loop after each backend change:** here run
-`npm run gen:api` -> the previously-`content?: never` operations gain typed
-responses -> build the corresponding mobile feature. CI already fails on
-`schema.ts` drift, so regenerate + commit when the backend spec changes.
+**Verification loop (now that the backend has landed):** once the backend is
+deployed, here run `npm run gen:api` -> the previously-`content?: never`
+operations (decks, buy-list, price-alerts, notifications, refresh) gain typed
+responses -> build the corresponding mobile feature. CI fails on `schema.ts`
+drift, so regenerate + commit when the spec changes. The mobile `gen:api`
+pulls the **live** spec (`https://iwantmymtg.net/api/openapi.json`) by default,
+so the types only appear after deploy (override with `OPENAPI_URL` for a local
+backend).

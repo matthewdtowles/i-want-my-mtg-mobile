@@ -53,3 +53,11 @@ const authMiddleware: Middleware = {
  */
 export const api = createClient<paths>({ baseUrl: API_BASE_URL });
 api.use(authMiddleware);
+
+/**
+ * Bare client without the auth middleware, for the auth endpoints themselves
+ * (login / refresh / logout). These take their credentials in the body, so they
+ * must not get a bearer attached - and refresh must not re-trigger the proactive
+ * token refresh or the 401 sign-out, which would recurse.
+ */
+export const authApi = createClient<paths>({ baseUrl: API_BASE_URL });
