@@ -65,8 +65,42 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Login and obtain JWT token */
+        /** Login and obtain access + refresh tokens */
         post: operations["AuthApiController_login"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Exchange a refresh token for a new access token (rotates the refresh token) */
+        post: operations["AuthApiController_refresh"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revoke a refresh token (sign-out) */
+        post: operations["AuthApiController_logout"];
         delete?: never;
         options?: never;
         head?: never;
@@ -482,6 +516,24 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Register (or refresh) this device's push token for the authenticated user */
+        post: operations["NotificationDeviceApiController_register"];
+        /** Unregister a device's push token (e.g. on sign-out) */
+        delete: operations["NotificationDeviceApiController_unregister"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1049,16 +1101,44 @@ export interface components {
             multiSetBlockKeys?: string[];
         };
         LoginResponseDto: {
+            /** @description Short-lived JWT for the Authorization header. */
             accessToken: string;
+            /** @description Long-lived opaque token. Exchange it at POST /api/v1/auth/refresh for a new access token; rotated on each use. */
+            refreshToken: string;
         };
         LoginRequestDto: {
             /** @example user@example.com */
             email: string;
             password: string;
+            /**
+             * @description Optional client/device label stored with the refresh token so a user can tell their sessions apart.
+             * @example iPhone 15
+             */
+            deviceLabel?: string;
+        };
+        RefreshRequestDto: {
+            /** @description The refresh token issued at login (or the previous refresh call). */
+            refreshToken: string;
         };
         CheckoutRequestDto: {
             /** @enum {string} */
             plan: "monthly" | "annual";
+        };
+        BuyListItemApiDto: {
+            cardId: string;
+            quantity: number;
+            isFoil: boolean;
+            cardName?: string;
+            setCode?: string;
+            cardNumber?: string;
+            imgSrc?: string;
+            rarity?: string;
+            keyruneCode?: string;
+            priceNormal?: number;
+            priceFoil?: number;
+            hasNonFoil?: boolean;
+            hasFoil?: boolean;
+            url?: string;
         };
         BuyListAddApiDto: {
             cardId: string;
@@ -1078,13 +1158,13 @@ export interface components {
             /** @default false */
             isFoil: boolean;
         };
-        BuyListImportApiDto: {
-            /** @description Pasted CSV with a header row (native: name,set_code,number,quantity,foil). External exports (Moxfield, Archidekt, Deckbox, TCGPlayer) are auto-detected. */
-            text: string;
-        };
         BuyListImportResponseDto: {
             saved: number;
             errors: string[];
+        };
+        BuyListImportApiDto: {
+            /** @description Pasted CSV with a header row (native: name,set_code,number,quantity,foil). External exports (Moxfield, Archidekt, Deckbox, TCGPlayer) are auto-detected. */
+            text: string;
         };
         CardPriceDto: {
             normal?: number;
@@ -1183,6 +1263,47 @@ export interface components {
             normal?: number;
             foil?: number;
         };
+        DeckSummaryApiDto: {
+            id: number;
+            name: string;
+            format?: string | null;
+            /** @description Total card count (sum of quantities, main + side). */
+            cardCount: number;
+            estimatedValue: number;
+            createdAt: string;
+            updatedAt: string;
+        };
+        DeckCardApiDto: {
+            cardId: string;
+            quantity: number;
+            isSideboard: boolean;
+            cardName?: string;
+            setCode?: string;
+            cardNumber?: string;
+            imgSrc?: string;
+            rarity?: string;
+            type?: string;
+            manaCost?: string;
+            keyruneCode?: string;
+            priceNormal?: number;
+            priceFoil?: number;
+            /** @description Whether the card is legal in the deck format. Null when the deck has no format. */
+            legalInFormat?: boolean;
+            url?: string;
+        };
+        DeckDetailApiDto: {
+            id: number;
+            name: string;
+            format?: string | null;
+            /** @description Total card count (sum of quantities, main + side). */
+            cardCount: number;
+            estimatedValue: number;
+            createdAt: string;
+            updatedAt: string;
+            /** @description Count of cards not legal in the deck format (0 when no format). */
+            illegalCount: number;
+            cards: components["schemas"]["DeckCardApiDto"][];
+        };
         DeckCreateApiDto: {
             name: string;
             /**
@@ -1190,6 +1311,15 @@ export interface components {
              * @enum {string}
              */
             format?: "standard" | "commander" | "modern" | "legacy" | "vintage" | "brawl" | "explorer" | "historic" | "oathbreaker" | "pauper" | "pioneer";
+        };
+        DeckImportApiResultDto: {
+            /** @description Id of the created deck. */
+            deckId: number;
+            name: string;
+            /** @description Total card quantity added across resolved lines. */
+            saved: number;
+            /** @description Lines that could not be parsed or resolved ({ row, name?, error }). */
+            errors: Record<string, never>[];
         };
         DeckImportApiDto: {
             name: string;
@@ -1200,6 +1330,10 @@ export interface components {
             format?: "standard" | "commander" | "modern" | "legacy" | "vintage" | "brawl" | "explorer" | "historic" | "oathbreaker" | "pauper" | "pioneer";
             /** @description Decklist text, one entry per line (e.g. "4 Lightning Bolt"). */
             text: string;
+        };
+        DeckMissingToBuyListResultDto: {
+            /** @description Count of distinct cards added to the buy-list. */
+            added: number;
         };
         DeckUpdateApiDto: {
             name: string;
@@ -1313,6 +1447,29 @@ export interface components {
             cardId: string;
             isFoil: boolean;
         };
+        NotificationDeviceApiDto: {
+            id: number;
+            /** @enum {string} */
+            platform: "ios" | "android" | "web";
+            deviceId?: string | null;
+            /** @description When the device was first registered. */
+            createdAt: string;
+        };
+        RegisterDeviceApiDto: {
+            /** @description The Expo/APNs/FCM push token for this device. */
+            token: string;
+            /**
+             * @description Device platform.
+             * @enum {string}
+             */
+            platform: "ios" | "android" | "web";
+            /** @description Optional client-supplied device identifier (metadata only). */
+            deviceId?: string;
+        };
+        UnregisterDeviceApiDto: {
+            /** @description The push token to remove (e.g. on sign-out). */
+            token: string;
+        };
         PortfolioSummaryApiDto: {
             totalValue: number;
             totalCost?: number;
@@ -1360,8 +1517,39 @@ export interface components {
             /** @description Pre-formatted value, e.g. "$12.34" */
             valueFormatted: string;
         };
+        PriceAlertApiDto: {
+            id: number;
+            cardId: string;
+            cardName?: string;
+            cardNumber?: string;
+            setCode?: string;
+            increasePct?: number;
+            decreasePct?: number;
+            isActive: boolean;
+            /** Format: date-time */
+            lastNotifiedAt?: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
         CreatePriceAlertDto: Record<string, never>;
         UpdatePriceAlertDto: Record<string, never>;
+        PriceNotificationApiDto: {
+            id: number;
+            cardId: string;
+            cardName?: string;
+            cardNumber?: string;
+            setCode?: string;
+            alertId?: number;
+            direction: string;
+            oldPrice: number;
+            newPrice: number;
+            changePct: number;
+            isRead: boolean;
+            /** Format: date-time */
+            createdAt: string;
+        };
         SealedInventoryRequestDto: {
             sealedProductUuid: string;
             quantity: number;
@@ -1593,6 +1781,65 @@ export interface operations {
             };
         };
     };
+    AuthApiController_refresh: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RefreshRequestDto"];
+            };
+        };
+        responses: {
+            /** @description New access + refresh tokens */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data?: components["schemas"]["LoginResponseDto"];
+                        error?: string;
+                        message?: string;
+                        meta?: components["schemas"]["PaginationMeta"] | components["schemas"]["BlockPaginationMeta"];
+                    };
+                };
+            };
+            /** @description Invalid, revoked, or expired refresh token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthApiController_logout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RefreshRequestDto"];
+            };
+        };
+        responses: {
+            /** @description Refresh token revoked */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     BillingApiController_getSubscription: {
         parameters: {
             query?: never;
@@ -1662,7 +1909,15 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data?: components["schemas"]["BuyListItemApiDto"][];
+                        error?: string;
+                        message?: string;
+                        meta?: components["schemas"]["PaginationMeta"] | components["schemas"]["BlockPaginationMeta"];
+                    };
+                };
             };
         };
     };
@@ -1751,7 +2006,13 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["BuyListImportResponseDto"];
+                    "application/json": {
+                        success: boolean;
+                        data?: components["schemas"]["BuyListImportResponseDto"];
+                        error?: string;
+                        message?: string;
+                        meta?: components["schemas"]["PaginationMeta"] | components["schemas"]["BlockPaginationMeta"];
+                    };
                 };
             };
             /** @description Invalid CSV text */
@@ -2063,7 +2324,15 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data?: components["schemas"]["DeckSummaryApiDto"][];
+                        error?: string;
+                        message?: string;
+                        meta?: components["schemas"]["PaginationMeta"] | components["schemas"]["BlockPaginationMeta"];
+                    };
+                };
             };
         };
     };
@@ -2085,7 +2354,15 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data?: components["schemas"]["DeckDetailApiDto"];
+                        error?: string;
+                        message?: string;
+                        meta?: components["schemas"]["PaginationMeta"] | components["schemas"]["BlockPaginationMeta"];
+                    };
+                };
             };
         };
     };
@@ -2107,7 +2384,15 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data?: components["schemas"]["DeckImportApiResultDto"];
+                        error?: string;
+                        message?: string;
+                        meta?: components["schemas"]["PaginationMeta"] | components["schemas"]["BlockPaginationMeta"];
+                    };
+                };
             };
         };
     };
@@ -2127,7 +2412,15 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data?: components["schemas"]["DeckDetailApiDto"];
+                        error?: string;
+                        message?: string;
+                        meta?: components["schemas"]["PaginationMeta"] | components["schemas"]["BlockPaginationMeta"];
+                    };
+                };
             };
             /** @description Deck not found */
             404: {
@@ -2185,7 +2478,15 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data?: components["schemas"]["DeckSummaryApiDto"];
+                        error?: string;
+                        message?: string;
+                        meta?: components["schemas"]["PaginationMeta"] | components["schemas"]["BlockPaginationMeta"];
+                    };
+                };
             };
             /** @description Deck not found */
             404: {
@@ -2212,7 +2513,15 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data?: components["schemas"]["DeckMissingToBuyListResultDto"];
+                        error?: string;
+                        message?: string;
+                        meta?: components["schemas"]["PaginationMeta"] | components["schemas"]["BlockPaginationMeta"];
+                    };
+                };
             };
             /** @description Deck not found */
             404: {
@@ -2534,6 +2843,58 @@ export interface operations {
             };
         };
     };
+    NotificationDeviceApiController_register: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterDeviceApiDto"];
+            };
+        };
+        responses: {
+            /** @description Device registered */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data?: components["schemas"]["NotificationDeviceApiDto"];
+                        error?: string;
+                        message?: string;
+                        meta?: components["schemas"]["PaginationMeta"] | components["schemas"]["BlockPaginationMeta"];
+                    };
+                };
+            };
+        };
+    };
+    NotificationDeviceApiController_unregister: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UnregisterDeviceApiDto"];
+            };
+        };
+        responses: {
+            /** @description Device unregistered */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     getOptimizer: {
         parameters: {
             query?: {
@@ -2804,7 +3165,15 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data?: components["schemas"]["PriceAlertApiDto"][];
+                        error?: string;
+                        message?: string;
+                        meta?: components["schemas"]["PaginationMeta"] | components["schemas"]["BlockPaginationMeta"];
+                    };
+                };
             };
         };
     };
@@ -2826,7 +3195,15 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data?: components["schemas"]["PriceAlertApiDto"];
+                        error?: string;
+                        message?: string;
+                        meta?: components["schemas"]["PaginationMeta"] | components["schemas"]["BlockPaginationMeta"];
+                    };
+                };
             };
         };
     };
@@ -2870,7 +3247,15 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data?: components["schemas"]["PriceAlertApiDto"];
+                        error?: string;
+                        message?: string;
+                        meta?: components["schemas"]["PaginationMeta"] | components["schemas"]["BlockPaginationMeta"];
+                    };
+                };
             };
         };
     };
@@ -2911,7 +3296,15 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data?: components["schemas"]["PriceNotificationApiDto"][];
+                        error?: string;
+                        message?: string;
+                        meta?: components["schemas"]["PaginationMeta"] | components["schemas"]["BlockPaginationMeta"];
+                    };
+                };
             };
         };
     };
