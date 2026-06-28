@@ -159,7 +159,7 @@ confuse the two.
 Split along the backend-readiness seam:
 
 - **Notifications (built):** `GET /api/v1/notifications` (paginated),
-  `PATCH /notifications/{id}/read`, `PATCH /notifications/read-all` - all typed
+  `PATCH /api/v1/notifications/{id}/read`, `PATCH /api/v1/notifications/read-all` - all typed
   after backend #562. `lib/api/notifications.ts` + a shared `lib/useNotifications.ts`
   hook that auto-pages the list so the unread count is exact; one
   `["notifications"]` cache feeds the inbox (`app/notifications.tsx`) and the
