@@ -3,7 +3,7 @@
     "name": "I Want My MTG",
     "slug": "i-want-my-mtg-mobile",
     "scheme": "iwantmymtg",
-    "version": "0.1.0",
+    "version": "0.9.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
