@@ -13,7 +13,8 @@
       "bundleIdentifier": "com.matthewdtowles.iwantmymtg",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
-      }
+      },
+      "buildNumber": "2"
     },
     "android": {
       "package": "com.matthewdtowles.iwantmymtg",
