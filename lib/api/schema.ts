@@ -1533,8 +1533,21 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
         };
-        CreatePriceAlertDto: Record<string, never>;
-        UpdatePriceAlertDto: Record<string, never>;
+        CreatePriceAlertDto: {
+            /** Format: uuid */
+            cardId: string;
+            /** @description Alert when the price rises by at least this percent. At least one of increasePct/decreasePct is required. */
+            increasePct?: number;
+            /** @description Alert when the price falls by at least this percent. At least one of increasePct/decreasePct is required. */
+            decreasePct?: number;
+        };
+        UpdatePriceAlertDto: {
+            /** @description Set null to clear the rise threshold. */
+            increasePct?: number | null;
+            /** @description Set null to clear the fall threshold. */
+            decreasePct?: number | null;
+            isActive?: boolean;
+        };
         PriceNotificationApiDto: {
             id: number;
             cardId: string;
