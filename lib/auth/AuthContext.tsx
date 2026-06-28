@@ -12,7 +12,7 @@ import {
 import { setAuthTokenGetter, setOnUnauthorized } from "../api/client";
 import { isExpiringSoon } from "./jwt";
 import { login as loginRequest } from "./loginRequest";
-import { refreshSession, revokeSession } from "./session";
+import { RefreshRejectedError, refreshSession, revokeSession } from "./session";
 import {
   clearSession,
   getStoredSession,
@@ -72,18 +72,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Single-flight refresh: returns a fresh access token, or null if there's no
-  // refresh token or the refresh was rejected (in which case we sign out).
+  // refresh token or the refresh failed.
   const ensureFreshAccessToken = useCallback((): Promise<string | null> => {
     if (refreshPromiseRef.current) return refreshPromiseRef.current;
     const rt = refreshRef.current;
     if (!rt) return Promise.resolve(null);
     const p = refreshSession(rt)
       .then((session) => {
+        // If the session changed mid-flight (sign-out, or a new sign-in),
+        // don't resurrect the old one.
+        if (refreshRef.current !== rt) return null;
         applySession(session);
         return session.accessToken;
       })
-      .catch(() => {
-        handleSignedOut(true);
+      .catch((err) => {
+        // Only sign out when the refresh token was actually rejected and we're
+        // still on the same session - a transient failure must not log out.
+        if (refreshRef.current === rt && err instanceof RefreshRejectedError) {
+          handleSignedOut(true);
+        }
         return null;
       })
       .finally(() => {
@@ -97,9 +104,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAuthTokenGetter(async () => {
       const access = accessRef.current;
       if (access && !isExpiringSoon(access)) return access;
-      // Missing or (near-)expired: refresh if we can, else send what we have
-      // and let the 401 backstop sign out.
-      if (refreshRef.current) return await ensureFreshAccessToken();
+      // Missing or (near-)expired: refresh if we can. If the refresh fails
+      // transiently, fall back to the current token (still valid within skew)
+      // rather than sending nothing; the 401 backstop covers a dead token.
+      if (refreshRef.current) return (await ensureFreshAccessToken()) ?? accessRef.current;
       return access;
     });
 

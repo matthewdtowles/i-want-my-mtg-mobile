@@ -10,7 +10,7 @@ export type StoredSession = {
   refreshToken: string;
 };
 
-/** The persisted access + refresh tokens, if both are present. */
+/** The persisted access and refresh tokens; either may be null independently. */
 export async function getStoredSession(): Promise<{
   accessToken: string | null;
   refreshToken: string | null;
