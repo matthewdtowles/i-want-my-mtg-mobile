@@ -8,9 +8,10 @@
 #   1. Sanity-checks you're on a clean `main` (so you ship what's merged).
 #   2. Reads the latest git tag (CI creates these from merged PR titles) and
 #      writes it into app.json's `version`. This is REQUIRED: EAS uses
-#      `appVersionSource: remote`, which only manages the build NUMBER — the
-#      version string TestFlight shows always comes from app.json. Without this
-#      step every build would keep shipping as the old 0.1.0.
+#      `appVersionSource: local`, so the version string TestFlight shows comes
+#      straight from app.json (autoIncrement still manages the build NUMBER).
+#      Without this step a build would ship whatever stale version is already
+#      committed in app.json instead of the current release.
 #   3. Runs a quick typecheck (a failed build wastes EAS minutes).
 #   4. `eas build` (production) with `--auto-submit` → uploads to TestFlight.
 #

@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -53,8 +54,15 @@ export default function SignInScreen() {
       style={[styles.container, { paddingTop: insets.top + 24 }]}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <Text style={styles.title}>I Want My MTG</Text>
-      <Text style={styles.subtitle}>Sign in to your collection</Text>
+      <View style={styles.header}>
+        <Image
+          source={require("../assets/icon.png")}
+          style={styles.logo}
+          accessibilityLabel="I Want My MTG logo"
+        />
+        <Text style={styles.title}>I Want My MTG</Text>
+        <Text style={styles.subtitle}>Sign in to your collection</Text>
+      </View>
 
       {sessionExpired ? (
         <View style={styles.notice}>
@@ -124,6 +132,17 @@ const createStyles = (colors: ThemeColors) =>
       gap: 16,
       backgroundColor: colors.background,
     },
+    header: {
+      alignItems: "center",
+      gap: 8,
+      marginBottom: 8,
+    },
+    logo: {
+      width: 96,
+      height: 96,
+      borderRadius: 20,
+      marginBottom: 8,
+    },
     title: {
       fontSize: 28,
       fontWeight: "700",
@@ -132,7 +151,6 @@ const createStyles = (colors: ThemeColors) =>
     subtitle: {
       fontSize: 16,
       color: colors.textMuted,
-      marginBottom: 8,
     },
     notice: {
       backgroundColor: colors.surfaceAlt,
