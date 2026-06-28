@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Link, Tabs } from "expo-router";
-import { Pressable } from "react-native";
+import { Pressable, View } from "react-native";
 
+import { NotificationBell } from "../../components/NotificationBell";
 import { useTheme } from "../../lib/theme/ThemeContext";
 
 export default function TabsLayout() {
@@ -21,15 +22,21 @@ export default function TabsLayout() {
         headerTintColor: colors.textPrimary,
         headerTitleStyle: { color: colors.textPrimary },
         headerRight: () => (
-          <Link href="/account" asChild>
-            <Pressable
-              hitSlop={12}
-              style={{ paddingHorizontal: 16 }}
-              accessibilityLabel="Account and settings"
-            >
-              <Ionicons name="person-circle-outline" size={26} color={colors.accent} />
-            </Pressable>
-          </Link>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 14,
+              paddingHorizontal: 16,
+            }}
+          >
+            <NotificationBell />
+            <Link href="/account" asChild>
+              <Pressable hitSlop={12} accessibilityLabel="Account and settings">
+                <Ionicons name="person-circle-outline" size={26} color={colors.accent} />
+              </Pressable>
+            </Link>
+          </View>
         ),
       }}
     >
