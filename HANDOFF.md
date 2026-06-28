@@ -63,10 +63,10 @@ stack of squash-merged PRs (#33, #34, #38, #39, #40, #41), each reviewed
   `react-native-svg`) off the typed `GET /cards/{cardId}/price-history`.
 
 **Backend landed; mobile UI rolling out** (see "Cross-repo backend
-dependencies"). Backend deps for #23 decks, #31 buy-list, #32
-price-alerts/notifications, and the #25 core all merged + deployed. Built so
-far: **#25 persistent login** (PR #47) and **#31 buy-list** (PR open). Still to
-build: **#23 decks**, **#32 price-alerts/notifications**.
+dependencies"). Merged: **#25 persistent login** (#47), **#31 buy-list** (#48),
+and **#32 notifications** (#49). Backend #563 is deployed, so the **#32
+price-alerts** half is now unblocked (create/update DTOs typed). Still to build:
+**#32 price-alerts** and **#23 decks**.
 
 ## Inventory (#5) notes
 
@@ -153,6 +153,23 @@ rethink (a menu/section) to avoid tab overflow.
 the deck `missing-to-buy-list` action (belongs with #23). Heads-up:
 `/cards/{cardId}/buylist` is vendor sell-to *pricing*, not the want-list - don't
 confuse the two.
+
+## Price alerts + notifications (#32) notes
+
+Split along the backend-readiness seam:
+
+- **Notifications (built):** `GET /api/v1/notifications` (paginated),
+  `PATCH /api/v1/notifications/{id}/read`, `PATCH /api/v1/notifications/read-all` - all typed
+  after backend #562. `lib/api/notifications.ts` + a shared `lib/useNotifications.ts`
+  hook that auto-pages the list so the unread count is exact; one
+  `["notifications"]` cache feeds the inbox (`app/notifications.tsx`) and the
+  header `NotificationBell` badge. `unread-count` endpoint is intentionally
+  unused (it's untyped `content?: never`; the badge derives from the loaded list).
+- **Price alerts (to build):** unblocked - backend **#563** deployed, so
+  `CreatePriceAlertDto` / `UpdatePriceAlertDto` are now typed (were
+  `Record<string, never>`). Next: set-alert from card detail + an alerts
+  list/delete. Note the alert model is **percent thresholds** (`increasePct` /
+  `decreasePct`), not the absolute "target price" the issue text describes.
 
 ## Distribution: issue #8
 
