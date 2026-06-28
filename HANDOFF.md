@@ -4,8 +4,9 @@ Where the v1 build stands and how to pick it up. See the web repo's
 `ROADMAP.md` §7.1 for the overall plan.
 
 _Last updated: 2026-06-28 (TestFlight build 2 shipped via `npm run ship:ios`;
-versioning notes corrected). Prior: v2 UX wave (dark mode, account, inventory
-bulk/search, tx edit/delete, price history)._
+versioning notes corrected; all cross-repo backend deps merged - #25/#23/#31/#32
+now buildable after a spec regen). Prior: v2 UX wave (dark mode, account,
+inventory bulk/search, tx edit/delete, price history)._
 
 ## What this is
 
@@ -61,8 +62,10 @@ stack of squash-merged PRs (#33, #34, #38, #39, #40, #41), each reviewed
   range + finish toggles and a **dependency-free** bar chart (plain Views, no
   `react-native-svg`) off the typed `GET /cards/{cardId}/price-history`.
 
-**Blocked, not built** (need backend - see "Cross-repo backend dependencies"):
-#23 decks, #31 buy-list, #32 price-alerts/notifications, and the #25 core.
+**Backend now landed, mobile UI not built yet** (see "Cross-repo backend
+dependencies"): the backend deps for #23 decks, #31 buy-list, #32
+price-alerts/notifications, and the #25 core have all merged - these are now
+buildable once the spec is regenerated.
 
 ## Inventory (#5) notes
 
@@ -209,25 +212,24 @@ repo's `ROADMAP.md` §7.1 "Store readiness".
 
 ## Cross-repo backend dependencies (backend hand-off)
 
-Three mobile features are **blocked on the backend** (`matthewdtowles/i-want-my-mtg`).
-Each is tracked as a mobile issue with the exact, verified details:
+The backend deps (`matthewdtowles/i-want-my-mtg`) that blocked the remaining
+features have **all merged** (2026-06-28). Each was tracked as a mobile issue:
 
-- **#35 - refresh token / long-lived session.** Login returns only
-  `accessToken` (no refresh token). Add `POST /api/v1/auth/refresh` (rotating,
-  revocable) or a long-lived mobile token. Unblocks the **#25** core.
-- **#36 - OpenAPI response annotations (`ApiOkEnvelope`).** Deck, buy-list,
-  **price-alert, and notification** GET responses serialize as
-  `content?: never` (request bodies are typed; responses are not). Annotate
-  them so the generated client gets return types. Unblocks **#23 / #31 / #32**.
-- **#37 - push device registration.** `POST /api/v1/notifications/devices`
-  (+ unregister) + Expo Push fan-out, for the push half of **#32**.
+- **#35 - refresh token / long-lived session.** Done - backend PR #558. Unblocks
+  the **#25** core.
+- **#36 - OpenAPI response annotations (`ApiOkEnvelope`).** Done - backend PR
+  #557 (deck + buy-list) and #562 (price-alert + notification; the latter were
+  missed by #557 and still serialized as `content?: never`). Unblocks
+  **#23 / #31 / #32**.
+- **#37 - push device registration.** Done - backend PR #559
+  (`POST/DELETE /api/v1/notifications/devices`). Expo Push fan-out on alert
+  firing is a documented backend follow-up, not required for the #32 UI.
 
-**To continue this in a new session:** start a Claude Code session **scoped to
-both `i-want-my-mtg` and `i-want-my-mtg-mobile`** (so it can read mobile issues
-#35/#36/#37 and this repo's generated `lib/api/schema.ts` to see exactly which
-operations are untyped). In the backend, the response-annotation work mirrors
-the existing `ApiOkEnvelope` usage on card/set/inventory/transaction/portfolio/
-user/auth controllers. **Verification loop after each backend change:** here run
-`npm run gen:api` -> the previously-`content?: never` operations gain typed
-responses -> build the corresponding mobile feature. CI already fails on
-`schema.ts` drift, so regenerate + commit when the backend spec changes.
+**Verification loop (now that the backend has landed):** once the backend is
+deployed, here run `npm run gen:api` -> the previously-`content?: never`
+operations (decks, buy-list, price-alerts, notifications, refresh) gain typed
+responses -> build the corresponding mobile feature. CI fails on `schema.ts`
+drift, so regenerate + commit when the spec changes. The mobile `gen:api`
+pulls the **live** spec (`https://iwantmymtg.net/api/openapi.json`) by default,
+so the types only appear after deploy (override with `OPENAPI_URL` for a local
+backend).
