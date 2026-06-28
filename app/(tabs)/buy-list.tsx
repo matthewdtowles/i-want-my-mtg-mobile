@@ -99,7 +99,8 @@ export default function BuyListScreen() {
       <View style={styles.center}>
         <Text style={styles.empty}>Your buy-list is empty.</Text>
         <Text style={styles.emptyHint}>
-          Open a card and tap “Add to buy-list” to track cards you want to buy.
+          Open a card and use the “On your buy-list” steppers to track cards you
+          want to buy.
         </Text>
       </View>
     );
