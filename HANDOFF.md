@@ -3,8 +3,9 @@
 Where the v1 build stands and how to pick it up. See the web repo's
 `ROADMAP.md` §7.1 for the overall plan.
 
-_Last updated: 2026-06-27 (v2 UX wave: dark mode, account, inventory bulk/search,
-tx edit/delete, price history)._
+_Last updated: 2026-06-28 (TestFlight build 2 shipped via `npm run ship:ios`;
+versioning notes corrected). Prior: v2 UX wave (dark mode, account, inventory
+bulk/search, tx edit/delete, price history)._
 
 ## What this is
 
@@ -139,15 +140,18 @@ secret stays on EAS servers, never in the repo), and
 `ios.infoPlist.ITSAppUsesNonExemptEncryption: false` in `app.json` to skip the
 per-build encryption-compliance prompt. Expo account: **mtengineer**.
 
-Cutting a new TestFlight build is two manual commands (interactive Apple login):
-
-```bash
-eas build  --platform ios --profile production
-eas submit --platform ios --profile production
-```
+Cutting a new TestFlight build is one command (interactive Apple login the first
+time): `npm run ship:ios` (`scripts/ship-ios.sh`). It sanity-checks a clean
+`main`, syncs `app.json`'s `version` from the latest git tag (committing that
+bump), typechecks, then `eas build --auto-submit` -> TestFlight. EAS uses
+`appVersionSource: local` with `production.autoIncrement`, so it bumps the
+`buildNumber` in `app.json` during the build; **commit that bump after shipping**
+(the script does not - e.g. build 2 was committed by hand) so the next ship
+increments from the right number.
 
 **Merging to `main` does NOT build or ship anything** - CI only tags a version
-(no `eas build`/`eas submit` in the workflow). And `eas submit` reaches
+(no `eas build`/`eas submit` in the workflow). And `eas submit` (via `ship:ios`)
+reaches
 **TestFlight only**, not the public App Store; a public release is a separate
 manual Submit-for-Review in App Store Connect. (See the README "Distribution"
 section for the full rundown, incl. inviting testers.)
@@ -198,8 +202,9 @@ repo's `ROADMAP.md` §7.1 "Store readiness".
 
 - Per-card **legality** is not in the API card response (only a search filter);
   card detail can't show it without a backend change.
-- `app.json` version is `0.1.0` but EAS `appVersionSource: remote` ignores it
-  (the build version is stamped from the latest git tag, not app.json).
+- EAS uses `appVersionSource: local`: `ship:ios` writes the latest git tag into
+  `app.json`'s `version`, and `production.autoIncrement` bumps the `buildNumber`
+  there each build (commit it after shipping - see Distribution).
 - iOS EAS build/submit is set up (see Distribution above); Android is not.
 
 ## Cross-repo backend dependencies (backend hand-off)
