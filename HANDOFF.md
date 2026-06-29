@@ -3,11 +3,11 @@
 Where the v1 build stands and how to pick it up. See the web repo's
 `ROADMAP.md` §7.1 for the overall plan.
 
-_Last updated: 2026-06-29 (#23 decks - part 1: nav reworked (Buy-list + Decks
-moved off the tab bar into the account menu), deck list/create/import/detail with
-edit, quantity steppers, and the missing-cards view + missing-to-buy-list action;
-add-card-via-search is the part-2 fast follow. Prior: #32 price-alerts built; #32
-notifications shipped in #49; TestFlight build 2; v2 UX wave)._
+_Last updated: 2026-06-29 (#23 decks complete - part 1 (#51): nav reworked
+(Buy-list + Decks into the account menu), deck list/create/import/detail with
+edit, quantity steppers, missing-cards view + missing-to-buy-list; part 2:
+add-card-via-search. Prior: #32 price-alerts built; #32 notifications shipped in
+#49; TestFlight build 2; v2 UX wave)._
 
 ## What this is
 
@@ -65,9 +65,9 @@ stack of squash-merged PRs (#33, #34, #38, #39, #40, #41), each reviewed
 
 **Backend landed; mobile UI rolling out** (see "Cross-repo backend
 dependencies"). Merged: **#25 persistent login** (#47), **#31 buy-list** (#48),
-**#32 notifications** (#49), and **#32 price-alerts** (#50). **#23 decks** is in
-flight (part 1: list/create/import/detail/edit + missing-cards; part 2 adds
-search-add). With #23 the **tab bar is now the 4 core surfaces**
+**#32 notifications** (#49), and **#32 price-alerts** (#50). **#23 decks** is
+built - part 1 (#51: list/create/import/detail/edit + missing-cards) merged; part
+2 (add-card-via-search) in review. With #23 the **tab bar is now the 4 core surfaces**
 (Browse/Inventory/Transactions/Portfolio); Buy-list, Decks, and Price alerts live
 in the **account menu** (header person icon → MANAGE).
 
@@ -203,9 +203,11 @@ buy-list.
   cards you don't fully own, plus an **"Add missing to buy-list"** action
   (`/decks/{id}/missing-to-buy-list`, invalidates `["buy-list"]`).
 
-**Part 2 (fast follow):** add an arbitrary card to a deck via card search
-(reuse `searchCards`) - the `POST /decks/{id}/cards` add-increment endpoint. Until
-then a deck is populated by **import** (and quantities edited in detail).
+**Part 2 (built):** `app/deck/add.tsx` (modal, opened from the deck detail
+**+ Add cards** button) - Main/Sideboard toggle + debounced card search
+(`searchCards`), tap **Add** to `addDeckCard` (`POST /decks/{id}/cards`
+add-increment) with optimistic per-card "Added ×N" feedback; invalidates
+`["deck", id]` + `["decks"]`.
 
 **Format enum** (from `DeckCreateApiDto`): standard / commander / modern / legacy
 / vintage / brawl / explorer / historic / oathbreaker / pauper / pioneer (omit for

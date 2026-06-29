@@ -69,6 +69,7 @@ function RootNavigator() {
         <Stack.Screen name="decks" options={{ headerBackTitle: "Back" }} />
         <Stack.Screen name="deck/[id]" options={{ headerBackTitle: "Back" }} />
         <Stack.Screen name="deck/new" options={{ presentation: "modal" }} />
+        <Stack.Screen name="deck/add" options={{ presentation: "modal" }} />
         <Stack.Screen name="transaction/new" options={{ presentation: "modal" }} />
       </Stack>
       {statusBar}
