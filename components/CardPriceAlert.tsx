@@ -21,7 +21,8 @@ import type { ThemeColors } from "../lib/theme/colors";
 
 type Props = { cardId: string };
 
-// Accepts a non-negative percent like "10" or "7.5"; empty -> undefined (unset).
+// Accepts a positive percent like "10" or "7.5"; empty -> undefined (unset);
+// zero/negative/non-numeric -> null (invalid).
 function parsePct(raw: string): number | null | undefined {
   const trimmed = raw.trim();
   if (trimmed === "") return undefined;

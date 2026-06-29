@@ -109,7 +109,11 @@ export default function PriceAlertsScreen() {
         keyExtractor={(it) => String(it.id)}
         renderItem={({ item }) => (
           <View style={styles.row}>
-            <Pressable style={styles.rowMain} onPress={() => openCard(item)}>
+            <Pressable
+              style={styles.rowMain}
+              onPress={() => openCard(item)}
+              disabled={!(item.setCode && item.cardNumber)}
+            >
               <Text style={styles.cardName}>{item.cardName ?? item.cardId}</Text>
               {item.setCode && item.cardNumber ? (
                 <Text style={styles.meta}>
