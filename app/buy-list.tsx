@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Stack } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import { useMemo } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Pressable,
   RefreshControl,
   StyleSheet,
   Text,
@@ -32,6 +33,7 @@ export default function BuyListScreen() {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const queryClient = useQueryClient();
+  const router = useRouter();
 
   const query = useQuery({ queryKey: KEY, queryFn: fetchBuyList });
   const items = useMemo(() => query.data ?? [], [query.data]);
@@ -82,7 +84,24 @@ export default function BuyListScreen() {
     },
   });
 
-  const header = <Stack.Screen options={{ title: "Buy-list", headerBackTitle: "Back" }} />;
+  const header = (
+    <Stack.Screen
+      options={{
+        title: "Buy-list",
+        headerBackTitle: "Back",
+        headerRight: () => (
+          <Pressable
+            hitSlop={8}
+            onPress={() => router.push("/buy-list-import")}
+            style={styles.importBtn}
+            accessibilityLabel="Import buy-list from CSV"
+          >
+            <Text style={styles.importText}>Import</Text>
+          </Pressable>
+        ),
+      }}
+    />
+  );
 
   if (query.isPending) {
     return (
@@ -173,6 +192,8 @@ const createStyles = (colors: ThemeColors) =>
       borderBottomColor: colors.border,
     },
     summary: { fontSize: 13, color: colors.textSecondary, fontWeight: "600" },
+    importBtn: { paddingHorizontal: 12 },
+    importText: { color: colors.accent, fontSize: 15, fontWeight: "600" },
     empty: { fontSize: 16, fontWeight: "600", color: colors.textSecondary },
     emptyHint: {
       fontSize: 14,
