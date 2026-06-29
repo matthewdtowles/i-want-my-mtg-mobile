@@ -12,6 +12,7 @@ export type ApiInventoryItem = components["schemas"]["InventoryItemApiDto"];
 export type ApiInventoryWrite = components["schemas"]["InventoryRequestApiDto"];
 export type ApiInventoryQuantity = components["schemas"]["InventoryQuantityApiDto"];
 export type ApiBuyListItem = components["schemas"]["BuyListItemApiDto"];
+export type ApiBuyListImportResult = components["schemas"]["BuyListImportResponseDto"];
 export type ApiTransaction = components["schemas"]["TransactionApiItemDto"];
 export type ApiTransactionWrite = components["schemas"]["TransactionRequestDto"];
 export type ApiTransactionUpdate = components["schemas"]["TransactionUpdateRequestDto"];

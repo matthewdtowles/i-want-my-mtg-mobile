@@ -3,11 +3,10 @@
 Where the v1 build stands and how to pick it up. See the web repo's
 `ROADMAP.md` §7.1 for the overall plan.
 
-_Last updated: 2026-06-29 (#23 decks complete - part 1 (#51): nav reworked
-(Buy-list + Decks into the account menu), deck list/create/import/detail with
-edit, quantity steppers, missing-cards view + missing-to-buy-list; part 2:
-add-card-via-search. Prior: #32 price-alerts built; #32 notifications shipped in
-#49; TestFlight build 2; v2 UX wave)._
+_Last updated: 2026-06-29 (buy-list **CSV import** built - Import button on the
+Buy-list screen → paste-CSV modal. Prior: #23 decks complete (#51 + #52); #32
+price-alerts built; #32 notifications shipped in #49; TestFlight build 2; v2 UX
+wave)._
 
 ## What this is
 
@@ -140,10 +139,11 @@ flows into the portfolio totals.
 ## Buy-list (#31) notes
 
 Want-list backed by `/api/v1/buy-list` (GET list / POST add-increment / PATCH
-set-absolute-quantity where 0 removes / DELETE), all typed after backend #557.
-Mirrors inventory: `lib/api/buyList.ts` (`fetchBuyList` / `setBuyListQuantity` /
-`removeFromBuyList`), query key `["buy-list"]`. The list endpoint is **not**
-paginated (returns the whole list), so the screen uses a plain `useQuery`.
+set-absolute-quantity where 0 removes / DELETE / POST import), all typed after
+backend #557. Mirrors inventory: `lib/api/buyList.ts` (`fetchBuyList` /
+`setBuyListQuantity` / `removeFromBuyList` / `importBuyList`), query key
+`["buy-list"]`. The list endpoint is **not** paginated (returns the whole list),
+so the screen uses a plain `useQuery`.
 
 UI: a **Buy-list** screen (`app/buy-list.tsx`) with an optimistic stepper +
 remove (`BuyListListItem`, rows link to card detail) and a distinct-card /
@@ -152,10 +152,15 @@ steppers seeded from the shared `["buy-list"]` cache). It **used to be a tab**;
 #23 moved it off the tab bar into the **account menu** (it's now a stack screen,
 not under `app/(tabs)/`).
 
-**Not built:** CSV import (`/buy-list/import`, `BuyListImportApiDto.text`). The
-deck `missing-to-buy-list` action shipped with #23 (see Decks notes). Heads-up:
-`/cards/{cardId}/buylist` is vendor sell-to *pricing*, not the want-list - don't
-confuse the two.
+**CSV import (built):** the Buy-list screen's header **Import** button opens
+`app/buy-list-import.tsx` (modal) - paste a CSV (`POST /api/v1/buy-list/import`,
+`BuyListImportApiDto.text`; native header `name,set_code,number,quantity,foil`,
+external Moxfield/Archidekt/Deckbox/TCGPlayer exports auto-detected). Shows the
+saved count + any per-line errors, then invalidates `["buy-list"]`.
+
+Heads-up: `/cards/{cardId}/buylist` is vendor sell-to *pricing*, not the
+want-list - don't confuse the two. (The deck `missing-to-buy-list` action shipped
+with #23 - see Decks notes.)
 
 ## Price alerts + notifications (#32) notes
 
@@ -262,8 +267,8 @@ repo's `ROADMAP.md` §7.1 "Store readiness".
 - `app/` - expo-router routes: `(tabs)` shell (4 core tabs), `sign-in`,
   `account` (the **menu hub** - MANAGE links to Decks / Buy-list / Price alerts),
   `set/[code]`, `card/[setCode]/[number]`, `transaction/new` (create + edit),
-  `buy-list`, `notifications`, `price-alerts`, `decks`, `deck/[id]`, `deck/new`
-  (create / import / edit).
+  `buy-list`, `buy-list-import` (CSV modal), `notifications`, `price-alerts`,
+  `decks`, `deck/[id]`, `deck/new` (create / import / edit), `deck/add` (search).
 - `components/` - shared UI incl. `ErrorState` (message + Retry), `BulkAddBar`
   (multi-select add), `CardPriceHistory` (dependency-free bar chart),
   `CardListItem` (optional discriminated-union selection mode).

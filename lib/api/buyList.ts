@@ -1,6 +1,8 @@
 import { api } from "./client";
 import { errMessage } from "./envelope";
-import type { ApiBuyListItem } from "./types";
+import type { ApiBuyListImportResult, ApiBuyListItem } from "./types";
+
+export const BUY_LIST_KEY = ["buy-list"] as const;
 
 export async function fetchBuyList(): Promise<ApiBuyListItem[]> {
   const { data, error, response } = await api.GET("/api/v1/buy-list");
@@ -26,4 +28,16 @@ export async function removeFromBuyList(cardId: string, isFoil: boolean): Promis
     body: { cardId, isFoil },
   });
   if (!response.ok) throw new Error(errMessage(error, "Failed to remove item."));
+}
+
+// Imports a CSV (header row required; external exports auto-detected) and returns
+// the count saved plus any per-line errors.
+export async function importBuyList(text: string): Promise<ApiBuyListImportResult> {
+  const { data, error, response } = await api.POST("/api/v1/buy-list/import", {
+    body: { text },
+  });
+  if (!response.ok) throw new Error(errMessage(error, "Failed to import buy-list."));
+  const result = data?.data;
+  if (!result) throw new Error("Failed to import buy-list.");
+  return result;
 }
