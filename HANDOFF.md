@@ -3,10 +3,11 @@
 Where the v1 build stands and how to pick it up. See the web repo's
 `ROADMAP.md` §7.1 for the overall plan.
 
-_Last updated: 2026-06-28 (TestFlight build 2 shipped via `npm run ship:ios`;
-versioning notes corrected; all cross-repo backend deps merged - #25/#23/#31/#32
-now buildable after a spec regen). Prior: v2 UX wave (dark mode, account,
-inventory bulk/search, tx edit/delete, price history)._
+_Last updated: 2026-06-28 (#32 price-alerts built - set/manage alerts from card
+detail + a Price alerts management screen; the notifications half already shipped
+in #49. Prior: TestFlight build 2 shipped via `npm run ship:ios`; versioning
+notes corrected; all cross-repo backend deps merged - #25/#23/#31/#32 buildable
+after a spec regen; v2 UX wave)._
 
 ## What this is
 
@@ -64,9 +65,9 @@ stack of squash-merged PRs (#33, #34, #38, #39, #40, #41), each reviewed
 
 **Backend landed; mobile UI rolling out** (see "Cross-repo backend
 dependencies"). Merged: **#25 persistent login** (#47), **#31 buy-list** (#48),
-and **#32 notifications** (#49). Backend #563 is deployed, so the **#32
-price-alerts** half is now unblocked (create/update DTOs typed). Still to build:
-**#32 price-alerts** and **#23 decks**.
+and **#32 notifications** (#49). The **#32 price-alerts** half is now built
+(set/manage from card detail + a Price alerts screen). Still to build: **#23
+decks**.
 
 ## Inventory (#5) notes
 
@@ -165,11 +166,17 @@ Split along the backend-readiness seam:
   `["notifications"]` cache feeds the inbox (`app/notifications.tsx`) and the
   header `NotificationBell` badge. `unread-count` endpoint is intentionally
   unused (it's untyped `content?: never`; the badge derives from the loaded list).
-- **Price alerts (to build):** unblocked - backend **#563** deployed, so
-  `CreatePriceAlertDto` / `UpdatePriceAlertDto` are now typed (were
-  `Record<string, never>`). Next: set-alert from card detail + an alerts
-  list/delete. Note the alert model is **percent thresholds** (`increasePct` /
-  `decreasePct`), not the absolute "target price" the issue text describes.
+- **Price alerts (built):** backend **#563** typed `CreatePriceAlertDto` /
+  `UpdatePriceAlertDto` (were `Record<string, never>`). `lib/api/priceAlerts.ts`
+  (`fetchPriceAlerts` / `createPriceAlert` / `updatePriceAlert` /
+  `deletePriceAlert`), query key `["price-alerts"]`; the list endpoint is **not**
+  paginated. `components/CardPriceAlert.tsx` on card detail sets a new alert
+  (Rise %/Fall % inputs, at least one required) or shows + removes the existing
+  one; `app/price-alerts.tsx` (reached from the **account** screen's "Price
+  alerts" row) lists all alerts with pause/resume (`isActive` via PATCH) + delete
+  and taps through to the card. The alert model is **percent thresholds**
+  (`increasePct` / `decreasePct`), not the absolute "target price" the issue text
+  describes. The unread bell + inbox (#49) surface alert firings.
 
 ## Distribution: issue #8
 
@@ -255,10 +262,11 @@ features have **all merged** (2026-06-28). Each was tracked as a mobile issue:
 
 - **#35 - refresh token / long-lived session.** Done - backend PR #558. Unblocks
   the **#25** core.
-- **#36 - OpenAPI response annotations (`ApiOkEnvelope`).** Done - backend PR
-  #557 (deck + buy-list) and #562 (price-alert + notification; the latter were
-  missed by #557 and still serialized as `content?: never`). Unblocks
-  **#23 / #31 / #32**.
+- **#36 - OpenAPI annotations (`ApiOkEnvelope` + request DTOs).** Done - backend
+  PR #557 (deck + buy-list responses), #562 (price-alert + notification
+  responses; the latter were missed by #557 and still serialized as
+  `content?: never`), and #563 (price-alert **request** DTOs - `CreatePriceAlertDto`
+  / `UpdatePriceAlertDto` were `Record<string, never>`). Unblocks **#23 / #31 / #32**.
 - **#37 - push device registration.** Done - backend PR #559
   (`POST/DELETE /api/v1/notifications/devices`). Expo Push fan-out on alert
   firing is a documented backend follow-up, not required for the #32 UI.

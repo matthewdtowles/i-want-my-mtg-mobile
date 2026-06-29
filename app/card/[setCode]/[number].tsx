@@ -16,6 +16,7 @@ import { formatPrice } from "../../../lib/format";
 import { CardThumb } from "../../../components/CardThumb";
 import { AddToInventory } from "../../../components/AddToInventory";
 import { AddToBuyList } from "../../../components/AddToBuyList";
+import { CardPriceAlert } from "../../../components/CardPriceAlert";
 import { CardPriceHistory } from "../../../components/CardPriceHistory";
 import { ErrorState } from "../../../components/ErrorState";
 import { useTheme } from "../../../lib/theme/ThemeContext";
@@ -96,6 +97,8 @@ export default function CardDetailScreen() {
         hasNonFoil={card.hasNonFoil}
         hasFoil={card.hasFoil}
       />
+
+      <CardPriceAlert cardId={card.id} />
 
       <CardPriceHistory
         cardId={card.id}

@@ -64,6 +64,7 @@ function RootNavigator() {
         />
         <Stack.Screen name="account" options={{ headerBackTitle: "Back" }} />
         <Stack.Screen name="notifications" options={{ headerBackTitle: "Back" }} />
+        <Stack.Screen name="price-alerts" options={{ headerBackTitle: "Back" }} />
         <Stack.Screen name="transaction/new" options={{ presentation: "modal" }} />
       </Stack>
       {statusBar}
