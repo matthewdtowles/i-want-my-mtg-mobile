@@ -34,10 +34,11 @@ export default function AddDeckCardScreen() {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const queryClient = useQueryClient();
   const params = useLocalSearchParams<{ deckId: string; name?: string }>();
-  const deckId = Number(params.deckId);
+  const deckId = Number(Array.isArray(params.deckId) ? params.deckId[0] : params.deckId);
 
   const [text, setText] = useState("");
   const [board, setBoard] = useState<Board>("main");
+  // Keyed by `${board}:${cardId}` so the "Added ×N" feedback is board-specific.
   const [addedCounts, setAddedCounts] = useState<Record<string, number>>({});
   const q = useDebounce(text.trim(), 350);
   const searching = q.length > 0;
@@ -51,13 +52,16 @@ export default function AddDeckCardScreen() {
   });
 
   const add = useMutation({
-    mutationFn: (card: ApiCard) => addDeckCard(deckId, card.id, board === "side", 1),
-    onMutate(card) {
+    mutationFn: ({ card, isSideboard }: { card: ApiCard; isSideboard: boolean }) =>
+      addDeckCard(deckId, card.id, isSideboard, 1),
+    onMutate({ card, isSideboard }) {
       // Optimistic feedback so rapid taps feel instant.
-      setAddedCounts((c) => ({ ...c, [card.id]: (c[card.id] ?? 0) + 1 }));
+      const k = `${isSideboard ? "side" : "main"}:${card.id}`;
+      setAddedCounts((c) => ({ ...c, [k]: (c[k] ?? 0) + 1 }));
     },
-    onError(e, card) {
-      setAddedCounts((c) => ({ ...c, [card.id]: Math.max(0, (c[card.id] ?? 1) - 1) }));
+    onError(e, { card, isSideboard }) {
+      const k = `${isSideboard ? "side" : "main"}:${card.id}`;
+      setAddedCounts((c) => ({ ...c, [k]: Math.max(0, (c[k] ?? 1) - 1) }));
       Alert.alert("Couldn't add card", e instanceof Error ? e.message : "Please try again.");
     },
     onSuccess() {
@@ -70,6 +74,15 @@ export default function AddDeckCardScreen() {
     () => search.data?.pages.flatMap((p) => p.items) ?? [],
     [search.data],
   );
+
+  if (!Number.isFinite(deckId)) {
+    return (
+      <>
+        <Stack.Screen options={{ title: "Add cards" }} />
+        <Text style={styles.message}>Deck not found.</Text>
+      </>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -135,11 +148,13 @@ export default function AddDeckCardScreen() {
               <Text style={styles.price}>{formatPrice(item.prices?.normal)}</Text>
               <Pressable
                 style={styles.addBtn}
-                onPress={() => add.mutate(item)}
+                onPress={() => add.mutate({ card: item, isSideboard: board === "side" })}
                 accessibilityLabel={`Add ${item.name} to ${board === "side" ? "sideboard" : "main deck"}`}
               >
                 <Text style={styles.addText}>
-                  {addedCounts[item.id] ? `Added ×${addedCounts[item.id]}` : "Add"}
+                  {addedCounts[`${board}:${item.id}`]
+                    ? `Added ×${addedCounts[`${board}:${item.id}`]}`
+                    : "Add"}
                 </Text>
               </Pressable>
             </View>
