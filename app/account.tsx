@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Constants from "expo-constants";
-import { Stack } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { useMemo } from "react";
 import {
@@ -32,6 +32,7 @@ export default function AccountScreen() {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { signOut } = useAuth();
   const queryClient = useQueryClient();
+  const router = useRouter();
 
   const profile = useQuery({ queryKey: ["user", "profile"], queryFn: fetchProfile });
 
@@ -125,6 +126,16 @@ export default function AccountScreen() {
           );
         })}
       </View>
+
+      <Text style={styles.sectionLabel}>MANAGE</Text>
+      <Pressable
+        style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+        onPress={() => router.push("/price-alerts")}
+        accessibilityRole="button"
+      >
+        <Text style={styles.rowText}>Price alerts</Text>
+        <Text style={styles.rowHint}>›</Text>
+      </Pressable>
 
       <Text style={styles.sectionLabel}>ACTIONS</Text>
       <Pressable
