@@ -2,6 +2,8 @@ import { api } from "./client";
 import { errMessage } from "./envelope";
 import type { ApiBuyListImportResult, ApiBuyListItem } from "./types";
 
+export const BUY_LIST_KEY = ["buy-list"] as const;
+
 export async function fetchBuyList(): Promise<ApiBuyListItem[]> {
   const { data, error, response } = await api.GET("/api/v1/buy-list");
   if (!response.ok) throw new Error(errMessage(error, "Failed to load buy-list."));

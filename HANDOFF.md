@@ -153,7 +153,7 @@ steppers seeded from the shared `["buy-list"]` cache). It **used to be a tab**;
 not under `app/(tabs)/`).
 
 **CSV import (built):** the Buy-list screen's header **Import** button opens
-`app/buy-list-import.tsx` (modal) - paste a CSV (`POST /buy-list/import`,
+`app/buy-list-import.tsx` (modal) - paste a CSV (`POST /api/v1/buy-list/import`,
 `BuyListImportApiDto.text`; native header `name,set_code,number,quantity,foil`,
 external Moxfield/Archidekt/Deckbox/TCGPlayer exports auto-detected). Shows the
 saved count + any per-line errors, then invalidates `["buy-list"]`.

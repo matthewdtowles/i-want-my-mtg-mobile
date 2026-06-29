@@ -11,7 +11,12 @@ import {
   View,
 } from "react-native";
 
-import { fetchBuyList, removeFromBuyList, setBuyListQuantity } from "../lib/api/buyList";
+import {
+  BUY_LIST_KEY,
+  fetchBuyList,
+  removeFromBuyList,
+  setBuyListQuantity,
+} from "../lib/api/buyList";
 import type { ApiBuyListItem } from "../lib/api/types";
 import { BuyListListItem } from "../components/BuyListListItem";
 import { ErrorState } from "../components/ErrorState";
@@ -19,7 +24,7 @@ import { formatPrice } from "../lib/format";
 import { useTheme } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
 
-const KEY = ["buy-list"] as const;
+const KEY = BUY_LIST_KEY;
 
 function sameRow(a: ApiBuyListItem, b: ApiBuyListItem): boolean {
   return a.cardId === b.cardId && a.isFoil === b.isFoil;
@@ -94,6 +99,7 @@ export default function BuyListScreen() {
             hitSlop={8}
             onPress={() => router.push("/buy-list-import")}
             style={styles.importBtn}
+            accessibilityRole="button"
             accessibilityLabel="Import buy-list from CSV"
           >
             <Text style={styles.importText}>Import</Text>

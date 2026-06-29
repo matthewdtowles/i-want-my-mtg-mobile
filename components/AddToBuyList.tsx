@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 
-import { fetchBuyList, setBuyListQuantity } from "../lib/api/buyList";
+import { BUY_LIST_KEY, fetchBuyList, setBuyListQuantity } from "../lib/api/buyList";
 import type { ApiBuyListItem } from "../lib/api/types";
 import { useTheme } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
@@ -13,7 +13,7 @@ type Props = {
   hasFoil: boolean;
 };
 
-const KEY = ["buy-list"] as const;
+const KEY = BUY_LIST_KEY;
 
 function wanted(items: ApiBuyListItem[] | undefined, cardId: string, isFoil: boolean): number {
   return items?.find((it) => it.cardId === cardId && it.isFoil === isFoil)?.quantity ?? 0;

@@ -12,7 +12,7 @@ import {
   View,
 } from "react-native";
 
-import { importBuyList } from "../lib/api/buyList";
+import { BUY_LIST_KEY, importBuyList } from "../lib/api/buyList";
 import type { ApiBuyListImportResult } from "../lib/api/types";
 import { useTheme } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
@@ -30,7 +30,7 @@ export default function BuyListImportScreen() {
     mutationFn: () => importBuyList(text.trim()),
     onSuccess: (res) => {
       setResult(res);
-      queryClient.invalidateQueries({ queryKey: ["buy-list"] });
+      queryClient.invalidateQueries({ queryKey: BUY_LIST_KEY });
     },
   });
 
