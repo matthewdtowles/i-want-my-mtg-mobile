@@ -247,6 +247,18 @@ export default function DeckDetailScreen() {
                 {missingOnly ? "Showing missing cards" : "Show missing cards only"}
               </Text>
             </Pressable>
+            <Pressable
+              style={styles.actionBtn}
+              onPress={() =>
+                router.push({
+                  pathname: "/deck/add",
+                  params: { deckId: String(deck.id), name: deck.name },
+                })
+              }
+              accessibilityRole="button"
+            >
+              <Text style={styles.actionText}>+ Add cards</Text>
+            </Pressable>
           </View>
         }
         renderSectionHeader={({ section }) => (

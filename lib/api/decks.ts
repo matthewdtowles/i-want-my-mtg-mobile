@@ -73,6 +73,20 @@ export async function setDeckCardQuantity(
   if (!response.ok) throw new Error(errMessage(error, "Failed to update card."));
 }
 
+// Adds `quantity` of a card to the deck (increments if already present).
+export async function addDeckCard(
+  id: number,
+  cardId: string,
+  isSideboard: boolean,
+  quantity = 1,
+): Promise<void> {
+  const { error, response } = await api.POST("/api/v1/decks/{id}/cards", {
+    params: { path: { id } },
+    body: { cardId, isSideboard, quantity },
+  });
+  if (!response.ok) throw new Error(errMessage(error, "Failed to add card."));
+}
+
 // Adds the deck's cards you don't own to your buy-list; returns the count added.
 export async function deckMissingToBuyList(id: number): Promise<number> {
   const { data, error, response } = await api.POST(
