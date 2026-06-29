@@ -3,11 +3,11 @@
 Where the v1 build stands and how to pick it up. See the web repo's
 `ROADMAP.md` §7.1 for the overall plan.
 
-_Last updated: 2026-06-28 (#32 price-alerts built - set/manage alerts from card
-detail + a Price alerts management screen; the notifications half already shipped
-in #49. Prior: TestFlight build 2 shipped via `npm run ship:ios`; versioning
-notes corrected; all cross-repo backend deps merged - #25/#23/#31/#32 buildable
-after a spec regen; v2 UX wave)._
+_Last updated: 2026-06-29 (#23 decks - part 1: nav reworked (Buy-list + Decks
+moved off the tab bar into the account menu), deck list/create/import/detail with
+edit, quantity steppers, and the missing-cards view + missing-to-buy-list action;
+add-card-via-search is the part-2 fast follow. Prior: #32 price-alerts built; #32
+notifications shipped in #49; TestFlight build 2; v2 UX wave)._
 
 ## What this is
 
@@ -65,9 +65,11 @@ stack of squash-merged PRs (#33, #34, #38, #39, #40, #41), each reviewed
 
 **Backend landed; mobile UI rolling out** (see "Cross-repo backend
 dependencies"). Merged: **#25 persistent login** (#47), **#31 buy-list** (#48),
-and **#32 notifications** (#49). The **#32 price-alerts** half is now built
-(set/manage from card detail + a Price alerts screen). Still to build: **#23
-decks**.
+**#32 notifications** (#49), and **#32 price-alerts** (#50). **#23 decks** is in
+flight (part 1: list/create/import/detail/edit + missing-cards; part 2 adds
+search-add). With #23 the **tab bar is now the 4 core surfaces**
+(Browse/Inventory/Transactions/Portfolio); Buy-list, Decks, and Price alerts live
+in the **account menu** (header person icon → MANAGE).
 
 ## Inventory (#5) notes
 
@@ -143,15 +145,15 @@ Mirrors inventory: `lib/api/buyList.ts` (`fetchBuyList` / `setBuyListQuantity` /
 `removeFromBuyList`), query key `["buy-list"]`. The list endpoint is **not**
 paginated (returns the whole list), so the screen uses a plain `useQuery`.
 
-UI: a 5th **Buy-list** tab (`app/(tabs)/buy-list.tsx`) with an optimistic
-stepper + remove (`BuyListListItem`, rows link to card detail) and a
-distinct-card / wanted-qty / value summary; add from card detail via
-`AddToBuyList` (per-finish steppers seeded from the shared `["buy-list"]`
-cache). Note: there are now **5 tabs** - adding the decks (#23) area will need a
-rethink (a menu/section) to avoid tab overflow.
+UI: a **Buy-list** screen (`app/buy-list.tsx`) with an optimistic stepper +
+remove (`BuyListListItem`, rows link to card detail) and a distinct-card /
+wanted-qty / value summary; add from card detail via `AddToBuyList` (per-finish
+steppers seeded from the shared `["buy-list"]` cache). It **used to be a tab**;
+#23 moved it off the tab bar into the **account menu** (it's now a stack screen,
+not under `app/(tabs)/`).
 
-**Not built:** CSV import (`/buy-list/import`, `BuyListImportApiDto.text`) and
-the deck `missing-to-buy-list` action (belongs with #23). Heads-up:
+**Not built:** CSV import (`/buy-list/import`, `BuyListImportApiDto.text`). The
+deck `missing-to-buy-list` action shipped with #23 (see Decks notes). Heads-up:
 `/cards/{cardId}/buylist` is vendor sell-to *pricing*, not the want-list - don't
 confuse the two.
 
@@ -177,6 +179,37 @@ Split along the backend-readiness seam:
   and taps through to the card. The alert model is **percent thresholds**
   (`increasePct` / `decreasePct`), not the absolute "target price" the issue text
   describes. The unread bell + inbox (#49) surface alert firings.
+
+## Decks (#23) notes
+
+Full deck API was already typed (no backend dep needed): `GET/POST /decks`,
+`GET/PATCH/DELETE /decks/{id}`, `POST /decks/import`, `POST/PATCH/DELETE
+/decks/{id}/cards`, `POST /decks/{id}/missing-to-buy-list`. Data layer
+`lib/api/decks.ts`; query keys `["decks"]` (summaries) and `["deck", id]`
+(detail, embeds `cards`). The deck-card write is an **absolute-quantity** upsert
+keyed by `cardId` + `isSideboard` (quantity 0 removes), same shape as inventory /
+buy-list.
+
+**Part 1 (this PR):**
+- `app/decks.tsx` - deck list (name · format · count · value), header **+** opens
+  create/import.
+- `app/deck/new.tsx` - **create** (name + format chips) or **import** (paste
+  decklist → `/decks/import`). Doubles as the **edit** form when pushed with an
+  `id` param (PATCH name/format), mirroring `transaction/new`'s create/edit reuse.
+- `app/deck/[id].tsx` - detail via `SectionList` (Main / Sideboard), optimistic
+  quantity steppers (drop at 0), per-row legality flag (`legalInFormat === false`)
+  + illegal-count banner, **Edit**/**Delete**, and the **missing-cards view**: it
+  cross-references `GET /inventory/quantities` (owned = normal+foil) to filter to
+  cards you don't fully own, plus an **"Add missing to buy-list"** action
+  (`/decks/{id}/missing-to-buy-list`, invalidates `["buy-list"]`).
+
+**Part 2 (fast follow):** add an arbitrary card to a deck via card search
+(reuse `searchCards`) - the `POST /decks/{id}/cards` add-increment endpoint. Until
+then a deck is populated by **import** (and quantities edited in detail).
+
+**Format enum** (from `DeckCreateApiDto`): standard / commander / modern / legacy
+/ vintage / brawl / explorer / historic / oathbreaker / pauper / pioneer (omit for
+no format).
 
 ## Distribution: issue #8
 
@@ -224,8 +257,11 @@ repo's `ROADMAP.md` §7.1 "Store readiness".
   Components read tokens via a `createStyles(colors)` factory + `useMemo`.
 - `lib/api/user.ts` - `fetchProfile` / `deleteAccount`.
 - `lib/images.ts` - card images: `https://cards.scryfall.io/{size}/front/{imgSrc}`.
-- `app/` - expo-router routes: `(tabs)` shell, `sign-in`, `account`,
-  `set/[code]`, `card/[setCode]/[number]`, `transaction/new` (create + edit).
+- `app/` - expo-router routes: `(tabs)` shell (4 core tabs), `sign-in`,
+  `account` (the **menu hub** - MANAGE links to Decks / Buy-list / Price alerts),
+  `set/[code]`, `card/[setCode]/[number]`, `transaction/new` (create + edit),
+  `buy-list`, `notifications`, `price-alerts`, `decks`, `deck/[id]`, `deck/new`
+  (create / import / edit).
 - `components/` - shared UI incl. `ErrorState` (message + Retry), `BulkAddBar`
   (multi-select add), `CardPriceHistory` (dependency-free bar chart),
   `CardListItem` (optional discriminated-union selection mode).
