@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Stack } from "expo-router";
 import { useMemo } from "react";
 import {
   ActivityIndicator,
@@ -9,13 +10,13 @@ import {
   View,
 } from "react-native";
 
-import { fetchBuyList, removeFromBuyList, setBuyListQuantity } from "../../lib/api/buyList";
-import type { ApiBuyListItem } from "../../lib/api/types";
-import { BuyListListItem } from "../../components/BuyListListItem";
-import { ErrorState } from "../../components/ErrorState";
-import { formatPrice } from "../../lib/format";
-import { useTheme } from "../../lib/theme/ThemeContext";
-import type { ThemeColors } from "../../lib/theme/colors";
+import { fetchBuyList, removeFromBuyList, setBuyListQuantity } from "../lib/api/buyList";
+import type { ApiBuyListItem } from "../lib/api/types";
+import { BuyListListItem } from "../components/BuyListListItem";
+import { ErrorState } from "../components/ErrorState";
+import { formatPrice } from "../lib/format";
+import { useTheme } from "../lib/theme/ThemeContext";
+import type { ThemeColors } from "../lib/theme/colors";
 
 const KEY = ["buy-list"] as const;
 
@@ -81,33 +82,47 @@ export default function BuyListScreen() {
     },
   });
 
+  const header = <Stack.Screen options={{ title: "Buy-list", headerBackTitle: "Back" }} />;
+
   if (query.isPending) {
-    return <ActivityIndicator style={styles.center} size="large" color={colors.accent} />;
+    return (
+      <>
+        {header}
+        <ActivityIndicator style={styles.center} size="large" color={colors.accent} />
+      </>
+    );
   }
   if (query.isError) {
     return (
-      <ErrorState
-        message={
-          query.error instanceof Error ? query.error.message : "Failed to load buy-list."
-        }
-        onRetry={() => query.refetch()}
-      />
+      <>
+        {header}
+        <ErrorState
+          message={
+            query.error instanceof Error ? query.error.message : "Failed to load buy-list."
+          }
+          onRetry={() => query.refetch()}
+        />
+      </>
     );
   }
   if (items.length === 0) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.empty}>Your buy-list is empty.</Text>
-        <Text style={styles.emptyHint}>
-          Open a card and use the “On your buy-list” steppers to track cards you
-          want to buy.
-        </Text>
-      </View>
+      <>
+        {header}
+        <View style={styles.center}>
+          <Text style={styles.empty}>Your buy-list is empty.</Text>
+          <Text style={styles.emptyHint}>
+            Open a card and use the “On your buy-list” steppers to track cards you
+            want to buy.
+          </Text>
+        </View>
+      </>
     );
   }
 
   return (
     <View style={styles.screen}>
+      {header}
       <View style={styles.controls}>
         <Text style={styles.summary}>
           {summary.cards} card{summary.cards === 1 ? "" : "s"} · {summary.qty} wanted ·{" "}

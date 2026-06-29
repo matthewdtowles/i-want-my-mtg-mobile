@@ -130,6 +130,22 @@ export default function AccountScreen() {
       <Text style={styles.sectionLabel}>MANAGE</Text>
       <Pressable
         style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+        onPress={() => router.push("/decks")}
+        accessibilityRole="button"
+      >
+        <Text style={styles.rowText}>Decks</Text>
+        <Text style={styles.rowHint}>›</Text>
+      </Pressable>
+      <Pressable
+        style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+        onPress={() => router.push("/buy-list")}
+        accessibilityRole="button"
+      >
+        <Text style={styles.rowText}>Buy-list</Text>
+        <Text style={styles.rowHint}>›</Text>
+      </Pressable>
+      <Pressable
+        style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
         onPress={() => router.push("/price-alerts")}
         accessibilityRole="button"
       >
