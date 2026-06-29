@@ -80,5 +80,7 @@ export async function deckMissingToBuyList(id: number): Promise<number> {
     { params: { path: { id } } },
   );
   if (!response.ok) throw new Error(errMessage(error, "Failed to add missing cards."));
-  return data?.data?.added ?? 0;
+  const added = data?.data?.added;
+  if (typeof added !== "number") throw new Error("Unexpected response adding missing cards.");
+  return added;
 }

@@ -86,7 +86,14 @@ export default function DecksScreen() {
         contentContainerStyle={styles.listContent}
         data={query.data}
         keyExtractor={(it) => String(it.id)}
-        renderItem={({ item }) => <DeckRow item={item} styles={styles} onPress={() => router.push(`/deck/${item.id}`)} />}
+        renderItem={({ item }) => (
+          <DeckRow
+            item={item}
+            styles={styles}
+            chevronColor={colors.textMuted}
+            onPress={() => router.push(`/deck/${item.id}`)}
+          />
+        )}
         refreshControl={
           <RefreshControl
             refreshing={query.isRefetching}
@@ -102,10 +109,12 @@ export default function DecksScreen() {
 function DeckRow({
   item,
   styles,
+  chevronColor,
   onPress,
 }: {
   item: ApiDeckSummary;
   styles: ReturnType<typeof createStyles>;
+  chevronColor: string;
   onPress: () => void;
 }) {
   return (
@@ -120,7 +129,7 @@ function DeckRow({
           ].join(" · ")}
         </Text>
       </View>
-      <Ionicons name="chevron-forward" size={18} color={styles.chevron.color} />
+      <Ionicons name="chevron-forward" size={18} color={chevronColor} />
     </Pressable>
   );
 }
@@ -153,5 +162,4 @@ const createStyles = (colors: ThemeColors) =>
     rowMain: { flex: 1, gap: 2 },
     name: { fontSize: 16, fontWeight: "700", color: colors.textPrimary },
     meta: { fontSize: 13, color: colors.textSecondary },
-    chevron: { color: colors.textMuted },
   });

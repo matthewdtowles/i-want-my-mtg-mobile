@@ -158,14 +158,15 @@ export default function DeckDetailScreen() {
 
   const sections = useMemo(() => {
     if (!deck) return [];
-    const visible = missingOnly ? deck.cards.filter((c) => missingCount(c) > 0) : deck.cards;
+    const visible = missingOnly
+      ? deck.cards.filter((c) => c.quantity - (ownedById.get(c.cardId) ?? 0) > 0)
+      : deck.cards;
     const main = visible.filter((c) => !c.isSideboard);
     const side = visible.filter((c) => c.isSideboard);
     return [
       { title: "Main", data: main },
       { title: "Sideboard", data: side },
     ].filter((s) => s.data.length > 0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deck, missingOnly, ownedById]);
 
   const headerScreen = (
