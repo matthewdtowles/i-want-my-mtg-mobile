@@ -175,7 +175,7 @@ function buildSeries(data: ApiPriceHistoryPoint[], finish: Finish): Series {
   };
 }
 
-/** Vertical breathing room so the line never touches the chart edges. */
+/** Breathing room so the line/points never touch (or clip at) the chart edges. */
 const CHART_PAD = 4;
 const STROKE_WIDTH = 2;
 
@@ -194,6 +194,7 @@ function Chart({
   const range = series.max - series.min || 1;
   const count = series.points.length;
   const plotHeight = CHART_HEIGHT - CHART_PAD * 2;
+  const plotWidth = width - CHART_PAD * 2;
 
   // Keep only days that have a price, then draw one continuous line through
   // them. Missing days are skipped entirely — the line passes straight from one
@@ -201,7 +202,7 @@ function Chart({
   const coords = series.points
     .map((p, i) => {
       if (p.value == null) return null;
-      const x = count <= 1 ? 0 : (i / (count - 1)) * width;
+      const x = CHART_PAD + (count <= 1 ? 0 : (i / (count - 1)) * plotWidth);
       const y = CHART_PAD + (1 - (p.value - series.min) / range) * plotHeight;
       return { x, y };
     })
