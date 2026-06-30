@@ -10,6 +10,7 @@ import {
 } from "react";
 
 import { setAuthTokenGetter, setOnUnauthorized } from "../api/client";
+import { unregisterPushDevice } from "../push";
 import { isExpiringSoon } from "./jwt";
 import { login as loginRequest } from "./loginRequest";
 import { RefreshRejectedError, refreshSession, revokeSession } from "./session";
@@ -147,6 +148,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
       async signOut() {
         const rt = refreshRef.current;
+        // Drop this device's push registration while the access token is still
+        // valid (best-effort; clears the local token ref regardless).
+        await unregisterPushDevice();
         setSessionExpired(false);
         handleSignedOut(false);
         // Revoke the refresh token server-side; best-effort, already cleared

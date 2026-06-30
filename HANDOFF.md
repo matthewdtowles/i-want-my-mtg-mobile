@@ -3,10 +3,10 @@
 Where the v1 build stands and how to pick it up. See the web repo's
 `ROADMAP.md` §7.1 for the overall plan.
 
-_Last updated: 2026-06-29 (buy-list **CSV import** built - Import button on the
-Buy-list screen → paste-CSV modal. Prior: #23 decks complete (#51 + #52); #32
-price-alerts built; #32 notifications shipped in #49; TestFlight build 2; v2 UX
-wave)._
+_Last updated: 2026-06-29 (#32 **push delivery client wired** - expo-notifications
+device registration + tap routing; fan-out gated on backend #560, needs an EAS dev
+build to exercise. Prior: buy-list CSV import; #23 decks complete (#51 + #52); #32
+price-alerts built; #32 notifications shipped in #49; v2 UX wave)._
 
 ## What this is
 
@@ -184,6 +184,18 @@ Split along the backend-readiness seam:
   and taps through to the card. The alert model is **percent thresholds**
   (`increasePct` / `decreasePct`), not the absolute "target price" the issue text
   describes. The unread bell + inbox (#49) surface alert firings.
+- **Push delivery (client wired):** `expo-notifications` + `expo-device`
+  (`expo-notifications` config plugin in `app.json`). `lib/push.ts` requests
+  permission, gets the Expo push token (via the EAS `projectId`), and
+  registers/unregisters it with `lib/api/devices.ts`
+  (`POST`/`DELETE /api/v1/notifications/devices`, #559). `lib/usePushNotifications.ts`
+  (called from `app/_layout.tsx` when authenticated) registers on auth,
+  invalidates `["notifications"]` on receipt, and routes a tapped notification to
+  the card (when the payload carries `setCode`/`cardNumber`) or the inbox;
+  `AuthContext.signOut` unregisters the token first (best-effort). **Caveats:**
+  no-ops in Expo Go / simulators (`Device.isDevice` guard); needs an **EAS dev
+  build + APNs/FCM credentials** to exercise; actual fan-out on alert firing is
+  the **backend follow-up #560** (device registration #559 is the storage half).
 
 ## Decks (#23) notes
 
