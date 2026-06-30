@@ -33,7 +33,8 @@
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "gen:api": "node scripts/gen-api.mjs",
-    "ship:ios": "bash scripts/ship-ios.sh"
+    "ship:ios": "bash scripts/ship-ios.sh",
+    "ship:android": "bash scripts/ship-android.sh"
   },
   "private": true
 }
