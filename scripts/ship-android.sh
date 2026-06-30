@@ -55,7 +55,9 @@ if [ -n "$(git status --porcelain)" ]; then
 fi
 
 # --- 2. sync version from the latest tag ------------------------------------
-version="$(git describe --tags --abbrev=0 2>/dev/null || true)"
+# Highest SemVer tag — the same source of truth CI uses (.github/scripts/next-version.sh).
+# `git describe` would pick the most recent tag by topology and not filter non-SemVer tags.
+version="$(git tag --list --sort=-v:refname | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | head -1 || true)"
 if [ -z "$version" ]; then
   echo "✗ No git tag found. CI tags releases on merge to main; nothing to ship." >&2
   exit 1
@@ -86,7 +88,7 @@ $EAS submit --platform android --profile production --track "$TRACK" --latest
 # autoIncrement (production profile) bumps app.json's android.versionCode on disk
 # during the build. Commit it so the next build increments from the real value.
 if [ -n "$(git status --porcelain app.json)" ]; then
-  newcode="$(node -e "process.stdout.write(String(require('./app.json').expo.android.versionCode))")"
+  newcode="$(node -e "const c=require('./app.json').expo.android.versionCode; if(!Number.isInteger(c)||c<1){console.error('✗ android.versionCode missing/invalid after build: '+c);process.exit(1)} process.stdout.write(String(c))")"
   echo "==> Committing auto-incremented versionCode → $newcode"
   git commit -qm "chore(release): bump android versionCode to $newcode" -- app.json
   echo "    committed the versionCode bump — remember to: git push origin main"
