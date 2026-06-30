@@ -1,6 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  type LayoutChangeEvent,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import Svg, { Circle, Polyline } from "react-native-svg";
 
 import { fetchCardPriceHistory } from "../lib/api/catalog";
 import type { ApiPriceHistoryPoint } from "../lib/api/types";
@@ -9,6 +17,12 @@ import { useTheme } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
 
 type Finish = "normal" | "foil";
+
+/** Line colors mirroring the web app's price chart (teal normal / purple foil). */
+const LINE_COLORS = {
+  light: { normal: "#0d9488", foil: "#7c3aed" },
+  dark: { normal: "#2cc8ca", foil: "#a95de0" },
+};
 
 const RANGES: { label: string; days: number }[] = [
   { label: "30D", days: 30 },
@@ -25,10 +39,11 @@ type Props = {
 };
 
 export function CardPriceHistory({ cardId, hasNonFoil, hasFoil }: Props) {
-  const { colors } = useTheme();
+  const { colors, scheme } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [days, setDays] = useState(90);
   const [finish, setFinish] = useState<Finish>(hasNonFoil ? "normal" : "foil");
+  const lineColor = LINE_COLORS[scheme][finish];
 
   const query = useQuery({
     queryKey: ["card", cardId, "price-history", days],
@@ -94,7 +109,7 @@ export function CardPriceHistory({ cardId, hasNonFoil, hasFoil }: Props) {
       ) : series.definedCount < 2 ? (
         <Text style={styles.empty}>Not enough price history yet.</Text>
       ) : (
-        <Chart series={series} color={colors.accent} styles={styles} />
+        <Chart series={series} color={lineColor} styles={styles} />
       )}
     </View>
   );
@@ -160,6 +175,10 @@ function buildSeries(data: ApiPriceHistoryPoint[], finish: Finish): Series {
   };
 }
 
+/** Vertical breathing room so the line never touches the chart edges. */
+const CHART_PAD = 4;
+const STROKE_WIDTH = 2;
+
 function Chart({
   series,
   color,
@@ -169,20 +188,44 @@ function Chart({
   color: string;
   styles: ReturnType<typeof createStyles>;
 }) {
+  const [width, setWidth] = useState(0);
+  const onLayout = (e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width);
+
   const range = series.max - series.min || 1;
+  const count = series.points.length;
+  const plotHeight = CHART_HEIGHT - CHART_PAD * 2;
+
+  // Keep only days that have a price, then draw one continuous line through
+  // them. Missing days are skipped entirely — the line passes straight from one
+  // real point to the next rather than breaking or dipping to zero.
+  const coords = series.points
+    .map((p, i) => {
+      if (p.value == null) return null;
+      const x = count <= 1 ? 0 : (i / (count - 1)) * width;
+      const y = CHART_PAD + (1 - (p.value - series.min) / range) * plotHeight;
+      return { x, y };
+    })
+    .filter((c): c is { x: number; y: number } => c != null);
+
   return (
     <View>
-      <View style={styles.chart}>
-        {series.points.map((p, i) => {
-          const height =
-            p.value == null ? 0 : Math.max(2, ((p.value - series.min) / range) * CHART_HEIGHT);
-          return (
-            <View
-              key={`${p.date}-${i}`}
-              style={[styles.bar, { height, backgroundColor: color }]}
-            />
-          );
-        })}
+      <View style={styles.chart} onLayout={onLayout}>
+        {width > 0 ? (
+          <Svg width={width} height={CHART_HEIGHT}>
+            {coords.length === 1 ? (
+              <Circle cx={coords[0].x} cy={coords[0].y} r={STROKE_WIDTH} fill={color} />
+            ) : (
+              <Polyline
+                points={coords.map((pt) => `${pt.x},${pt.y}`).join(" ")}
+                fill="none"
+                stroke={color}
+                strokeWidth={STROKE_WIDTH}
+                strokeLinejoin="round"
+                strokeLinecap="round"
+              />
+            )}
+          </Svg>
+        ) : null}
       </View>
       <View style={styles.axisRow}>
         <Text style={styles.axis}>{formatPrice(series.min)}</Text>
@@ -231,13 +274,9 @@ const createStyles = (colors: ThemeColors) =>
     retry: { color: colors.accent, fontSize: 14, fontWeight: "600" },
     empty: { marginTop: 16, color: colors.textMuted, fontSize: 14 },
     chart: {
-      flexDirection: "row",
-      alignItems: "flex-end",
       height: CHART_HEIGHT,
       marginTop: 16,
-      gap: 1,
     },
-    bar: { flex: 1, borderRadius: 1, minWidth: 1 },
     axisRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 6 },
     axis: { fontSize: 11, color: colors.textMuted },
   });
