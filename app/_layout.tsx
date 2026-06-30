@@ -8,12 +8,15 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider, useAuth } from "../lib/auth/AuthContext";
 import { queryClient } from "../lib/queryClient";
 import { ThemeProvider, useTheme } from "../lib/theme/ThemeContext";
+import { usePushNotifications } from "../lib/usePushNotifications";
 
 function RootNavigator() {
   const { initializing, isAuthenticated } = useAuth();
   const { colors, scheme } = useTheme();
   const segments = useSegments();
   const router = useRouter();
+
+  usePushNotifications(isAuthenticated);
 
   useEffect(() => {
     if (initializing) return;
