@@ -20,6 +20,9 @@ export function usePushNotifications(isAuthenticated: boolean) {
   }, [isAuthenticated]);
 
   useEffect(() => {
+    // Only listen while signed in, so a push received/tapped after sign-out can't
+    // touch the (cleared) cache or navigate into the authed app.
+    if (!isAuthenticated) return;
     const received = Notifications.addNotificationReceivedListener(() => {
       queryClient.invalidateQueries({ queryKey: NOTIFICATIONS_KEY });
     });
@@ -39,5 +42,5 @@ export function usePushNotifications(isAuthenticated: boolean) {
       received.remove();
       response.remove();
     };
-  }, [queryClient, router]);
+  }, [isAuthenticated, queryClient, router]);
 }

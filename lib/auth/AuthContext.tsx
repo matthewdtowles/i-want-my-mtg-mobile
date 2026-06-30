@@ -64,6 +64,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const handleSignedOut = useCallback((expired: boolean) => {
+    // Best-effort on every sign-out path (incl. session-expiry / 401). Clears the
+    // local push-token ref always; the server-side DELETE only lands while the
+    // access token is still valid (the explicit signOut() awaits it first), which
+    // an expiry path no longer has - the token then re-points on next sign-in.
+    void unregisterPushDevice();
     accessRef.current = null;
     refreshRef.current = null;
     setAccessToken(null);
