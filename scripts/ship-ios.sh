@@ -14,6 +14,9 @@
 #      committed in app.json instead of the current release.
 #   3. Runs a quick typecheck (a failed build wastes EAS minutes).
 #   4. `eas build` (production) with `--auto-submit` → uploads to TestFlight.
+#   5. Commits the buildNumber that EAS autoIncrement wrote into app.json, so
+#      the next build increments from the real value (a duplicate build number
+#      gets rejected by App Store Connect).
 #
 # This is NOT automatic — you run it by hand, and it needs an interactive Apple
 # login the first time. It does not touch the public App Store (TestFlight only;
@@ -63,6 +66,16 @@ EAS="eas"
 command -v eas >/dev/null 2>&1 || EAS="npx eas-cli"
 echo "==> Building iOS (production) and auto-submitting to TestFlight as $version…"
 $EAS build --platform ios --profile production --auto-submit
+
+# --- 5. commit the auto-incremented build number ----------------------------
+# autoIncrement (production profile) bumps app.json's `buildNumber` on disk
+# during the build. Commit it so the next build increments from the real value.
+if [ -n "$(git status --porcelain app.json)" ]; then
+  newbuild="$(node -e "process.stdout.write(require('./app.json').expo.ios.buildNumber)")"
+  echo "==> Committing auto-incremented buildNumber → $newbuild"
+  git commit -qm "chore(release): bump ios buildNumber to $newbuild" -- app.json
+  echo "    committed the buildNumber bump — remember to: git push origin main"
+fi
 
 echo "✓ Submitted. The build appears in App Store Connect → TestFlight once"
 echo "  Apple finishes processing (usually a few minutes)."
