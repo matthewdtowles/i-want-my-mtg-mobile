@@ -3,10 +3,12 @@
 Where the v1 build stands and how to pick it up. See the web repo's
 `ROADMAP.md` §7.1 for the overall plan.
 
-_Last updated: 2026-06-29 (#32 **push delivery client wired** - expo-notifications
-device registration + tap routing; fan-out gated on backend #560, needs an EAS dev
-build to exercise. Prior: buy-list CSV import; #23 decks complete (#51 + #52); #32
-price-alerts built; #32 notifications shipped in #49; v2 UX wave)._
+_Last updated: 2026-06-30 (#32 **push notifications end-to-end** - client
+registration/tap-routing (#54) + backend Expo fan-out (#560); only an EAS dev
+build remains to exercise on-device. **#32 closed.** With it, all v2 feature
+issues (#25/#31/#32/#23) are done - remaining mobile work is distribution (#8
+Android, #20 iOS submission), which is mostly ops/policy. Prior: buy-list CSV
+import; #23 decks (#51 + #52); v2 UX wave)._
 
 ## What this is
 
@@ -62,13 +64,15 @@ stack of squash-merged PRs (#33, #34, #38, #39, #40, #41), each reviewed
   range + finish toggles and a **dependency-free** bar chart (plain Views, no
   `react-native-svg`) off the typed `GET /cards/{cardId}/price-history`.
 
-**Backend landed; mobile UI rolling out** (see "Cross-repo backend
-dependencies"). Merged: **#25 persistent login** (#47), **#31 buy-list** (#48),
-**#32 notifications** (#49), and **#32 price-alerts** (#50). **#23 decks** is
-built - part 1 (#51: list/create/import/detail/edit + missing-cards) merged; part
-2 (add-card-via-search) in review. With #23 the **tab bar is now the 4 core surfaces**
+**All v2 feature issues are shipped** (see "Cross-repo backend dependencies").
+Merged: **#25 persistent login** (#47), **#31 buy-list** (#48) + CSV import (#53),
+**#32 price alerts + notifications + push** (#49/#50/#54, backend fan-out #560),
+and **#23 decks** (#51 list/create/import/detail/edit + missing-cards; #52
+add-card-via-search). With #23 the **tab bar is now the 4 core surfaces**
 (Browse/Inventory/Transactions/Portfolio); Buy-list, Decks, and Price alerts live
-in the **account menu** (header person icon → MANAGE).
+in the **account menu** (header person icon → MANAGE). **Remaining mobile work is
+distribution**: #8 (Android / Play internal) and #20 (iOS public submission) -
+mostly ops/policy, not feature code.
 
 ## Inventory (#5) notes
 
@@ -184,18 +188,20 @@ Split along the backend-readiness seam:
   and taps through to the card. The alert model is **percent thresholds**
   (`increasePct` / `decreasePct`), not the absolute "target price" the issue text
   describes. The unread bell + inbox (#49) surface alert firings.
-- **Push delivery (client wired):** `expo-notifications` + `expo-device`
-  (`expo-notifications` config plugin in `app.json`). `lib/push.ts` requests
-  permission, gets the Expo push token (via the EAS `projectId`), and
-  registers/unregisters it with `lib/api/devices.ts`
-  (`POST`/`DELETE /api/v1/notifications/devices`, #559). `lib/usePushNotifications.ts`
-  (called from `app/_layout.tsx` when authenticated) registers on auth,
-  invalidates `["notifications"]` on receipt, and routes a tapped notification to
-  the card (when the payload carries `setCode`/`cardNumber`) or the inbox;
-  `AuthContext.signOut` unregisters the token first (best-effort). **Caveats:**
-  no-ops in Expo Go / simulators (`Device.isDevice` guard); needs an **EAS dev
-  build + APNs/FCM credentials** to exercise; actual fan-out on alert firing is
-  the **backend follow-up #560** (device registration #559 is the storage half).
+- **Push delivery (end-to-end):** both halves shipped. **Client** (#54):
+  `expo-notifications` + `expo-device` (`expo-notifications` config plugin in
+  `app.json`); `lib/push.ts` requests permission, gets the Expo push token (via
+  the EAS `projectId`), and registers/unregisters it with `lib/api/devices.ts`
+  (`POST`/`DELETE /api/v1/notifications/devices`). `lib/usePushNotifications.ts`
+  (called from `app/_layout.tsx`, gated on auth) registers on sign-in, invalidates
+  `["notifications"]` on receipt, and routes a tapped notification to the card
+  (when the payload carries `setCode`/`cardNumber`) or the inbox; every sign-out
+  path resets the registration best-effort. **Backend** (`i-want-my-mtg` #560):
+  `PriceAlertService.processAlerts` fans a push to the user's devices via the Expo
+  Push API and prunes dead tokens. **Caveat:** no-ops in Expo Go / simulators
+  (`Device.isDevice` guard) - **a real device needs an EAS dev build + APNs/FCM
+  credentials** to actually receive pushes (that's the only remaining step, and
+  it's operational, not code).
 
 ## Decks (#23) notes
 
@@ -323,8 +329,8 @@ features have **all merged** (2026-06-28). Each was tracked as a mobile issue:
   `content?: never`), and #563 (price-alert **request** DTOs - `CreatePriceAlertDto`
   / `UpdatePriceAlertDto` were `Record<string, never>`). Unblocks **#23 / #31 / #32**.
 - **#37 - push device registration.** Done - backend PR #559
-  (`POST/DELETE /api/v1/notifications/devices`). Expo Push fan-out on alert
-  firing is a documented backend follow-up, not required for the #32 UI.
+  (`POST/DELETE /api/v1/notifications/devices`). The Expo Push **fan-out** on
+  alert firing also shipped (backend #560 / PR #565), so push is end-to-end.
 
 **Verification loop (now that the backend has landed):** once the backend is
 deployed, here run `npm run gen:api` -> the previously-`content?: never`
