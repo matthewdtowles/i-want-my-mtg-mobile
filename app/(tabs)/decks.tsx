@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
-import { Stack, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { useMemo } from "react";
 import {
   ActivityIndicator,
@@ -12,12 +12,12 @@ import {
   View,
 } from "react-native";
 
-import { DECKS_KEY, fetchDecks } from "../lib/api/decks";
-import type { ApiDeckSummary } from "../lib/api/types";
-import { ErrorState } from "../components/ErrorState";
-import { formatPrice } from "../lib/format";
-import { useTheme } from "../lib/theme/ThemeContext";
-import type { ThemeColors } from "../lib/theme/colors";
+import { DECKS_KEY, fetchDecks } from "../../lib/api/decks";
+import type { ApiDeckSummary } from "../../lib/api/types";
+import { ErrorState } from "../../components/ErrorState";
+import { formatPrice } from "../../lib/format";
+import { useTheme } from "../../lib/theme/ThemeContext";
+import type { ThemeColors } from "../../lib/theme/colors";
 
 export default function DecksScreen() {
   const { colors } = useTheme();
@@ -26,83 +26,48 @@ export default function DecksScreen() {
 
   const query = useQuery({ queryKey: DECKS_KEY, queryFn: fetchDecks });
 
-  const header = (
-    <Stack.Screen
-      options={{
-        title: "Decks",
-        headerBackTitle: "Back",
-        headerRight: () => (
-          <Pressable
-            hitSlop={8}
-            onPress={() => router.push("/deck/new")}
-            style={styles.addBtn}
-            accessibilityLabel="New deck"
-          >
-            <Ionicons name="add" size={26} color={colors.accent} />
-          </Pressable>
-        ),
-      }}
-    />
-  );
-
   if (query.isPending) {
-    return (
-      <>
-        {header}
-        <ActivityIndicator style={styles.center} size="large" color={colors.accent} />
-      </>
-    );
+    return <ActivityIndicator style={styles.center} size="large" color={colors.accent} />;
   }
   if (query.isError) {
     return (
-      <>
-        {header}
-        <ErrorState
-          message={query.error instanceof Error ? query.error.message : "Failed to load decks."}
-          onRetry={() => query.refetch()}
-        />
-      </>
+      <ErrorState
+        message={query.error instanceof Error ? query.error.message : "Failed to load decks."}
+        onRetry={() => query.refetch()}
+      />
     );
   }
   if (query.data.length === 0) {
     return (
-      <>
-        {header}
-        <View style={styles.center}>
-          <Text style={styles.empty}>No decks yet.</Text>
-          <Text style={styles.emptyHint}>
-            Tap + to create a deck or import a decklist.
-          </Text>
-        </View>
-      </>
+      <View style={styles.center}>
+        <Text style={styles.empty}>No decks yet.</Text>
+        <Text style={styles.emptyHint}>Tap + to create a deck or import a decklist.</Text>
+      </View>
     );
   }
 
   return (
-    <>
-      {header}
-      <FlatList
-        style={styles.list}
-        contentContainerStyle={styles.listContent}
-        data={query.data}
-        keyExtractor={(it) => String(it.id)}
-        renderItem={({ item }) => (
-          <DeckRow
-            item={item}
-            styles={styles}
-            chevronColor={colors.textMuted}
-            onPress={() => router.push(`/deck/${item.id}`)}
-          />
-        )}
-        refreshControl={
-          <RefreshControl
-            refreshing={query.isRefetching}
-            onRefresh={() => query.refetch()}
-            tintColor={colors.accent}
-          />
-        }
-      />
-    </>
+    <FlatList
+      style={styles.list}
+      contentContainerStyle={styles.listContent}
+      data={query.data}
+      keyExtractor={(it) => String(it.id)}
+      renderItem={({ item }) => (
+        <DeckRow
+          item={item}
+          styles={styles}
+          chevronColor={colors.textMuted}
+          onPress={() => router.push(`/deck/${item.id}`)}
+        />
+      )}
+      refreshControl={
+        <RefreshControl
+          refreshing={query.isRefetching}
+          onRefresh={() => query.refetch()}
+          tintColor={colors.accent}
+        />
+      }
+    />
   );
 }
 
@@ -138,7 +103,6 @@ const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     list: { flex: 1, backgroundColor: colors.background },
     listContent: { padding: 16, gap: 12 },
-    addBtn: { paddingHorizontal: 12 },
     center: {
       flex: 1,
       alignItems: "center",

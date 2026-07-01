@@ -1,9 +1,11 @@
+import { Ionicons } from "@expo/vector-icons";
 import {
   useInfiniteQuery,
   useMutation,
   useQueryClient,
   type InfiniteData,
 } from "@tanstack/react-query";
+import { useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -65,6 +67,7 @@ export default function InventoryScreen() {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const queryClient = useQueryClient();
+  const router = useRouter();
 
   const [search, setSearch] = useState("");
   const q = useDebounce(search.trim().toLowerCase(), 250);
@@ -174,27 +177,59 @@ export default function InventoryScreen() {
     },
   });
 
+  const hub = (
+    <View style={styles.hub}>
+      <Pressable
+        style={styles.hubBtn}
+        onPress={() => router.push("/portfolio")}
+        accessibilityRole="button"
+      >
+        <Ionicons name="pie-chart" size={16} color={colors.accent} />
+        <Text style={styles.hubText}>Portfolio</Text>
+      </Pressable>
+      <Pressable
+        style={styles.hubBtn}
+        onPress={() => router.push("/transactions")}
+        accessibilityRole="button"
+      >
+        <Ionicons name="swap-horizontal" size={16} color={colors.accent} />
+        <Text style={styles.hubText}>Transactions</Text>
+      </Pressable>
+    </View>
+  );
+
   if (query.isPending) {
-    return <ActivityIndicator style={styles.center} size="large" color={colors.accent} />;
+    return (
+      <View style={styles.screen}>
+        {hub}
+        <ActivityIndicator style={styles.center} size="large" color={colors.accent} />
+      </View>
+    );
   }
   if (query.isError) {
     return (
-      <ErrorState
-        message={
-          query.error instanceof Error ? query.error.message : "Failed to load inventory."
-        }
-        onRetry={() => query.refetch()}
-      />
+      <View style={styles.screen}>
+        {hub}
+        <ErrorState
+          message={
+            query.error instanceof Error ? query.error.message : "Failed to load inventory."
+          }
+          onRetry={() => query.refetch()}
+        />
+      </View>
     );
   }
   if (items.length === 0) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.empty}>Your inventory is empty.</Text>
-        <Text style={styles.emptyHint}>
-          Open a set in Browse, tap “Select”, and add cards in bulk — or add them
-          from a card’s page.
-        </Text>
+      <View style={styles.screen}>
+        {hub}
+        <View style={styles.center}>
+          <Text style={styles.empty}>Your inventory is empty.</Text>
+          <Text style={styles.emptyHint}>
+            Open a set in Browse, tap “Select”, and add cards in bulk — or add them
+            from a card’s page.
+          </Text>
+        </View>
       </View>
     );
   }
@@ -203,6 +238,7 @@ export default function InventoryScreen() {
 
   return (
     <View style={styles.screen}>
+      {hub}
       <View style={styles.controls}>
         <Text style={styles.summary}>
           {summary.cards} card{summary.cards === 1 ? "" : "s"} · {summary.qty} total ·{" "}
@@ -293,6 +329,27 @@ export default function InventoryScreen() {
 const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.background },
+    hub: {
+      flexDirection: "row",
+      gap: 10,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
+    },
+    hubBtn: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+      paddingVertical: 9,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.inputBorder,
+      backgroundColor: colors.surface,
+    },
+    hubText: { fontSize: 14, fontWeight: "600", color: colors.accent },
     list: { backgroundColor: colors.background },
     center: {
       flex: 1,

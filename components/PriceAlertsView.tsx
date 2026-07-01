@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Stack, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { useMemo } from "react";
 import {
   ActivityIndicator,
@@ -19,11 +19,11 @@ import {
   updatePriceAlert,
 } from "../lib/api/priceAlerts";
 import type { ApiPriceAlert } from "../lib/api/types";
-import { ErrorState } from "../components/ErrorState";
+import { ErrorState } from "./ErrorState";
 import { useTheme } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
 
-export default function PriceAlertsScreen() {
+export function PriceAlertsView() {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const queryClient = useQueryClient();
@@ -62,101 +62,85 @@ export default function PriceAlertsScreen() {
     }
   }
 
-  const header = <Stack.Screen options={{ title: "Price alerts", headerBackTitle: "Back" }} />;
-
   if (query.isPending) {
-    return (
-      <>
-        {header}
-        <ActivityIndicator style={styles.center} size="large" color={colors.accent} />
-      </>
-    );
+    return <ActivityIndicator style={styles.center} size="large" color={colors.accent} />;
   }
   if (query.isError) {
     return (
-      <>
-        {header}
-        <ErrorState
-          message={
-            query.error instanceof Error ? query.error.message : "Failed to load price alerts."
-          }
-          onRetry={() => query.refetch()}
-        />
-      </>
+      <ErrorState
+        message={
+          query.error instanceof Error ? query.error.message : "Failed to load price alerts."
+        }
+        onRetry={() => query.refetch()}
+      />
     );
   }
   if (query.data.length === 0) {
     return (
-      <>
-        {header}
-        <View style={styles.center}>
-          <Text style={styles.empty}>No price alerts yet.</Text>
-          <Text style={styles.emptyHint}>
-            Open a card and set a rise or fall percent to start watching its price.
-          </Text>
-        </View>
-      </>
+      <View style={styles.center}>
+        <Text style={styles.empty}>No price alerts yet.</Text>
+        <Text style={styles.emptyHint}>
+          Open a card and set a rise or fall percent to start watching its price.
+        </Text>
+      </View>
     );
   }
 
   return (
-    <>
-      {header}
-      <FlatList
-        style={styles.list}
-        contentContainerStyle={styles.listContent}
-        data={query.data}
-        keyExtractor={(it) => String(it.id)}
-        renderItem={({ item }) => (
-          <View style={styles.row}>
-            <Pressable
-              style={styles.rowMain}
-              onPress={() => openCard(item)}
-              disabled={!(item.setCode && item.cardNumber)}
-            >
-              <Text style={styles.cardName}>{item.cardName ?? item.cardId}</Text>
-              {item.setCode && item.cardNumber ? (
-                <Text style={styles.meta}>
-                  {item.setCode.toUpperCase()} #{item.cardNumber}
-                </Text>
-              ) : null}
-              <Text style={styles.thresholds}>
-                {[
-                  item.increasePct != null ? `Rises ≥ ${item.increasePct}%` : null,
-                  item.decreasePct != null ? `Falls ≥ ${item.decreasePct}%` : null,
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
-                {!item.isActive ? "  (paused)" : ""}
+    <FlatList
+      style={styles.list}
+      contentContainerStyle={styles.listContent}
+      data={query.data}
+      keyExtractor={(it) => String(it.id)}
+      renderItem={({ item }) => (
+        <View style={styles.row}>
+          <Pressable
+            style={styles.rowMain}
+            onPress={() => openCard(item)}
+            disabled={!(item.setCode && item.cardNumber)}
+          >
+            <Text style={styles.cardName}>{item.cardName ?? item.cardId}</Text>
+            {item.setCode && item.cardNumber ? (
+              <Text style={styles.meta}>
+                {item.setCode.toUpperCase()} #{item.cardNumber}
               </Text>
+            ) : null}
+            <Text style={styles.thresholds}>
+              {[
+                item.increasePct != null ? `Rises ≥ ${item.increasePct}%` : null,
+                item.decreasePct != null ? `Falls ≥ ${item.decreasePct}%` : null,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+              {!item.isActive ? "  (paused)" : ""}
+            </Text>
+          </Pressable>
+          <View style={styles.actions}>
+            <Pressable
+              hitSlop={8}
+              onPress={() => toggle.mutate(item)}
+              accessibilityLabel={item.isActive ? "Pause alert" : "Resume alert"}
+            >
+              <Text style={styles.actionText}>{item.isActive ? "Pause" : "Resume"}</Text>
             </Pressable>
-            <View style={styles.actions}>
-              <Pressable
-                hitSlop={8}
-                onPress={() => toggle.mutate(item)}
-                accessibilityLabel={item.isActive ? "Pause alert" : "Resume alert"}
-              >
-                <Text style={styles.actionText}>{item.isActive ? "Pause" : "Resume"}</Text>
-              </Pressable>
-              <Pressable
-                hitSlop={8}
-                onPress={() => confirmDelete(item)}
-                accessibilityLabel="Delete alert"
-              >
-                <Text style={[styles.actionText, styles.danger]}>Delete</Text>
-              </Pressable>
-            </View>
+            <Pressable
+              hitSlop={8}
+              onPress={() => confirmDelete(item)}
+              accessibilityLabel="Delete alert"
+            >
+              <Text style={[styles.actionText, styles.danger]}>Delete</Text>
+            </Pressable>
           </View>
-        )}
-        refreshControl={
-          <RefreshControl
-            refreshing={query.isRefetching}
-            onRefresh={() => query.refetch()}
-            tintColor={colors.accent}
-          />
-        }
-      />
-    </>
+        </View>
+      )}
+      refreshControl={
+        <RefreshControl
+          refreshing={query.isRefetching}
+          onRefresh={() => query.refetch()}
+          tintColor={colors.accent}
+        />
+      }
+    />
   );
 }
 

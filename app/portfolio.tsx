@@ -11,11 +11,11 @@ import {
   View,
 } from "react-native";
 
-import { fetchPortfolioSummary, refreshPortfolio } from "../../lib/api/portfolio";
-import { formatPrice } from "../../lib/format";
-import { ErrorState } from "../../components/ErrorState";
-import { useTheme } from "../../lib/theme/ThemeContext";
-import type { ThemeColors } from "../../lib/theme/colors";
+import { fetchPortfolioSummary, refreshPortfolio } from "../lib/api/portfolio";
+import { formatPrice } from "../lib/format";
+import { ErrorState } from "../components/ErrorState";
+import { useTheme } from "../lib/theme/ThemeContext";
+import type { ThemeColors } from "../lib/theme/colors";
 
 const KEY = ["portfolio", "summary"] as const;
 

@@ -16,13 +16,13 @@ import {
   View,
 } from "react-native";
 
-import { deleteTransaction, fetchTransactions } from "../../lib/api/transactions";
-import type { Page } from "../../lib/api/catalog";
-import type { ApiTransaction } from "../../lib/api/types";
-import { TransactionListItem } from "../../components/TransactionListItem";
-import { ErrorState } from "../../components/ErrorState";
-import { useTheme } from "../../lib/theme/ThemeContext";
-import type { ThemeColors } from "../../lib/theme/colors";
+import { deleteTransaction, fetchTransactions } from "../lib/api/transactions";
+import type { Page } from "../lib/api/catalog";
+import type { ApiTransaction } from "../lib/api/types";
+import { TransactionListItem } from "../components/TransactionListItem";
+import { ErrorState } from "../components/ErrorState";
+import { useTheme } from "../lib/theme/ThemeContext";
+import type { ThemeColors } from "../lib/theme/colors";
 
 const KEY = ["transactions"] as const;
 type TxData = InfiniteData<Page<ApiTransaction>>;

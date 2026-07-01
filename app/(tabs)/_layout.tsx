@@ -1,12 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Link, Tabs } from "expo-router";
-import { Pressable, View } from "react-native";
+import { Tabs, useRouter } from "expo-router";
+import { Pressable } from "react-native";
 
-import { NotificationBell } from "../../components/NotificationBell";
+import { HeaderActions } from "../../components/HeaderActions";
 import { useTheme } from "../../lib/theme/ThemeContext";
 
 export default function TabsLayout() {
   const { colors } = useTheme();
+  const router = useRouter();
 
   return (
     <Tabs
@@ -21,23 +22,7 @@ export default function TabsLayout() {
         headerStyle: { backgroundColor: colors.surface },
         headerTintColor: colors.textPrimary,
         headerTitleStyle: { color: colors.textPrimary },
-        headerRight: () => (
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 14,
-              paddingHorizontal: 16,
-            }}
-          >
-            <NotificationBell />
-            <Link href="/account" asChild>
-              <Pressable hitSlop={12} accessibilityLabel="Account and settings">
-                <Ionicons name="person-circle-outline" size={26} color={colors.accent} />
-              </Pressable>
-            </Link>
-          </View>
-        ),
+        headerRight: () => <HeaderActions />,
       }}
     >
       <Tabs.Screen
@@ -59,20 +44,33 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="transactions"
+        name="decks"
         options={{
-          title: "Transactions",
+          title: "Decks",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="swap-horizontal" color={color} size={size} />
+            <Ionicons name="layers" color={color} size={size} />
+          ),
+          headerRight: () => (
+            <HeaderActions
+              leading={
+                <Pressable
+                  hitSlop={8}
+                  onPress={() => router.push("/deck/new")}
+                  accessibilityLabel="New deck"
+                >
+                  <Ionicons name="add" size={26} color={colors.accent} />
+                </Pressable>
+              }
+            />
           ),
         }}
       />
       <Tabs.Screen
-        name="portfolio"
+        name="watchlist"
         options={{
-          title: "Portfolio",
+          title: "Watchlist",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="pie-chart" color={color} size={size} />
+            <Ionicons name="bookmarks" color={color} size={size} />
           ),
         }}
       />
