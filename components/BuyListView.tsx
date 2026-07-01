@@ -1,10 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Stack, useRouter } from "expo-router";
 import { useMemo } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  Pressable,
   RefreshControl,
   StyleSheet,
   Text,
@@ -18,8 +16,8 @@ import {
   setBuyListQuantity,
 } from "../lib/api/buyList";
 import type { ApiBuyListItem } from "../lib/api/types";
-import { BuyListListItem } from "../components/BuyListListItem";
-import { ErrorState } from "../components/ErrorState";
+import { BuyListListItem } from "./BuyListListItem";
+import { ErrorState } from "./ErrorState";
 import { formatPrice } from "../lib/format";
 import { useTheme } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
@@ -34,11 +32,10 @@ function unitPrice(item: ApiBuyListItem): number {
   return (item.isFoil ? item.priceFoil : item.priceNormal) ?? 0;
 }
 
-export default function BuyListScreen() {
+export function BuyListView() {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const queryClient = useQueryClient();
-  const router = useRouter();
 
   const query = useQuery({ queryKey: KEY, queryFn: fetchBuyList });
   const items = useMemo(() => query.data ?? [], [query.data]);
@@ -89,65 +86,31 @@ export default function BuyListScreen() {
     },
   });
 
-  const header = (
-    <Stack.Screen
-      options={{
-        title: "Buy-list",
-        headerBackTitle: "Back",
-        headerRight: () => (
-          <Pressable
-            hitSlop={8}
-            onPress={() => router.push("/buy-list-import")}
-            style={styles.importBtn}
-            accessibilityRole="button"
-            accessibilityLabel="Import buy-list from CSV"
-          >
-            <Text style={styles.importText}>Import</Text>
-          </Pressable>
-        ),
-      }}
-    />
-  );
-
   if (query.isPending) {
-    return (
-      <>
-        {header}
-        <ActivityIndicator style={styles.center} size="large" color={colors.accent} />
-      </>
-    );
+    return <ActivityIndicator style={styles.center} size="large" color={colors.accent} />;
   }
   if (query.isError) {
     return (
-      <>
-        {header}
-        <ErrorState
-          message={
-            query.error instanceof Error ? query.error.message : "Failed to load buy-list."
-          }
-          onRetry={() => query.refetch()}
-        />
-      </>
+      <ErrorState
+        message={query.error instanceof Error ? query.error.message : "Failed to load buy-list."}
+        onRetry={() => query.refetch()}
+      />
     );
   }
   if (items.length === 0) {
     return (
-      <>
-        {header}
-        <View style={styles.center}>
-          <Text style={styles.empty}>Your buy-list is empty.</Text>
-          <Text style={styles.emptyHint}>
-            Open a card and use the “On your buy-list” steppers to track cards you
-            want to buy.
-          </Text>
-        </View>
-      </>
+      <View style={styles.center}>
+        <Text style={styles.empty}>Your buy-list is empty.</Text>
+        <Text style={styles.emptyHint}>
+          Open a card and use the “On your buy-list” steppers to track cards you
+          want to buy.
+        </Text>
+      </View>
     );
   }
 
   return (
     <View style={styles.screen}>
-      {header}
       <View style={styles.controls}>
         <Text style={styles.summary}>
           {summary.cards} card{summary.cards === 1 ? "" : "s"} · {summary.qty} wanted ·{" "}
@@ -198,8 +161,6 @@ const createStyles = (colors: ThemeColors) =>
       borderBottomColor: colors.border,
     },
     summary: { fontSize: 13, color: colors.textSecondary, fontWeight: "600" },
-    importBtn: { paddingHorizontal: 12 },
-    importText: { color: colors.accent, fontSize: 15, fontWeight: "600" },
     empty: { fontSize: 16, fontWeight: "600", color: colors.textSecondary },
     emptyHint: {
       fontSize: 14,

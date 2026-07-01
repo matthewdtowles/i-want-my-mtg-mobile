@@ -67,10 +67,15 @@ function RootNavigator() {
         />
         <Stack.Screen name="account" options={{ headerBackTitle: "Back" }} />
         <Stack.Screen name="notifications" options={{ headerBackTitle: "Back" }} />
-        <Stack.Screen name="price-alerts" options={{ headerBackTitle: "Back" }} />
-        <Stack.Screen name="buy-list" options={{ headerBackTitle: "Back" }} />
+        <Stack.Screen
+          name="portfolio"
+          options={{ title: "Portfolio", headerBackTitle: "Back" }}
+        />
+        <Stack.Screen
+          name="transactions"
+          options={{ title: "Transactions", headerBackTitle: "Back" }}
+        />
         <Stack.Screen name="buy-list-import" options={{ presentation: "modal" }} />
-        <Stack.Screen name="decks" options={{ headerBackTitle: "Back" }} />
         <Stack.Screen name="deck/[id]" options={{ headerBackTitle: "Back" }} />
         <Stack.Screen name="deck/new" options={{ presentation: "modal" }} />
         <Stack.Screen name="deck/add" options={{ presentation: "modal" }} />
