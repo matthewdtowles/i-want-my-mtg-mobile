@@ -10,6 +10,37 @@ production on Google Play, and how to answer the production-access questionnaire
 
 ---
 
+## Versioning & build numbers
+
+There is **one source of truth for the app version: the highest SemVer git tag.**
+CI cuts these from merged PR titles (feat → minor, `!` → major, else → patch) on
+merge to `main`. You never edit a version by hand.
+
+- **Version string** (e.g. `0.19.6`): resolved at build time by `app.config.ts`,
+  which reads the latest git tag. It is *not* stored in `app.json`, so it cannot
+  drift. `eas-cli` evaluates the config locally when you build, so the tag is
+  always available.
+- **Build numbers** (`versionCode` / `buildNumber`): managed remotely by EAS
+  (`eas.json` → `appVersionSource: remote`) and auto-incremented on their servers.
+  Nothing is written to disk or committed.
+
+So a release is just: merge a PR → CI tags `0.19.6` → `npm run ship:android alpha`
+→ the build is stamped `0.19.6` with the next versionCode automatically.
+
+### One-time setup (once per platform)
+
+Before the first remote build, initialize EAS's build-number counters so they
+don't collide with what's already on the stores (interactive — no value flag):
+
+```
+eas build:version:set -p android   # enter the last-used versionCode; next build is +1
+eas build:version:set -p ios       # enter the last-used buildNumber; next build is +1
+```
+
+Gaps in build numbers are fine — if EAS ever reports a duplicate, set it higher.
+
+---
+
 ## The production-access requirement
 
 New personal Google Play developer accounts must, before they can publish to
@@ -104,8 +135,8 @@ change you'd ship anyway (a copy fix, a small UX tweak, an actual bug fix):
 npm run ship:android alpha
 ```
 
-`autoIncrement` handles the `versionCode` bump. (See the open item about pushing
-that bump back to `main` — track it so builds don't collide.)
+The version comes from the git tag and the versionCode is managed by EAS — there's
+nothing to edit or commit (see [Versioning & build numbers](#versioning--build-numbers)).
 
 ---
 
@@ -134,7 +165,7 @@ Before requesting production access:
 - [ ] 12+ **real** testers opted in and stayed opted in for 14 continuous days
 - [ ] At least one genuine update shipped to Alpha during the window
 - [ ] Questionnaire answers written from the real feedback log (Q1–Q4 above)
-- [ ] `versionCode` bump from the last build committed and pushed to `main`
+- [ ] Latest git tag reflects the version you intend to ship (CI tags on merge to `main`)
 - [ ] Store listing complete (icon, feature graphic, phone screenshots, descriptions)
 - [ ] App content declarations complete (privacy policy, data safety, content
       rating, target audience, ads, financial features = none, health = none)
