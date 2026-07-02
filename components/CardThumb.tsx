@@ -1,4 +1,4 @@
-import { Image } from "react-native";
+import { Image } from "expo-image";
 
 import { cardImageUrl, SCRYFALL_USER_AGENT, type CardImageSize } from "../lib/images";
 import { useTheme } from "../lib/theme/ThemeContext";
@@ -25,8 +25,7 @@ export function CardThumb({ imgSrc, size = "small", width }: Props) {
         borderRadius: width * 0.06,
         backgroundColor: colors.imagePlaceholder,
       }}
-      resizeMode="contain"
-      accessibilityIgnoresInvertColors
+      contentFit="contain"
     />
   );
 }

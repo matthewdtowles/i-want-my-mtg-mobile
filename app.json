@@ -35,7 +35,8 @@
       "expo-router",
       "expo-secure-store",
       "expo-web-browser",
-      "expo-notifications"
+      "expo-notifications",
+      "expo-image"
     ],
     "extra": {
       "router": {},
