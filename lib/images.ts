@@ -3,6 +3,13 @@
 // BASE_IMAGE_URL.
 const IMAGE_BASE = "https://cards.scryfall.io";
 
+// Scryfall rejects requests that use a default HTTP-library User-Agent. Android's
+// RN image loader (OkHttp) sends `okhttp/x.y.z`, which returns HTTP 400 with
+// subcode `generic_user_agent`, so card art silently fails on Android while iOS
+// (NSURLSession) is unaffected. Send a custom UA identifying the app so the
+// request succeeds on Android; it's harmless on iOS.
+export const SCRYFALL_USER_AGENT = "IWantMyMTG/1.0 (i-want-my-mtg-mobile)";
+
 export type CardImageSize = "small" | "normal" | "large";
 
 export function cardImageUrl(

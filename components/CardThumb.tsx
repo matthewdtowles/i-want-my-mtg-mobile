@@ -1,6 +1,6 @@
 import { Image } from "react-native";
 
-import { cardImageUrl, type CardImageSize } from "../lib/images";
+import { cardImageUrl, SCRYFALL_USER_AGENT, type CardImageSize } from "../lib/images";
 import { useTheme } from "../lib/theme/ThemeContext";
 
 type Props = {
@@ -18,7 +18,7 @@ export function CardThumb({ imgSrc, size = "small", width }: Props) {
   const height = width / CARD_ASPECT;
   return (
     <Image
-      source={uri ? { uri } : undefined}
+      source={uri ? { uri, headers: { "User-Agent": SCRYFALL_USER_AGENT } } : undefined}
       style={{
         width,
         height,
