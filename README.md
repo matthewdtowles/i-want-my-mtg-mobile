@@ -72,8 +72,9 @@ npm run typecheck  # tsc --noEmit
 `npm install`, run `npm run ios` and `npm run android` and confirm the tab shell
 (Browse / Inventory / Transactions / Portfolio) renders before building on top.
 
-Build config for both platforms lives in `eas.json` (EAS managed workflow). iOS
-is wired up end-to-end (build -> TestFlight); Android is not set up yet. See
+Build config for both platforms lives in `eas.json` (EAS managed workflow). Both
+platforms are wired up end-to-end: iOS ships to TestFlight (`npm run ship:ios`)
+and Android ships to a Play track (`npm run ship:android [track]`). See
 **Distribution** below for how builds and store uploads actually happen.
 
 ## Structure
@@ -92,8 +93,9 @@ lib/                   app-wide singletons (query client, ...)
 ```
 
 Browse (#4), Inventory (#5), Transactions (#6), and Portfolio (#7) are
-implemented. Distribution (#8) is in progress: iOS ships to TestFlight; the
-Android / Play internal track is the remaining piece.
+implemented. Distribution to the beta channels (#8) is done: iOS ships to
+TestFlight and Android ships to Play closed testing (Alpha). What remains is
+the two **public** store releases — see [`GO-LIVE.md`](GO-LIVE.md).
 
 ## API client
 
@@ -152,9 +154,12 @@ title** (same scheme as the web, scry, and MCP repos):
 The `version` + `release` jobs in `.github/workflows/ci.yml` run
 `.github/scripts/next-version.sh` to compute the next semver from the latest git
 tag + the PR title, then create a matching git tag and GitHub release. **Git tags
-are the source of truth** - `app.json` stays a placeholder; the EAS build
-stamps the real version and native build numbers (`ios.buildNumber`,
-`android.versionCode`) from the tag.
+are the source of truth** - the version is never stored in `app.json`.
+`app.config.ts` resolves it at build time (from `APP_VERSION`, set by the ship
+scripts, falling back to the latest tag), and the native build numbers
+(`ios.buildNumber`, `android.versionCode`) are managed remotely by EAS
+(`eas.json` -> `appVersionSource: remote`, auto-incremented per build). Nothing
+version-related is ever committed by a release.
 
 ## Distribution (builds & store uploads)
 
@@ -165,16 +170,15 @@ uploads only happen when you run these commands yourself from a terminal (each
 needs an interactive Apple/Google login):
 
 ```bash
-eas build  --platform ios --profile production   # produce a signed build (EAS cloud)
-eas submit --platform ios --profile production   # upload that build to TestFlight
+npm run ship:ios              # iOS: build + auto-submit to TestFlight
+npm run ship:android          # Android: build + submit to the Play `internal` track
+npm run ship:android alpha    # Android: build + submit to `alpha` (Play "Closed testing")
 ```
 
-**One-command shortcut:** `npm run ship:ios` (`scripts/ship-ios.sh`) does
-build + auto-submit in one go. It also **syncs the app version from the latest
-git tag** into `app.json` first - important because EAS `appVersionSource:
-remote` only manages the build *number*; the version string TestFlight shows
-comes from `app.json`, so without the sync every build keeps shipping as the old
-placeholder version. The script commits that version bump (push it afterward).
+The ship scripts (`scripts/ship-ios.sh`, `scripts/ship-android.sh`) sanity-check
+a clean `main`, export `APP_VERSION` from the latest git tag (which
+`app.config.ts` stamps into the build), typecheck, then `eas build` (+ submit).
+Build numbers are managed remotely by EAS, so **shipping commits nothing**.
 
 **`eas submit` uploads to TestFlight only - never the public App Store.**
 TestFlight is the private beta channel (you + invited testers). A public App
@@ -185,9 +189,17 @@ for Apple's review (~1-3 days), then **Release**. None of that is automated.
 iOS setup is one-time and already done (App ID `com.matthewdtowles.iwantmymtg`,
 App Store Connect app `6784075307`, signing certs/profile + an App Store Connect
 API key all managed on EAS servers; `ITSAppUsesNonExemptEncryption: false` in
-`app.json` skips the per-build encryption-compliance prompt). So a new TestFlight
-build is just the two commands above. The same flow for Android (`--platform
-android`, uploads to Play internal testing) is not set up yet.
+`app.json` skips the per-build encryption-compliance prompt). Android setup is
+also done (Play Console app `com.matthewdtowles.iwantmymtg`, store listing +
+content declarations complete, closed-testing Alpha track live). The one gap:
+`eas submit` for Android needs a Google Play **service-account key** at
+`./play-service-account.json` (gitignored) - until that's created, upload the
+`.aab` from the EAS build page to the Play Console by hand.
+
+**`eas submit` for Android reaches testing tracks only** - promoting a build to
+the Production track is a separate manual action in the Play Console, and is
+gated for this account by Google's new-personal-account closed-test requirement
+(12 testers, 14 days). See `docs/playstore-release.md` and `GO-LIVE.md`.
 
 ### Inviting TestFlight testers
 

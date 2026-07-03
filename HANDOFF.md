@@ -3,12 +3,14 @@
 Where the v1 build stands and how to pick it up. See the web repo's
 `ROADMAP.md` §7.1 for the overall plan.
 
-_Last updated: 2026-06-30 (#32 **push notifications end-to-end** - client
-registration/tap-routing (#54) + backend Expo fan-out (#560); only an EAS dev
-build remains to exercise on-device. **#32 closed.** With it, all v2 feature
-issues (#25/#31/#32/#23) are done - remaining mobile work is distribution (#8
-Android, #20 iOS submission), which is mostly ops/policy. Prior: buy-list CSV
-import; #23 decks (#51 + #52); v2 UX wave)._
+_Last updated: 2026-07-03 (**Android is live in Play closed testing (Alpha)** -
+the 12-tester/14-day production gate is running (#60, `docs/playstore-release.md`);
+Scryfall card images fixed on Android via `expo-image` + User-Agent (6dec2e3);
+**versioning refactored to a single source of truth** - git tag via
+`app.config.ts`, build numbers remote on EAS (38bd17c). All v2 feature issues
+(#25/#31/#32/#23) are done; #8 beta distribution is done. Remaining work is the
+two public store releases - see `GO-LIVE.md`. Prior: push end-to-end (#54/#560);
+buy-list CSV import; #23 decks; v2 UX wave)._
 
 ## What this is
 
@@ -30,8 +32,8 @@ Expo (SDK 56), TypeScript, expo-router, TanStack Query. It consumes the existing
 - #5 inventory (view / add / edit / finish) - **done**
 - #6 transactions (log buy/sell + history) - **done**
 - #7 portfolio overview - **done**
-- #8 distribution (TestFlight + Play internal) - **in progress**: iOS ships to
-  TestFlight (done 2026-06-24); Android / Play internal track not started
+- #8 distribution (TestFlight + Play testing) - **done**: iOS on TestFlight
+  (2026-06-24); Android in Play closed testing / Alpha (2026-07-02)
 
 ## v2 UX wave (2026-06-27)
 
@@ -236,35 +238,43 @@ add-increment) with optimistic per-card "Added ×N" feedback; invalidates
 / vintage / brawl / explorer / historic / oathbreaker / pauper / pioneer (omit for
 no format).
 
-## Distribution: issue #8
+## Distribution: issue #8 (done — beta channels on both platforms)
 
-**iOS is done (2026-06-24):** the app builds on EAS and ships to TestFlight.
-One-time setup landed in PR #18 - App ID `com.matthewdtowles.iwantmymtg`, App
-Store Connect app `6784075307` (pinned as `submit.production.ios.ascAppId` in
-`eas.json`), signing certs/profile + an App Store Connect API key (the `.p8`
-secret stays on EAS servers, never in the repo), and
-`ios.infoPlist.ITSAppUsesNonExemptEncryption: false` in `app.json` to skip the
-per-build encryption-compliance prompt. Expo account: **mtengineer**.
+**iOS (2026-06-24):** the app builds on EAS and ships to TestFlight via
+`npm run ship:ios`. One-time setup landed in PR #18 - App ID
+`com.matthewdtowles.iwantmymtg`, App Store Connect app `6784075307` (pinned as
+`submit.production.ios.ascAppId` in `eas.json`), signing certs/profile + an App
+Store Connect API key (the `.p8` secret stays on EAS servers, never in the
+repo), and `ios.infoPlist.ITSAppUsesNonExemptEncryption: false` in `app.json`
+to skip the per-build encryption-compliance prompt. Expo: **mtengineer**.
 
-Cutting a new TestFlight build is one command (interactive Apple login the first
-time): `npm run ship:ios` (`scripts/ship-ios.sh`). It sanity-checks a clean
-`main`, syncs `app.json`'s `version` from the latest git tag (committing that
-bump), typechecks, then `eas build --auto-submit` -> TestFlight. EAS uses
-`appVersionSource: local` with `production.autoIncrement`, so it bumps the
-`buildNumber` in `app.json` during the build; **commit that bump after shipping**
-(the script does not - e.g. build 2 was committed by hand) so the next ship
-increments from the right number.
+**Android (2026-07-02):** live in Play **closed testing (Alpha)** as
+`com.matthewdtowles.iwantmymtg`. Store listing, content declarations, and
+graphics are done. Ship via `npm run ship:android alpha`
+(`scripts/ship-android.sh`). Caveat: `eas submit` needs a Play service-account
+key at `./play-service-account.json` (gitignored) which **does not exist yet**,
+so until it's created, upload the `.aab` from the EAS build page to the Play
+Console by hand. Card images initially rendered grey on Android — Scryfall's
+CDN rejects the default okhttp User-Agent and RN's `<Image>` drops custom
+headers; fixed by switching `CardThumb` to `expo-image` with a custom UA
+(6dec2e3, verified in an emulator).
+
+**Versioning (refactored 2026-07-02, 38bd17c):** git tags are the single source
+of truth. `app.config.ts` resolves the version at build time (`APP_VERSION` from
+the ship scripts, else the latest tag); build numbers are EAS-remote
+(`appVersionSource: remote` + `autoIncrement`) and were initialized once via
+`eas build:version:set` (android 4, ios 5). **Nothing version-related is ever
+committed** — the old sync-to-app.json/commit-back flow is gone.
 
 **Merging to `main` does NOT build or ship anything** - CI only tags a version
-(no `eas build`/`eas submit` in the workflow). And `eas submit` (via `ship:ios`)
-reaches
-**TestFlight only**, not the public App Store; a public release is a separate
-manual Submit-for-Review in App Store Connect. (See the README "Distribution"
-section for the full rundown, incl. inviting testers.)
+(no `eas build`/`eas submit` in the workflow). `eas submit` reaches
+**TestFlight / Play testing tracks only**; public releases are separate manual
+submissions in App Store Connect / Play Console.
 
-**Remaining: Android / Play internal track** - not started. Calendar-bound
-(Google's 14-day closed-test gate for new individual accounts) - see the web
-repo's `ROADMAP.md` §7.1 "Store readiness".
+**Remaining: the two public store releases** — Android production is gated by
+Google's 12-tester/14-day closed test (tracked in #60; questionnaire guide in
+`docs/playstore-release.md`), iOS public submission is tracked in #20. Full
+checklist: `GO-LIVE.md`.
 
 ## Architecture / key files
 
@@ -311,10 +321,10 @@ repo's `ROADMAP.md` §7.1 "Store readiness".
 
 - Per-card **legality** is not in the API card response (only a search filter);
   card detail can't show it without a backend change.
-- EAS uses `appVersionSource: local`: `ship:ios` writes the latest git tag into
-  `app.json`'s `version`, and `production.autoIncrement` bumps the `buildNumber`
-  there each build (commit it after shipping - see Distribution).
-- iOS EAS build/submit is set up (see Distribution above); Android is not.
+- Android `eas submit` is blocked on creating a Play service-account key
+  (`./play-service-account.json`); manual `.aab` upload until then.
+- EAS Update (OTA) channel from the original #8 scope was never set up — JS-only
+  fixes currently require a full store build.
 
 ## Cross-repo backend dependencies (backend hand-off)
 
