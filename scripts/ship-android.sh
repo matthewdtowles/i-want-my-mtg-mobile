@@ -70,7 +70,9 @@ command -v eas >/dev/null 2>&1 || EAS="npx eas-cli"
 echo "==> Building Android (production) as $version…"
 $EAS build --platform android --profile production
 echo "==> Submitting latest build to the '$TRACK' Play track…"
-$EAS submit --platform android --profile production --track "$TRACK" --latest
+# `eas submit` has no --track flag; the Play track lives in eas.json. Each track
+# has its own submit profile there ("internal"/"alpha"), selected by name here.
+$EAS submit --platform android --profile "$TRACK" --latest
 
 echo "✓ Submitted to '$TRACK'. The build appears in the Play Console once Google"
 echo "  finishes processing. For the new-account gate, ship to 'alpha' (Closed"
