@@ -29,13 +29,24 @@
 #   - eas-cli installed (script falls back to `npx eas-cli`)
 #   - `eas login` (Expo account: mtengineer)
 #   - A Google Play service account key at ./play-service-account.json
-#     (gitignored; referenced by eas.json submit.production.android)
+#     (gitignored; referenced by the internal/alpha submit profiles in eas.json)
 #   - EAS remote versionCode initialized once: `eas build:version:set`
 #
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 TRACK="${1:-internal}"
+
+# $TRACK selects the submit profile in eas.json; validate before the (expensive)
+# build so a typo fails fast instead of after burning EAS minutes. Add a matching
+# submit profile in eas.json to support a new track.
+case "$TRACK" in
+  internal|alpha) ;;
+  *)
+    echo "✗ Unknown track '$TRACK'. Supported: internal, alpha (add a submit profile in eas.json for more)." >&2
+    exit 1
+    ;;
+esac
 
 # --- 1. clean main ----------------------------------------------------------
 branch="$(git rev-parse --abbrev-ref HEAD)"
