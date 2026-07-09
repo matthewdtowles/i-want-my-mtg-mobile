@@ -4,9 +4,15 @@ on:
   push:
     branches: [main]
   pull_request:
+  schedule:
+    # Weekly spec-drift check against the live OpenAPI spec (see spec-drift job).
+    - cron: "0 12 * * 1"
 
 jobs:
-  verify:
+  # The merge gate. This is the only check that runs on a PR, so a backend
+  # deploy that changes the live OpenAPI spec can never break open PRs.
+  typecheck:
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,9 +24,25 @@ jobs:
 
       - run: npm ci
 
-      # Regenerate the typed API client from the live OpenAPI spec and fail if
-      # the committed schema is stale (the backend API changed without a
-      # corresponding `npm run gen:api` + commit here).
+      - run: npm run typecheck
+
+  # Informational only - never gates a PR (#64). Regenerating from the live spec
+  # would otherwise red every open PR on any backend deploy or downtime. Runs on
+  # main pushes + a weekly schedule so genuine drift is still surfaced, without
+  # coupling feature work to the backend's deploy cadence.
+  spec-drift:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
       - name: Check generated API client is up to date
         run: |
           npm run gen:api
@@ -29,15 +51,13 @@ jobs:
             exit 1
           fi
 
-      - run: npm run typecheck
-
   # On merge to main, compute the next version from the squash-merged PR title
   # (feat -> minor, ! -> major, anything else -> patch) and cut a tag + GitHub
   # release. Git tags are the source of truth for the version; app.json stays a
   # placeholder and the EAS build (issue #8) stamps the real version + native
   # build numbers from the tag.
   version:
-    needs: [verify]
+    needs: [typecheck]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     outputs:
