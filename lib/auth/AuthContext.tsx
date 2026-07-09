@@ -11,6 +11,7 @@ import {
 
 import { setAuthTokenGetter, setOnUnauthorized } from "../api/client";
 import { unregisterPushDevice } from "../push";
+import { queryClient } from "../queryClient";
 import { isExpiringSoon } from "./jwt";
 import { login as loginRequest } from "./loginRequest";
 import { RefreshRejectedError, refreshSession, revokeSession } from "./session";
@@ -73,6 +74,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshRef.current = null;
     setAccessToken(null);
     setRefreshToken(null);
+    // Drop all user-scoped query caches so the next account to sign in can't read
+    // the previous user's data (query keys are user-independent). Covers every
+    // sign-out path: explicit signOut, session-expiry, and the 401 backstop.
+    queryClient.clear();
     if (expired) setSessionExpired(true);
     clearSession().catch(() => {});
   }, []);
