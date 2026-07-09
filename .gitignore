@@ -45,3 +45,6 @@ play-service-account.json
 
 # pr-review-fix state
 .claude/pr-review-fix-state.json
+
+# Local raw screenshot captures (re-generated, not committed)
+screenshots/**/raw/
