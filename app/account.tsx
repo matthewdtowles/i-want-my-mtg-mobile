@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import Constants from "expo-constants";
 import { Stack } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
@@ -31,15 +31,14 @@ export default function AccountScreen() {
   const { colors, mode, setMode } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { signOut } = useAuth();
-  const queryClient = useQueryClient();
 
   const profile = useQuery({ queryKey: ["user", "profile"], queryFn: fetchProfile });
 
   const remove = useMutation({
     mutationFn: deleteAccount,
     onSuccess: async () => {
-      // The token is now invalid server-side; drop local session + caches.
-      queryClient.clear();
+      // The token is now invalid server-side; signOut() drops the local session
+      // and clears all query caches (see AuthContext.handleSignedOut).
       await signOut();
     },
     onError: (e) =>
