@@ -25,6 +25,7 @@
   "devDependencies": {
     "@types/react": "~19.2.2",
     "openapi-typescript": "^7.13.0",
+    "tsx": "^4.23.0",
     "typescript": "~6.0.3"
   },
   "scripts": {
@@ -33,6 +34,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test \"lib/**/*.test.ts\"",
     "gen:api": "node scripts/gen-api.mjs",
     "ship:ios": "bash scripts/ship-ios.sh",
     "ship:android": "bash scripts/ship-android.sh"

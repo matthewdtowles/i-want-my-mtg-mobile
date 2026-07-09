@@ -9,8 +9,9 @@ on:
     - cron: "0 12 * * 1"
 
 jobs:
-  # The merge gate. This is the only check that runs on a PR, so a backend
-  # deploy that changes the live OpenAPI spec can never break open PRs.
+  # PR merge gate (with `test` below). Deliberately does not regenerate the API
+  # client, so a backend deploy that changes the live OpenAPI spec can never red
+  # an open PR - that drift is surfaced by the informational spec-drift job.
   typecheck:
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
@@ -25,6 +26,23 @@ jobs:
       - run: npm ci
 
       - run: npm run typecheck
+
+  # PR merge gate. Unit tests for pure helpers (node:test via tsx). Like
+  # typecheck, it never touches the live spec, so it's safe to gate PRs on.
+  test:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm test
 
   # Informational only - never gates a PR (#64). Regenerating from the live spec
   # would otherwise red every open PR on any backend deploy or downtime. Runs on
@@ -57,7 +75,7 @@ jobs:
   # placeholder and the EAS build (issue #8) stamps the real version + native
   # build numbers from the tag.
   version:
-    needs: [typecheck]
+    needs: [typecheck, test]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     outputs:
