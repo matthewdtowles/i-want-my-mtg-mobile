@@ -10,8 +10,8 @@ on:
 
 jobs:
   # PR merge gate (with `test` below). Deliberately does not regenerate the API
-  # client, so a backend deploy that changes the live OpenAPI spec can never red
-  # an open PR - that drift is surfaced by the informational spec-drift job.
+  # client, so a backend deploy that changes the live OpenAPI spec can never
+  # break an open PR - that drift is surfaced by the informational spec-drift job.
   typecheck:
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
