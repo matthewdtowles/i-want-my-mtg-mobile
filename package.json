@@ -34,7 +34,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test \"lib/**/*.test.ts\"",
+    "test": "node --import tsx --test $(find lib -name '*.test.ts')",
     "gen:api": "node scripts/gen-api.mjs",
     "ship:ios": "bash scripts/ship-ios.sh",
     "ship:android": "bash scripts/ship-android.sh"
