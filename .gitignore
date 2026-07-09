@@ -48,3 +48,7 @@ play-service-account.json
 
 # Local raw screenshot captures (re-generated, not committed)
 screenshots/**/raw/
+
+# Local Claude Code settings and screenshot scratch
+.claude/settings.local.json
+.claude/screenshots/
