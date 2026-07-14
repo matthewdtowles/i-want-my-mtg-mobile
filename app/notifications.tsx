@@ -19,13 +19,14 @@ import {
 import type { Page } from "../lib/api/catalog";
 import {
   NOTIFICATIONS_KEY,
+  NOTIFICATIONS_UNREAD_KEY,
   markAllNotificationsRead,
   markNotificationRead,
 } from "../lib/api/notifications";
 import type { ApiNotification } from "../lib/api/types";
 import { NotificationListItem } from "../components/NotificationListItem";
 import { ErrorState } from "../components/ErrorState";
-import { useNotifications } from "../lib/useNotifications";
+import { useNotifications, useUnreadCount } from "../lib/useNotifications";
 import { useTheme } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
 
@@ -44,7 +45,8 @@ export default function NotificationsScreen() {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const queryClient = useQueryClient();
   const router = useRouter();
-  const { query, items, unread } = useNotifications();
+  const { query, items } = useNotifications();
+  const unread = useUnreadCount();
 
   const markRead = useMutation({
     mutationFn: (id: number) => markNotificationRead(id),
@@ -64,6 +66,10 @@ export default function NotificationsScreen() {
         "Couldn't mark as read",
         err instanceof Error ? err.message : "Please try again.",
       );
+    },
+    // The badge is its own query now; refresh it after the count changes.
+    onSettled() {
+      queryClient.invalidateQueries({ queryKey: NOTIFICATIONS_UNREAD_KEY });
     },
   });
 
@@ -166,6 +172,15 @@ export default function NotificationsScreen() {
         renderItem={({ item }) => (
           <NotificationListItem item={item} onPress={() => onPressItem(item)} />
         )}
+        onEndReached={() => {
+          if (query.hasNextPage && !query.isFetchingNextPage) query.fetchNextPage();
+        }}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={
+          query.isFetchingNextPage ? (
+            <ActivityIndicator style={styles.footer} color={colors.accent} />
+          ) : null
+        }
         refreshControl={
           <RefreshControl
             refreshing={query.isRefetching && !query.isFetchingNextPage}
@@ -195,6 +210,7 @@ const createStyles = (colors: ThemeColors) =>
       marginTop: 6,
       textAlign: "center",
     },
+    footer: { paddingVertical: 16 },
     markAllBtn: { paddingHorizontal: 12 },
     markAllText: { color: colors.accent, fontSize: 15, fontWeight: "600" },
   });
