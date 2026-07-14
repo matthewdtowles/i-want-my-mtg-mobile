@@ -7,6 +7,22 @@ import type {
   ApiInventoryWrite,
 } from "./types";
 
+/** The inventory list. */
+export const INVENTORY_KEY = ["inventory"] as const;
+/**
+ * Per-card owned quantities. Kept under the `["inventory"]` prefix so the
+ * existing `invalidateQueries({ queryKey: INVENTORY_KEY })` calls cover it.
+ */
+export const inventoryQuantitiesKey = (cardId: string) =>
+  ["inventory", "quantities", cardId] as const;
+/**
+ * A deck's owned quantities (for the "missing cards" view). Under the inventory
+ * prefix - so inventory edits invalidate it (finding 1.5) - and keyed by the
+ * deck's card set so it refetches when the deck's cards change.
+ */
+export const deckOwnedKey = (deckId: number, cardIds: string[]) =>
+  ["inventory", "quantities", "deck", deckId, cardIds] as const;
+
 export async function fetchInventory(
   page = 1,
   limit = 50,

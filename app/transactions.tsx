@@ -16,7 +16,13 @@ import {
   View,
 } from "react-native";
 
-import { deleteTransaction, fetchTransactions } from "../lib/api/transactions";
+import { INVENTORY_KEY } from "../lib/api/inventory";
+import { PORTFOLIO_KEY } from "../lib/api/portfolio";
+import {
+  TRANSACTIONS_KEY,
+  deleteTransaction,
+  fetchTransactions,
+} from "../lib/api/transactions";
 import type { Page } from "../lib/api/catalog";
 import type { ApiTransaction } from "../lib/api/types";
 import { TransactionListItem } from "../components/TransactionListItem";
@@ -24,7 +30,7 @@ import { ErrorState } from "../components/ErrorState";
 import { useTheme } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
 
-const KEY = ["transactions"] as const;
+const KEY = TRANSACTIONS_KEY;
 type TxData = InfiniteData<Page<ApiTransaction>>;
 
 function nextPage(last: Page<ApiTransaction>): number | undefined {
@@ -77,8 +83,8 @@ export default function TransactionsScreen() {
     onSettled() {
       // A deleted transaction re-syncs inventory and shifts portfolio totals.
       queryClient.invalidateQueries({ queryKey: KEY });
-      queryClient.invalidateQueries({ queryKey: ["inventory"] });
-      queryClient.invalidateQueries({ queryKey: ["portfolio"] });
+      queryClient.invalidateQueries({ queryKey: INVENTORY_KEY });
+      queryClient.invalidateQueries({ queryKey: PORTFOLIO_KEY });
     },
   });
 

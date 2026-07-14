@@ -11,13 +11,18 @@ import {
   View,
 } from "react-native";
 
-import { fetchPortfolioSummary, refreshPortfolio } from "../lib/api/portfolio";
+import {
+  PORTFOLIO_KEY,
+  PORTFOLIO_SUMMARY_KEY,
+  fetchPortfolioSummary,
+  refreshPortfolio,
+} from "../lib/api/portfolio";
 import { formatPrice } from "../lib/format";
 import { ErrorState } from "../components/ErrorState";
 import { useTheme } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
 
-const KEY = ["portfolio", "summary"] as const;
+const KEY = PORTFOLIO_SUMMARY_KEY;
 
 export default function PortfolioScreen() {
   const { colors } = useTheme();
@@ -31,7 +36,7 @@ export default function PortfolioScreen() {
 
   const recalc = useMutation({
     mutationFn: refreshPortfolio,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["portfolio"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: PORTFOLIO_KEY }),
     onError: (e) =>
       Alert.alert(
         "Couldn't refresh",

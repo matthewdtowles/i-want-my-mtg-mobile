@@ -2,6 +2,8 @@ import { api } from "./client";
 import { errMessage } from "./envelope";
 import type { ApiUser } from "./types";
 
+export const USER_PROFILE_KEY = ["user", "profile"] as const;
+
 /** The signed-in user's profile (id, email, name, role). */
 export async function fetchProfile(): Promise<ApiUser> {
   const { data, error, response } = await api.GET("/api/v1/user");

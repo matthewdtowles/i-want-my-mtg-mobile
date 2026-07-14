@@ -19,7 +19,8 @@ import {
   fetchDeck,
   setDeckCardQuantity,
 } from "../../lib/api/decks";
-import { fetchQuantities } from "../../lib/api/inventory";
+import { deckOwnedKey, fetchQuantities } from "../../lib/api/inventory";
+import { BUY_LIST_KEY } from "../../lib/api/buyList";
 import type { ApiDeckCard, ApiDeckDetail } from "../../lib/api/types";
 import { ErrorState } from "../../components/ErrorState";
 import { formatPrice } from "../../lib/format";
@@ -69,7 +70,7 @@ export default function DeckDetailScreen() {
 
   // Owned quantities power the "missing" view (deck qty vs. inventory).
   const owned = useQuery({
-    queryKey: ["deck-owned", id, cardIds],
+    queryKey: deckOwnedKey(id, cardIds),
     queryFn: () => fetchQuantities(cardIds),
     enabled: cardIds.length > 0,
   });
@@ -112,7 +113,7 @@ export default function DeckDetailScreen() {
   const missingToBuyList = useMutation({
     mutationFn: () => deckMissingToBuyList(id),
     onSuccess: (added) => {
-      queryClient.invalidateQueries({ queryKey: ["buy-list"] });
+      queryClient.invalidateQueries({ queryKey: BUY_LIST_KEY });
       Alert.alert(
         "Added to buy-list",
         added === 0

@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import Svg, { Circle, Polyline } from "react-native-svg";
 
-import { fetchCardPriceHistory } from "../lib/api/catalog";
+import { cardPriceHistoryKey, fetchCardPriceHistory } from "../lib/api/catalog";
 import type { ApiPriceHistoryPoint } from "../lib/api/types";
 import { formatPrice } from "../lib/format";
 import { useTheme } from "../lib/theme/ThemeContext";
@@ -46,7 +46,7 @@ export function CardPriceHistory({ cardId, hasNonFoil, hasFoil }: Props) {
   const lineColor = LINE_COLORS[scheme][finish];
 
   const query = useQuery({
-    queryKey: ["card", cardId, "price-history", days],
+    queryKey: cardPriceHistoryKey(cardId, days),
     queryFn: () => fetchCardPriceHistory(cardId, days),
   });
 

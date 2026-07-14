@@ -11,7 +11,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 
-import { fetchCard } from "../../../lib/api/catalog";
+import { cardKey, fetchCard } from "../../../lib/api/catalog";
 import { formatPrice } from "../../../lib/format";
 import { CardThumb } from "../../../components/CardThumb";
 import { AddToInventory } from "../../../components/AddToInventory";
@@ -34,7 +34,7 @@ export default function CardDetailScreen() {
   const { width } = useWindowDimensions();
 
   const query = useQuery({
-    queryKey: ["card", setCode, number],
+    queryKey: cardKey(setCode, number),
     queryFn: () => fetchCard(setCode as string, number as string),
     enabled: !!setCode && !!number,
   });

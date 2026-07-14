@@ -7,6 +7,15 @@ import type {
   ApiSet,
 } from "./types";
 
+/** Browse + card catalog query keys. */
+export const SETS_KEY = ["sets"] as const;
+export const setCardsKey = (code: string) => ["set", code, "cards"] as const;
+export const cardsSearchKey = (q: string) => ["cards", "search", q] as const;
+export const cardKey = (setCode: string, number: string) =>
+  ["card", setCode, number] as const;
+export const cardPriceHistoryKey = (cardId: string, days: number) =>
+  ["card", cardId, "price-history", days] as const;
+
 export interface Page<T> {
   items: T[];
   meta?: ApiPaginationMeta;

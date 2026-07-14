@@ -2,7 +2,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from "react-native";
 
-import { fetchQuantities, saveInventory } from "../lib/api/inventory";
+import {
+  INVENTORY_KEY,
+  fetchQuantities,
+  inventoryQuantitiesKey,
+  saveInventory,
+} from "../lib/api/inventory";
 import type { ApiInventoryQuantity } from "../lib/api/types";
 import { useDebouncedByKey } from "../lib/useDebouncedByKey";
 import { useTheme } from "../lib/theme/ThemeContext";
@@ -13,10 +18,6 @@ type Props = {
   hasNonFoil: boolean;
   hasFoil: boolean;
 };
-
-function qtyKey(cardId: string) {
-  return ["inventory", "quantities", cardId] as const;
-}
 
 function readQty(rows: ApiInventoryQuantity[] | undefined, cardId: string) {
   const row = rows?.find((r) => r.cardId === cardId);
@@ -43,7 +44,7 @@ export function AddToInventory({ cardId, hasNonFoil, hasFoil }: Props) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const queryClient = useQueryClient();
-  const key = qtyKey(cardId);
+  const key = inventoryQuantitiesKey(cardId);
 
   const query = useQuery({
     queryKey: key,
@@ -51,8 +52,8 @@ export function AddToInventory({ cardId, hasNonFoil, hasFoil }: Props) {
   });
 
   // Debounced absolute-quantity write: the tap handler updates the cache
-  // instantly, and settle re-syncs the whole inventory family (`["inventory"]`
-  // covers this card's `["inventory","quantities",cardId]` key too).
+  // instantly, and settle re-syncs the whole inventory family (INVENTORY_KEY
+  // covers this card's inventoryQuantitiesKey too).
   const setQty = useMutation({
     mutationFn: ({ isFoil, quantity }: { isFoil: boolean; quantity: number }) =>
       saveInventory([{ cardId, quantity, isFoil }]),
@@ -63,7 +64,7 @@ export function AddToInventory({ cardId, hasNonFoil, hasFoil }: Props) {
       );
     },
     onSettled() {
-      queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      queryClient.invalidateQueries({ queryKey: INVENTORY_KEY });
     },
   });
 
