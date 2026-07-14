@@ -19,17 +19,13 @@ import {
   searchCards,
   type Page,
 } from "../../lib/api/catalog";
+import { nextPage } from "../../lib/pagination";
 import type { ApiCard, ApiSet } from "../../lib/api/types";
 import { CardListItem } from "../../components/CardListItem";
 import { ErrorState } from "../../components/ErrorState";
 import { useDebounce } from "../../lib/useDebounce";
 import { useTheme } from "../../lib/theme/ThemeContext";
 import type { ThemeColors } from "../../lib/theme/colors";
-
-function nextPage<T>(last: Page<T>): number | undefined {
-  const m = last.meta;
-  return m && m.page < m.totalPages ? m.page + 1 : undefined;
-}
 
 export default function BrowseScreen() {
   const { colors } = useTheme();

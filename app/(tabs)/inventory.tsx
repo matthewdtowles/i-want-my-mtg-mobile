@@ -26,6 +26,7 @@ import {
   deleteInventory,
 } from "../../lib/api/inventory";
 import type { Page } from "../../lib/api/catalog";
+import { mapPageItems, nextPage } from "../../lib/pagination";
 import type { ApiInventoryItem } from "../../lib/api/types";
 import { InventoryListItem } from "../../components/InventoryListItem";
 import { ErrorState } from "../../components/ErrorState";
@@ -55,19 +56,6 @@ function sameRow(a: ApiInventoryItem, b: ApiInventoryItem): boolean {
 
 function unitPrice(item: ApiInventoryItem): number {
   return (item.isFoil ? item.priceFoil : item.priceNormal) ?? 0;
-}
-
-function mapItems(
-  data: InventoryData | undefined,
-  fn: (items: ApiInventoryItem[]) => ApiInventoryItem[],
-): InventoryData | undefined {
-  if (!data) return data;
-  return { ...data, pages: data.pages.map((p) => ({ ...p, items: fn(p.items) })) };
-}
-
-function nextPage(last: Page<ApiInventoryItem>): number | undefined {
-  const m = last.meta;
-  return m && m.page < m.totalPages ? m.page + 1 : undefined;
 }
 
 export default function InventoryScreen() {
@@ -178,7 +166,7 @@ export default function InventoryScreen() {
     const current = data?.pages.flatMap((p) => p.items).find((it) => sameRow(it, item))?.quantity;
     const quantity = Math.max(1, (current ?? item.quantity) + delta);
     queryClient.setQueryData<InventoryData>(KEY, (old) =>
-      mapItems(old, (items) =>
+      mapPageItems(old, (items) =>
         items.map((it) => (sameRow(it, item) ? { ...it, quantity } : it)),
       ),
     );
@@ -191,7 +179,7 @@ export default function InventoryScreen() {
       await queryClient.cancelQueries({ queryKey: KEY });
       const previous = queryClient.getQueryData<InventoryData>(KEY);
       queryClient.setQueryData<InventoryData>(KEY, (old) =>
-        mapItems(old, (items) => items.filter((it) => !sameRow(it, item))),
+        mapPageItems(old, (items) => items.filter((it) => !sameRow(it, item))),
       );
       return { previous };
     },

@@ -24,6 +24,7 @@ import {
   fetchTransactions,
 } from "../lib/api/transactions";
 import type { Page } from "../lib/api/catalog";
+import { nextPage } from "../lib/pagination";
 import type { ApiTransaction } from "../lib/api/types";
 import { TransactionListItem } from "../components/TransactionListItem";
 import { ErrorState } from "../components/ErrorState";
@@ -32,11 +33,6 @@ import type { ThemeColors } from "../lib/theme/colors";
 
 const KEY = TRANSACTIONS_KEY;
 type TxData = InfiniteData<Page<ApiTransaction>>;
-
-function nextPage(last: Page<ApiTransaction>): number | undefined {
-  const m = last.meta;
-  return m && m.page < m.totalPages ? m.page + 1 : undefined;
-}
 
 export default function TransactionsScreen() {
   const { colors } = useTheme();

@@ -26,7 +26,7 @@ export async function fetchNotifications(
   limit = 50,
 ): Promise<Page<ApiNotification>> {
   const { data, error, response } = await api.GET("/api/v1/notifications", {
-    params: { query: { page: String(page), limit: String(limit) } },
+    params: { query: { page, limit } },
   });
   if (!response.ok) throw new Error(errMessage(error, "Failed to load notifications."));
   return { items: data?.data ?? [], meta: data?.meta };

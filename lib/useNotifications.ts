@@ -1,19 +1,13 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 
-import type { Page } from "./api/catalog";
+import { nextPage } from "./pagination";
 import {
   NOTIFICATIONS_KEY,
   NOTIFICATIONS_UNREAD_KEY,
   fetchNotifications,
   fetchUnreadCount,
 } from "./api/notifications";
-import type { ApiNotification } from "./api/types";
-
-function nextPage(last: Page<ApiNotification>): number | undefined {
-  const m = last.meta;
-  return m && m.page < m.totalPages ? m.page + 1 : undefined;
-}
 
 /**
  * The inbox query. The screen paginates on scroll (`onEndReached`) like every

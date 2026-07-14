@@ -17,6 +17,7 @@ import {
 } from "react-native";
 
 import type { Page } from "../lib/api/catalog";
+import { mapPageItems } from "../lib/pagination";
 import {
   NOTIFICATIONS_KEY,
   NOTIFICATIONS_UNREAD_KEY,
@@ -32,13 +33,6 @@ import type { ThemeColors } from "../lib/theme/colors";
 
 type NotificationData = InfiniteData<Page<ApiNotification>>;
 
-function mapItems(
-  data: NotificationData | undefined,
-  fn: (items: ApiNotification[]) => ApiNotification[],
-): NotificationData | undefined {
-  if (!data) return data;
-  return { ...data, pages: data.pages.map((p) => ({ ...p, items: fn(p.items) })) };
-}
 
 export default function NotificationsScreen() {
   const { colors } = useTheme();
@@ -54,7 +48,7 @@ export default function NotificationsScreen() {
       await queryClient.cancelQueries({ queryKey: NOTIFICATIONS_KEY });
       const previous = queryClient.getQueryData<NotificationData>(NOTIFICATIONS_KEY);
       queryClient.setQueryData<NotificationData>(NOTIFICATIONS_KEY, (old) =>
-        mapItems(old, (list) =>
+        mapPageItems(old, (list) =>
           list.map((n) => (n.id === id ? { ...n, isRead: true } : n)),
         ),
       );
@@ -79,7 +73,7 @@ export default function NotificationsScreen() {
       await queryClient.cancelQueries({ queryKey: NOTIFICATIONS_KEY });
       const previous = queryClient.getQueryData<NotificationData>(NOTIFICATIONS_KEY);
       queryClient.setQueryData<NotificationData>(NOTIFICATIONS_KEY, (old) =>
-        mapItems(old, (list) => list.map((n) => ({ ...n, isRead: true }))),
+        mapPageItems(old, (list) => list.map((n) => ({ ...n, isRead: true }))),
       );
       return { previous };
     },

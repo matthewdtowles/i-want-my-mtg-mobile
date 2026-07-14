@@ -178,6 +178,26 @@ export interface paths {
         patch: operations["BuyListApiController_setQuantity"];
         trace?: never;
     };
+    "/api/v1/buy-list/adjust": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Adjust a buy-list item's quantity by a delta
+         * @description Atomically adds `delta` (negative to subtract) to the quantity for (card, finish), creating the row for a positive delta and removing it when the result is 0 or less. Safe under concurrent calls, unlike read-modify-write against the absolute-quantity PATCH.
+         */
+        patch: operations["adjustBuyListQuantity"];
+        trace?: never;
+    };
     "/api/v1/buy-list/import": {
         parameters: {
             query?: never;
@@ -479,6 +499,26 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inventory/adjust": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Adjust one holding's quantity by a delta
+         * @description Atomically adds `delta` (negative to subtract) to the quantity for (card, finish), creating the row for a positive delta and removing it when the result is 0 or less. Safe under concurrent calls, unlike read-modify-write against the absolute-quantity PATCH.
+         */
+        patch: operations["adjustInventoryQuantity"];
         trace?: never;
     };
     "/api/v1/inventory/import/cards": {
@@ -1149,13 +1189,23 @@ export interface components {
         };
         BuyListSetQuantityApiDto: {
             cardId: string;
-            /** @default false */
             isFoil: boolean;
             quantity: number;
         };
+        AdjustedQuantityApiDto: {
+            cardId: string;
+            isFoil: boolean;
+            /** @description Quantity after the adjustment; 0 means the row was removed. */
+            quantity: number;
+        };
+        BuyListAdjustApiDto: {
+            cardId: string;
+            isFoil: boolean;
+            /** @description Amount to add to the quantity; negative to subtract. */
+            delta: number;
+        };
         BuyListRemoveApiDto: {
             cardId: string;
-            /** @default false */
             isFoil: boolean;
         };
         BuyListImportResponseDto: {
@@ -1312,14 +1362,22 @@ export interface components {
              */
             format?: "standard" | "commander" | "modern" | "legacy" | "vintage" | "brawl" | "explorer" | "historic" | "oathbreaker" | "pauper" | "pioneer";
         };
+        DeckImportErrorApiDto: {
+            /** @description Line number in the pasted decklist (1-based). */
+            row: number;
+            /** @description Card name from the line, when one was parsed. */
+            name?: string;
+            /** @description Why the line was rejected. */
+            error: string;
+        };
         DeckImportApiResultDto: {
             /** @description Id of the created deck. */
             deckId: number;
             name: string;
             /** @description Total card quantity added across resolved lines. */
             saved: number;
-            /** @description Lines that could not be parsed or resolved ({ row, name?, error }). */
-            errors: Record<string, never>[];
+            /** @description Lines that could not be parsed or resolved. */
+            errors: components["schemas"]["DeckImportErrorApiDto"][];
         };
         DeckImportApiDto: {
             name: string;
@@ -1352,13 +1410,11 @@ export interface components {
         };
         DeckCardSetQuantityApiDto: {
             cardId: string;
-            /** @default false */
             isSideboard: boolean;
             quantity: number;
         };
         DeckCardRemoveApiDto: {
             cardId: string;
-            /** @default false */
             isSideboard: boolean;
         };
         InventoryItemApiDto: {
@@ -1425,6 +1481,12 @@ export interface components {
             /** @description Absolute quantity to set; 0 removes the row */
             quantity: number;
             isFoil: boolean;
+        };
+        InventoryAdjustApiDto: {
+            cardId: string;
+            isFoil: boolean;
+            /** @description Amount to add to the quantity; negative to subtract. */
+            delta: number;
         };
         InventoryImportResponseDto: {
             /** @description Number of inventory rows saved (created or updated to exact qty) */
@@ -2000,6 +2062,36 @@ export interface operations {
             };
         };
     };
+    adjustBuyListQuantity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BuyListAdjustApiDto"];
+            };
+        };
+        responses: {
+            /** @description Quantity after the adjustment */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data?: components["schemas"]["AdjustedQuantityApiDto"];
+                        error?: string;
+                        message?: string;
+                        meta?: components["schemas"]["PaginationMeta"] | components["schemas"]["BlockPaginationMeta"];
+                    };
+                };
+            };
+        };
+    };
     BuyListApiController_import: {
         parameters: {
             query?: never;
@@ -2040,8 +2132,8 @@ export interface operations {
     searchCards: {
         parameters: {
             query?: {
-                limit?: unknown;
-                page?: unknown;
+                limit?: number;
+                page?: number;
                 /** @description Set to "name" to return one representative printing per distinct card name (newest printing), instead of one row per printing. With "name", a `format` param flags each result's legality in that format. */
                 groupBy?: "name";
                 /** @description Legality status; only meaningful with format. Defaults to "legal". */
@@ -2049,13 +2141,13 @@ export interface operations {
                 /** @description Filter by format legality (joins legality table; defaults legality=legal) */
                 format?: "standard" | "commander" | "modern" | "legacy" | "vintage" | "brawl" | "explorer" | "historic" | "oathbreaker" | "pauper" | "pioneer";
                 /** @description Substring match on card type line (e.g. "creature", "instant") */
-                type?: unknown;
+                type?: string;
                 /** @description Filter by rarity */
                 rarity?: "common" | "uncommon" | "rare" | "mythic";
                 /** @description Restrict to a single set (e.g. LEA, MH3) */
-                setCode?: unknown;
+                setCode?: string;
                 /** @description Search query (matches card name) */
-                q?: unknown;
+                q?: string;
             };
             header?: never;
             path?: never;
@@ -2149,7 +2241,7 @@ export interface operations {
         parameters: {
             query?: {
                 /** @description Number of days of history */
-                days?: string;
+                days?: number;
             };
             header?: never;
             path: {
@@ -2252,7 +2344,7 @@ export interface operations {
         parameters: {
             query?: {
                 /** @description Number of days of history */
-                days?: string;
+                days?: number;
             };
             header?: never;
             path: {
@@ -2620,11 +2712,11 @@ export interface operations {
     InventoryApiController_findAll: {
         parameters: {
             query?: {
-                filter?: unknown;
-                ascend?: unknown;
-                sort?: unknown;
-                limit?: unknown;
-                page?: unknown;
+                filter?: string;
+                ascend?: boolean;
+                sort?: string;
+                limit?: number;
+                page?: number;
             };
             header?: never;
             path?: never;
@@ -2795,6 +2887,36 @@ export interface operations {
             };
         };
     };
+    adjustInventoryQuantity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InventoryAdjustApiDto"];
+            };
+        };
+        responses: {
+            /** @description Quantity after the adjustment */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data?: components["schemas"]["AdjustedQuantityApiDto"];
+                        error?: string;
+                        message?: string;
+                        meta?: components["schemas"]["PaginationMeta"] | components["schemas"]["BlockPaginationMeta"];
+                    };
+                };
+            };
+        };
+    };
     importInventoryCards: {
         parameters: {
             query?: never;
@@ -2912,7 +3034,7 @@ export interface operations {
         parameters: {
             query?: {
                 /** @description Store-credit bonus as a fraction (0.30 = +30%). Clamped to [0, 2]; default 0.30. */
-                bonus?: string;
+                bonus?: number;
             };
             header?: never;
             path?: never;
@@ -2959,7 +3081,7 @@ export interface operations {
         parameters: {
             query?: {
                 /** @description Number of days of history */
-                days?: string;
+                days?: number;
             };
             header?: never;
             path?: never;
@@ -2997,7 +3119,7 @@ export interface operations {
                 /** @description best or worst */
                 type?: string;
                 /** @description Number of results */
-                limit?: string;
+                limit?: number;
             };
             header?: never;
             path?: never;
@@ -3164,8 +3286,8 @@ export interface operations {
     PriceAlertApiController_findAll: {
         parameters: {
             query?: {
-                page?: string;
-                limit?: string;
+                page?: number;
+                limit?: number;
             };
             header?: never;
             path?: never;
@@ -3295,8 +3417,8 @@ export interface operations {
     PriceNotificationApiController_findAll: {
         parameters: {
             query?: {
-                page?: string;
-                limit?: string;
+                page?: number;
+                limit?: number;
             };
             header?: never;
             path?: never;
@@ -3380,8 +3502,8 @@ export interface operations {
     listSealedProductsForSet: {
         parameters: {
             query?: {
-                limit?: unknown;
-                page?: unknown;
+                limit?: number;
+                page?: number;
             };
             header?: never;
             path: {
@@ -3430,8 +3552,8 @@ export interface operations {
     SealedProductApiController_findInventory: {
         parameters: {
             query?: {
-                limit?: unknown;
-                page?: unknown;
+                limit?: number;
+                page?: number;
             };
             header?: never;
             path?: never;
@@ -3539,17 +3661,17 @@ export interface operations {
         parameters: {
             query?: {
                 /** @description Grouping mode: "block" for block-level pagination */
-                group?: unknown;
+                group?: string;
                 /** @description Search query */
-                q?: unknown;
+                q?: string;
                 /** @description Show only base/main sets */
-                baseOnly?: unknown;
+                baseOnly?: boolean;
                 /** @description Filter sets by name */
-                filter?: unknown;
-                ascend?: unknown;
-                sort?: unknown;
-                limit?: unknown;
-                page?: unknown;
+                filter?: string;
+                ascend?: boolean;
+                sort?: string;
+                limit?: number;
+                page?: number;
             };
             header?: never;
             path?: never;
@@ -3626,17 +3748,17 @@ export interface operations {
                 /** @description Filter by format legality (defaults legality=legal) */
                 format?: "standard" | "commander" | "modern" | "legacy" | "vintage" | "brawl" | "explorer" | "historic" | "oathbreaker" | "pauper" | "pioneer";
                 /** @description Substring match on card type line */
-                type?: unknown;
+                type?: string;
                 /** @description Filter by rarity */
                 rarity?: "common" | "uncommon" | "rare" | "mythic";
                 /** @description Show only base set cards */
-                baseOnly?: unknown;
+                baseOnly?: boolean;
                 /** @description Filter cards by name */
-                filter?: unknown;
-                ascend?: unknown;
-                sort?: unknown;
-                limit?: unknown;
-                page?: unknown;
+                filter?: string;
+                ascend?: boolean;
+                sort?: string;
+                limit?: number;
+                page?: number;
             };
             header?: never;
             path: {
@@ -3676,7 +3798,7 @@ export interface operations {
         parameters: {
             query?: {
                 /** @description Number of days of history */
-                days?: string;
+                days?: number;
             };
             header?: never;
             path: {
@@ -3707,11 +3829,11 @@ export interface operations {
         parameters: {
             query?: {
                 type?: "BUY" | "SELL";
-                filter?: unknown;
-                ascend?: unknown;
-                sort?: unknown;
-                limit?: unknown;
-                page?: unknown;
+                filter?: string;
+                ascend?: boolean;
+                sort?: string;
+                limit?: number;
+                page?: number;
             };
             header?: never;
             path?: never;
@@ -3831,7 +3953,7 @@ export interface operations {
         parameters: {
             query?: {
                 /** @description Whether to check foil version */
-                isFoil?: string;
+                isFoil?: boolean;
             };
             header?: never;
             path: {
@@ -3862,7 +3984,7 @@ export interface operations {
         parameters: {
             query?: {
                 /** @description Whether to check foil version */
-                isFoil?: string;
+                isFoil?: boolean;
             };
             header?: never;
             path: {

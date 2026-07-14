@@ -12,7 +12,8 @@ import {
   View,
 } from "react-native";
 
-import { setCardsKey, fetchSetCards, type Page } from "../../lib/api/catalog";
+import { setCardsKey, fetchSetCards } from "../../lib/api/catalog";
+import { nextPage } from "../../lib/pagination";
 import { INVENTORY_KEY , bulkAddToInventory } from "../../lib/api/inventory";
 import type { ApiCard } from "../../lib/api/types";
 import { CardListItem } from "../../components/CardListItem";
@@ -20,11 +21,6 @@ import { ErrorState } from "../../components/ErrorState";
 import { BulkAddBar } from "../../components/BulkAddBar";
 import { useTheme } from "../../lib/theme/ThemeContext";
 import type { ThemeColors } from "../../lib/theme/colors";
-
-function nextPage(last: Page<ApiCard>): number | undefined {
-  const m = last.meta;
-  return m && m.page < m.totalPages ? m.page + 1 : undefined;
-}
 
 export default function SetDetailScreen() {
   const { colors } = useTheme();
