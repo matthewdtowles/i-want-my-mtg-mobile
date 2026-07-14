@@ -9,6 +9,7 @@ import { useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Pressable,
   RefreshControl,
@@ -25,6 +26,7 @@ import { InventoryListItem } from "../../components/InventoryListItem";
 import { ErrorState } from "../../components/ErrorState";
 import { formatPrice } from "../../lib/format";
 import { useDebounce } from "../../lib/useDebounce";
+import { useDebouncedByKey } from "../../lib/useDebouncedByKey";
 import { useTheme } from "../../lib/theme/ThemeContext";
 import type { ThemeColors } from "../../lib/theme/colors";
 
@@ -141,23 +143,42 @@ export default function InventoryScreen() {
     });
   }, [items, q, finish, sortKey, sortAsc]);
 
+  // The write is debounced (below), so the mutation only fires with the final
+  // absolute quantity. It carries no optimistic onMutate of its own - the tap
+  // handler updates the cache instantly - and re-syncs from the server on
+  // settle so any drift self-heals.
   const setQuantity = useMutation({
     mutationFn: ({ item, quantity }: { item: ApiInventoryItem; quantity: number }) =>
       saveInventory([{ cardId: item.cardId, quantity, isFoil: item.isFoil }]),
-    async onMutate({ item, quantity }) {
-      await queryClient.cancelQueries({ queryKey: KEY });
-      const previous = queryClient.getQueryData<InventoryData>(KEY);
-      queryClient.setQueryData<InventoryData>(KEY, (old) =>
-        mapItems(old, (items) =>
-          items.map((it) => (sameRow(it, item) ? { ...it, quantity } : it)),
-        ),
+    onError(err) {
+      Alert.alert(
+        "Couldn't update quantity",
+        err instanceof Error ? err.message : "Please try again.",
       );
-      return { previous };
     },
-    onError(_err, _vars, ctx) {
-      if (ctx?.previous) queryClient.setQueryData(KEY, ctx.previous);
+    onSettled() {
+      queryClient.invalidateQueries({ queryKey: KEY });
     },
   });
+
+  const writeQuantity = useDebouncedByKey(
+    (item: ApiInventoryItem, quantity: number) => setQuantity.mutate({ item, quantity }),
+  );
+
+  // Step the quantity by ±1: read the latest value from the cache (not the
+  // rendered row, which can lag a rapid double-tap), update the cache instantly
+  // for a responsive UI, and debounce the server write.
+  function step(item: ApiInventoryItem, delta: number) {
+    const data = queryClient.getQueryData<InventoryData>(KEY);
+    const current = data?.pages.flatMap((p) => p.items).find((it) => sameRow(it, item))?.quantity;
+    const quantity = Math.max(1, (current ?? item.quantity) + delta);
+    queryClient.setQueryData<InventoryData>(KEY, (old) =>
+      mapItems(old, (items) =>
+        items.map((it) => (sameRow(it, item) ? { ...it, quantity } : it)),
+      ),
+    );
+    writeQuantity(`${item.cardId}-${item.isFoil}`, item, quantity);
+  }
 
   const remove = useMutation({
     mutationFn: (item: ApiInventoryItem) => deleteInventory(item.cardId, item.isFoil),
@@ -169,8 +190,12 @@ export default function InventoryScreen() {
       );
       return { previous };
     },
-    onError(_err, _item, ctx) {
+    onError(err, _item, ctx) {
       if (ctx?.previous) queryClient.setQueryData(KEY, ctx.previous);
+      Alert.alert(
+        "Couldn't remove card",
+        err instanceof Error ? err.message : "Please try again.",
+      );
     },
     onSettled() {
       queryClient.invalidateQueries({ queryKey: KEY });
@@ -306,8 +331,8 @@ export default function InventoryScreen() {
         renderItem={({ item }) => (
           <InventoryListItem
             item={item}
-            onIncrement={() => setQuantity.mutate({ item, quantity: item.quantity + 1 })}
-            onDecrement={() => setQuantity.mutate({ item, quantity: item.quantity - 1 })}
+            onIncrement={() => step(item, 1)}
+            onDecrement={() => step(item, -1)}
             onRemove={() => remove.mutate(item)}
           />
         )}

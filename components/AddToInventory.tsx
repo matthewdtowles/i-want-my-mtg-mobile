@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { fetchQuantities, saveInventory } from "../lib/api/inventory";
 import type { ApiInventoryQuantity } from "../lib/api/types";
+import { useDebouncedByKey } from "../lib/useDebouncedByKey";
 import { useTheme } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
 
@@ -49,25 +50,33 @@ export function AddToInventory({ cardId, hasNonFoil, hasFoil }: Props) {
     queryFn: () => fetchQuantities([cardId]),
   });
 
+  // Debounced absolute-quantity write: the tap handler updates the cache
+  // instantly, and settle re-syncs the whole inventory family (`["inventory"]`
+  // covers this card's `["inventory","quantities",cardId]` key too).
   const setQty = useMutation({
     mutationFn: ({ isFoil, quantity }: { isFoil: boolean; quantity: number }) =>
       saveInventory([{ cardId, quantity, isFoil }]),
-    async onMutate({ isFoil, quantity }) {
-      await queryClient.cancelQueries({ queryKey: key });
-      const previous = queryClient.getQueryData<ApiInventoryQuantity[]>(key);
-      queryClient.setQueryData<ApiInventoryQuantity[]>(key, (old) =>
-        upsertQty(old, cardId, isFoil, quantity),
+    onError(err) {
+      Alert.alert(
+        "Couldn't update quantity",
+        err instanceof Error ? err.message : "Please try again.",
       );
-      return { previous };
     },
-    onError(_err, _vars, ctx) {
-      if (ctx?.previous) queryClient.setQueryData(key, ctx.previous);
-    },
-    // Keep the inventory list in sync with edits made here.
     onSettled() {
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
     },
   });
+
+  const writeQty = useDebouncedByKey(
+    (isFoil: boolean, quantity: number) => setQty.mutate({ isFoil, quantity }),
+  );
+
+  function step(isFoil: boolean, quantity: number) {
+    queryClient.setQueryData<ApiInventoryQuantity[]>(key, (old) =>
+      upsertQty(old, cardId, isFoil, quantity),
+    );
+    writeQty(isFoil ? "foil" : "normal", isFoil, quantity);
+  }
 
   const owned = readQty(query.data, cardId);
 
@@ -86,7 +95,7 @@ export function AddToInventory({ cardId, hasNonFoil, hasFoil }: Props) {
             <FinishStepper
               label="Normal"
               quantity={owned.normal}
-              onChange={(quantity) => setQty.mutate({ isFoil: false, quantity })}
+              onChange={(quantity) => step(false, quantity)}
               styles={styles}
             />
           ) : null}
@@ -94,7 +103,7 @@ export function AddToInventory({ cardId, hasNonFoil, hasFoil }: Props) {
             <FinishStepper
               label="Foil"
               quantity={owned.foil}
-              onChange={(quantity) => setQty.mutate({ isFoil: true, quantity })}
+              onChange={(quantity) => step(true, quantity)}
               styles={styles}
             />
           ) : null}

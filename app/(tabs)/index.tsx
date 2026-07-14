@@ -11,7 +11,6 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { fetchSets, searchCards, type Page } from "../../lib/api/catalog";
 import type { ApiCard, ApiSet } from "../../lib/api/types";
@@ -29,7 +28,6 @@ function nextPage<T>(last: Page<T>): number | undefined {
 export default function BrowseScreen() {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const insets = useSafeAreaInsets();
   const [query, setQuery] = useState("");
   const q = useDebounce(query.trim(), 350);
   const searching = q.length > 0;
@@ -53,7 +51,7 @@ export default function BrowseScreen() {
   const active = searching ? cardsQuery : setsQuery;
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + 8 }]}>
+    <View style={[styles.container, { paddingTop: 8 }]}>
       <TextInput
         style={styles.search}
         placeholder="Search cards by name"
