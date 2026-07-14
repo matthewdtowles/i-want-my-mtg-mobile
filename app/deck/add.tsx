@@ -12,7 +12,7 @@ import {
   View,
 } from "react-native";
 
-import { searchCards, type Page } from "../../lib/api/catalog";
+import { cardsSearchKey, searchCards, type Page } from "../../lib/api/catalog";
 import { DECKS_KEY, addDeckCard, deckKey } from "../../lib/api/decks";
 import type { ApiCard } from "../../lib/api/types";
 import { CardThumb } from "../../components/CardThumb";
@@ -44,7 +44,7 @@ export default function AddDeckCardScreen() {
   const searching = q.length > 0;
 
   const search = useInfiniteQuery({
-    queryKey: ["cards", "search", q],
+    queryKey: cardsSearchKey(q),
     queryFn: ({ pageParam }) => searchCards(q, pageParam),
     initialPageParam: 1,
     getNextPageParam: nextPage,

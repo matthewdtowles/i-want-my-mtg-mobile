@@ -12,7 +12,13 @@ import {
   View,
 } from "react-native";
 
-import { createTransaction, updateTransaction } from "../../lib/api/transactions";
+import { INVENTORY_KEY } from "../../lib/api/inventory";
+import { PORTFOLIO_KEY } from "../../lib/api/portfolio";
+import {
+  TRANSACTIONS_KEY,
+  createTransaction,
+  updateTransaction,
+} from "../../lib/api/transactions";
 import { useTheme } from "../../lib/theme/ThemeContext";
 import type { ThemeColors } from "../../lib/theme/colors";
 
@@ -95,9 +101,9 @@ export default function NewTransactionScreen() {
           }),
     onSuccess: () => {
       // A transaction adjusts inventory server-side and shifts portfolio totals.
-      queryClient.invalidateQueries({ queryKey: ["transactions"] });
-      queryClient.invalidateQueries({ queryKey: ["inventory"] });
-      queryClient.invalidateQueries({ queryKey: ["portfolio"] });
+      queryClient.invalidateQueries({ queryKey: TRANSACTIONS_KEY });
+      queryClient.invalidateQueries({ queryKey: INVENTORY_KEY });
+      queryClient.invalidateQueries({ queryKey: PORTFOLIO_KEY });
       router.back();
     },
     onError: (e) =>

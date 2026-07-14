@@ -14,7 +14,7 @@ import {
 } from "react-native";
 
 import { API_BASE_URL } from "../lib/api/config";
-import { deleteAccount, fetchProfile } from "../lib/api/user";
+import { USER_PROFILE_KEY, deleteAccount, fetchProfile } from "../lib/api/user";
 import { useAuth } from "../lib/auth/AuthContext";
 import { useTheme, type ThemeMode } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
@@ -32,7 +32,7 @@ export default function AccountScreen() {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { signOut } = useAuth();
 
-  const profile = useQuery({ queryKey: ["user", "profile"], queryFn: fetchProfile });
+  const profile = useQuery({ queryKey: USER_PROFILE_KEY, queryFn: fetchProfile });
 
   const remove = useMutation({
     mutationFn: deleteAccount,

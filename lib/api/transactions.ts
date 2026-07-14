@@ -7,6 +7,8 @@ import type {
   ApiTransactionWrite,
 } from "./types";
 
+export const TRANSACTIONS_KEY = ["transactions"] as const;
+
 export async function fetchTransactions(
   page = 1,
   limit = 50,

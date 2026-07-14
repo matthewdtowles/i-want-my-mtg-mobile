@@ -12,7 +12,13 @@ import {
   View,
 } from "react-native";
 
-import { fetchSets, searchCards, type Page } from "../../lib/api/catalog";
+import {
+  SETS_KEY,
+  cardsSearchKey,
+  fetchSets,
+  searchCards,
+  type Page,
+} from "../../lib/api/catalog";
 import type { ApiCard, ApiSet } from "../../lib/api/types";
 import { CardListItem } from "../../components/CardListItem";
 import { ErrorState } from "../../components/ErrorState";
@@ -33,7 +39,7 @@ export default function BrowseScreen() {
   const searching = q.length > 0;
 
   const setsQuery = useInfiniteQuery({
-    queryKey: ["sets"],
+    queryKey: SETS_KEY,
     queryFn: ({ pageParam }) => fetchSets(pageParam),
     initialPageParam: 1,
     getNextPageParam: nextPage,
@@ -41,7 +47,7 @@ export default function BrowseScreen() {
   });
 
   const cardsQuery = useInfiniteQuery({
-    queryKey: ["cards", "search", q],
+    queryKey: cardsSearchKey(q),
     queryFn: ({ pageParam }) => searchCards(q, pageParam),
     initialPageParam: 1,
     getNextPageParam: nextPage,

@@ -19,7 +19,12 @@ import {
   View,
 } from "react-native";
 
-import { fetchInventory, saveInventory, deleteInventory } from "../../lib/api/inventory";
+import {
+  INVENTORY_KEY,
+  fetchInventory,
+  saveInventory,
+  deleteInventory,
+} from "../../lib/api/inventory";
 import type { Page } from "../../lib/api/catalog";
 import type { ApiInventoryItem } from "../../lib/api/types";
 import { InventoryListItem } from "../../components/InventoryListItem";
@@ -32,7 +37,7 @@ import type { ThemeColors } from "../../lib/theme/colors";
 
 type InventoryData = InfiniteData<Page<ApiInventoryItem>>;
 
-const KEY = ["inventory"] as const;
+const KEY = INVENTORY_KEY;
 
 type SortKey = "name" | "set" | "price" | "qty";
 type Finish = "all" | "normal" | "foil";

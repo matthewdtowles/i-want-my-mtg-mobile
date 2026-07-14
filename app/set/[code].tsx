@@ -12,7 +12,8 @@ import {
   View,
 } from "react-native";
 
-import { fetchSetCards, type Page } from "../../lib/api/catalog";
+import { setCardsKey, fetchSetCards, type Page } from "../../lib/api/catalog";
+import { INVENTORY_KEY } from "../../lib/api/inventory";
 import { bulkAddToInventory } from "../../lib/api/inventory";
 import type { ApiCard } from "../../lib/api/types";
 import { CardListItem } from "../../components/CardListItem";
@@ -39,7 +40,7 @@ export default function SetDetailScreen() {
   const selectedCards = Object.values(selected);
 
   const query = useInfiniteQuery({
-    queryKey: ["set", code, "cards"],
+    queryKey: setCardsKey(code),
     queryFn: ({ pageParam }) => fetchSetCards(code as string, pageParam),
     initialPageParam: 1,
     getNextPageParam: nextPage,
@@ -63,8 +64,8 @@ export default function SetDetailScreen() {
       total: number;
     }) => bulkAddToInventory(ids, isFoil, qty),
     onSuccess: (added, vars) => {
-      // ["inventory"] prefix also invalidates the per-card quantities caches.
-      queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      // The ["inventory"] prefix also invalidates the per-card quantities caches.
+      queryClient.invalidateQueries({ queryKey: INVENTORY_KEY });
       // Counts are captured in `vars` at mutate() time, so a selection change
       // while the request is in flight can't skew the message.
       const skipped = vars.total - vars.ids.length;
