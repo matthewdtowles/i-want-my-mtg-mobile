@@ -16,7 +16,10 @@ export function useDebouncedByKey<A extends unknown[]>(
 ): (key: string, ...args: A) => void {
   const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
   const fnRef = useRef(fn);
-  fnRef.current = fn;
+  // Keep the latest callback without touching the ref during render.
+  useEffect(() => {
+    fnRef.current = fn;
+  });
 
   useEffect(() => {
     const map = timers.current;

@@ -46,11 +46,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [sessionExpired, setSessionExpired] = useState(false);
 
   // Refs mirror state so the API client's token getter (registered once) always
-  // reads the latest tokens without re-registering on every change.
+  // reads the latest tokens without re-registering on every change. The
+  // handlers below set these refs explicitly alongside the state, so this effect
+  // is just a backstop that keeps them in sync without writing refs during
+  // render (unsafe under concurrent rendering).
   const accessRef = useRef<string | null>(null);
   const refreshRef = useRef<string | null>(null);
-  accessRef.current = accessToken;
-  refreshRef.current = refreshToken;
+  useEffect(() => {
+    accessRef.current = accessToken;
+    refreshRef.current = refreshToken;
+  }, [accessToken, refreshToken]);
 
   // Holds an in-flight refresh so concurrent expired requests share one call
   // (and don't stampede the rotating refresh token).
