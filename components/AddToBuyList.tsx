@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { BUY_LIST_KEY, fetchBuyList, setBuyListQuantity } from "../lib/api/buyList";
 import type { ApiBuyListItem } from "../lib/api/types";
+import { useDebouncedByKey } from "../lib/useDebouncedByKey";
 import { useTheme } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
 
@@ -43,25 +44,33 @@ export function AddToBuyList({ cardId, hasNonFoil, hasFoil }: Props) {
 
   const query = useQuery({ queryKey: KEY, queryFn: fetchBuyList });
 
+  // Debounced absolute-quantity write: the tap handler updates the cache
+  // instantly and settle re-syncs (so an optimistic insert picks up the card's
+  // name/price fields and any drift self-heals).
   const setQty = useMutation({
     mutationFn: ({ isFoil, quantity }: { isFoil: boolean; quantity: number }) =>
       setBuyListQuantity(cardId, isFoil, quantity),
-    async onMutate({ isFoil, quantity }) {
-      await queryClient.cancelQueries({ queryKey: KEY });
-      const previous = queryClient.getQueryData<ApiBuyListItem[]>(KEY);
-      queryClient.setQueryData<ApiBuyListItem[]>(KEY, (old) =>
-        upsert(old, cardId, isFoil, quantity),
+    onError(err) {
+      Alert.alert(
+        "Couldn't update your buy-list",
+        err instanceof Error ? err.message : "Please try again.",
       );
-      return { previous };
     },
-    onError(_err, _vars, ctx) {
-      if (ctx?.previous) queryClient.setQueryData(KEY, ctx.previous);
-    },
-    // Refetch so an optimistic insert picks up the card's name/price fields.
     onSettled() {
       queryClient.invalidateQueries({ queryKey: KEY });
     },
   });
+
+  const writeQty = useDebouncedByKey(
+    (isFoil: boolean, quantity: number) => setQty.mutate({ isFoil, quantity }),
+  );
+
+  function step(isFoil: boolean, quantity: number) {
+    queryClient.setQueryData<ApiBuyListItem[]>(KEY, (old) =>
+      upsert(old, cardId, isFoil, quantity),
+    );
+    writeQty(isFoil ? "foil" : "normal", isFoil, quantity);
+  }
 
   return (
     <View style={styles.container}>
@@ -76,7 +85,7 @@ export function AddToBuyList({ cardId, hasNonFoil, hasFoil }: Props) {
             <FinishStepper
               label="Normal"
               quantity={wanted(query.data, cardId, false)}
-              onChange={(quantity) => setQty.mutate({ isFoil: false, quantity })}
+              onChange={(quantity) => step(false, quantity)}
               styles={styles}
             />
           ) : null}
@@ -84,7 +93,7 @@ export function AddToBuyList({ cardId, hasNonFoil, hasFoil }: Props) {
             <FinishStepper
               label="Foil"
               quantity={wanted(query.data, cardId, true)}
-              onChange={(quantity) => setQty.mutate({ isFoil: true, quantity })}
+              onChange={(quantity) => step(true, quantity)}
               styles={styles}
             />
           ) : null}

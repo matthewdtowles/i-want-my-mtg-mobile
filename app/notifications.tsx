@@ -7,6 +7,7 @@ import { Stack, useRouter } from "expo-router";
 import { useMemo } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Pressable,
   RefreshControl,
@@ -57,8 +58,12 @@ export default function NotificationsScreen() {
       );
       return { previous };
     },
-    onError(_err, _id, ctx) {
+    onError(err, _id, ctx) {
       if (ctx?.previous) queryClient.setQueryData(NOTIFICATIONS_KEY, ctx.previous);
+      Alert.alert(
+        "Couldn't mark as read",
+        err instanceof Error ? err.message : "Please try again.",
+      );
     },
   });
 
@@ -72,8 +77,12 @@ export default function NotificationsScreen() {
       );
       return { previous };
     },
-    onError(_err, _vars, ctx) {
+    onError(err, _vars, ctx) {
       if (ctx?.previous) queryClient.setQueryData(NOTIFICATIONS_KEY, ctx.previous);
+      Alert.alert(
+        "Couldn't mark all as read",
+        err instanceof Error ? err.message : "Please try again.",
+      );
     },
     onSettled() {
       queryClient.invalidateQueries({ queryKey: NOTIFICATIONS_KEY });

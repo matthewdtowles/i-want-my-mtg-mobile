@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   RefreshControl,
   StyleSheet,
@@ -19,6 +20,7 @@ import type { ApiBuyListItem } from "../lib/api/types";
 import { BuyListListItem } from "./BuyListListItem";
 import { ErrorState } from "./ErrorState";
 import { formatPrice } from "../lib/format";
+import { useDebouncedByKey } from "../lib/useDebouncedByKey";
 import { useTheme } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
 
@@ -52,21 +54,37 @@ export function BuyListView() {
     return { cards: cardIds.size, qty, value };
   }, [items]);
 
+  // Debounced absolute-quantity write: no optimistic onMutate of its own (the
+  // tap handler updates the cache instantly), re-syncs on settle so drift
+  // self-heals, and surfaces failures instead of a silent rollback.
   const setQuantity = useMutation({
     mutationFn: ({ item, quantity }: { item: ApiBuyListItem; quantity: number }) =>
       setBuyListQuantity(item.cardId, item.isFoil, quantity),
-    async onMutate({ item, quantity }) {
-      await queryClient.cancelQueries({ queryKey: KEY });
-      const previous = queryClient.getQueryData<ApiBuyListItem[]>(KEY);
-      queryClient.setQueryData<ApiBuyListItem[]>(KEY, (old) =>
-        (old ?? []).map((it) => (sameRow(it, item) ? { ...it, quantity } : it)),
+    onError(err) {
+      Alert.alert(
+        "Couldn't update quantity",
+        err instanceof Error ? err.message : "Please try again.",
       );
-      return { previous };
     },
-    onError(_err, _vars, ctx) {
-      if (ctx?.previous) queryClient.setQueryData(KEY, ctx.previous);
+    onSettled() {
+      queryClient.invalidateQueries({ queryKey: KEY });
     },
   });
+
+  const writeQuantity = useDebouncedByKey(
+    (item: ApiBuyListItem, quantity: number) => setQuantity.mutate({ item, quantity }),
+  );
+
+  function step(item: ApiBuyListItem, delta: number) {
+    const current = queryClient
+      .getQueryData<ApiBuyListItem[]>(KEY)
+      ?.find((it) => sameRow(it, item))?.quantity;
+    const quantity = Math.max(1, (current ?? item.quantity) + delta);
+    queryClient.setQueryData<ApiBuyListItem[]>(KEY, (old) =>
+      (old ?? []).map((it) => (sameRow(it, item) ? { ...it, quantity } : it)),
+    );
+    writeQuantity(`${item.cardId}-${item.isFoil}`, item, quantity);
+  }
 
   const remove = useMutation({
     mutationFn: (item: ApiBuyListItem) => removeFromBuyList(item.cardId, item.isFoil),
@@ -78,8 +96,12 @@ export function BuyListView() {
       );
       return { previous };
     },
-    onError(_err, _item, ctx) {
+    onError(err, _item, ctx) {
       if (ctx?.previous) queryClient.setQueryData(KEY, ctx.previous);
+      Alert.alert(
+        "Couldn't remove card",
+        err instanceof Error ? err.message : "Please try again.",
+      );
     },
     onSettled() {
       queryClient.invalidateQueries({ queryKey: KEY });
@@ -125,8 +147,8 @@ export function BuyListView() {
         renderItem={({ item }) => (
           <BuyListListItem
             item={item}
-            onIncrement={() => setQuantity.mutate({ item, quantity: item.quantity + 1 })}
-            onDecrement={() => setQuantity.mutate({ item, quantity: item.quantity - 1 })}
+            onIncrement={() => step(item, 1)}
+            onDecrement={() => step(item, -1)}
             onRemove={() => remove.mutate(item)}
           />
         )}
