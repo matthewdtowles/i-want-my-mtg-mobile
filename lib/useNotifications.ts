@@ -1,8 +1,13 @@
-import { useInfiniteQuery } from "@tanstack/react-query";
-import { useEffect, useMemo } from "react";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 
 import type { Page } from "./api/catalog";
-import { NOTIFICATIONS_KEY, fetchNotifications } from "./api/notifications";
+import {
+  NOTIFICATIONS_KEY,
+  NOTIFICATIONS_UNREAD_KEY,
+  fetchNotifications,
+  fetchUnreadCount,
+} from "./api/notifications";
 import type { ApiNotification } from "./api/types";
 
 function nextPage(last: Page<ApiNotification>): number | undefined {
@@ -11,9 +16,9 @@ function nextPage(last: Page<ApiNotification>): number | undefined {
 }
 
 /**
- * Shared notifications query for both the inbox screen and the header bell
- * badge - one cache (`["notifications"]`) so the unread count stays in sync.
- * Auto-pages the whole list (like inventory) so the badge count is exact.
+ * The inbox query. The screen paginates on scroll (`onEndReached`) like every
+ * other list - it no longer eagerly drains all pages, since the badge count now
+ * comes from the dedicated endpoint below.
  */
 export function useNotifications() {
   const query = useInfiniteQuery({
@@ -23,15 +28,24 @@ export function useNotifications() {
     getNextPageParam: nextPage,
   });
 
-  useEffect(() => {
-    if (query.hasNextPage && !query.isFetchingNextPage) query.fetchNextPage();
-  }, [query.hasNextPage, query.isFetchingNextPage, query]);
-
   const items = useMemo(
     () => query.data?.pages.flatMap((p) => p.items) ?? [],
     [query.data],
   );
-  const unread = useMemo(() => items.filter((n) => !n.isRead).length, [items]);
 
-  return { query, items, unread };
+  return { query, items };
+}
+
+/**
+ * The header bell badge count. One small request against the unread-count
+ * endpoint instead of paging the whole history. Shares the `["notifications"]`
+ * key prefix, so marking read / a push arriving (both invalidate that prefix)
+ * refreshes the badge.
+ */
+export function useUnreadCount() {
+  const query = useQuery({
+    queryKey: NOTIFICATIONS_UNREAD_KEY,
+    queryFn: fetchUnreadCount,
+  });
+  return query.data ?? 0;
 }

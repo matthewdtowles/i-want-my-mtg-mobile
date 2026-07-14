@@ -2,12 +2,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { Link } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { useNotifications } from "../lib/useNotifications";
+import { useUnreadCount } from "../lib/useNotifications";
 import { useTheme } from "../lib/theme/ThemeContext";
 
 export function NotificationBell() {
   const { colors } = useTheme();
-  const { unread } = useNotifications();
+  const unread = useUnreadCount();
 
   return (
     <Link href="/notifications" asChild>

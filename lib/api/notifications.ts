@@ -4,6 +4,22 @@ import { errMessage } from "./envelope";
 import type { ApiNotification } from "./types";
 
 export const NOTIFICATIONS_KEY = ["notifications"] as const;
+// Under the notifications family so push-arrival invalidation of
+// `["notifications"]` refreshes the badge too.
+export const NOTIFICATIONS_UNREAD_KEY = ["notifications", "unread-count"] as const;
+
+/**
+ * The unread-notification count for the header badge - one tiny request, vs.
+ * draining the whole paginated list just to count. The endpoint returns
+ * `{ data: { count } }`; the generated spec doesn't type the body (backend
+ * gap), so we read it defensively.
+ */
+export async function fetchUnreadCount(): Promise<number> {
+  const { data, error, response } = await api.GET("/api/v1/notifications/unread-count");
+  if (!response.ok) throw new Error(errMessage(error, "Failed to load unread count."));
+  const count = (data as { data?: { count?: number } } | undefined)?.data?.count;
+  return typeof count === "number" ? count : 0;
+}
 
 export async function fetchNotifications(
   page = 1,
