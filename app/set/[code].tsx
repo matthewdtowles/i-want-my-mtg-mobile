@@ -13,8 +13,7 @@ import {
 } from "react-native";
 
 import { setCardsKey, fetchSetCards, type Page } from "../../lib/api/catalog";
-import { INVENTORY_KEY } from "../../lib/api/inventory";
-import { bulkAddToInventory } from "../../lib/api/inventory";
+import { INVENTORY_KEY , bulkAddToInventory } from "../../lib/api/inventory";
 import type { ApiCard } from "../../lib/api/types";
 import { CardListItem } from "../../components/CardListItem";
 import { ErrorState } from "../../components/ErrorState";

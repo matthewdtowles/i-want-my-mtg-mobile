@@ -89,7 +89,7 @@ export function AddToInventory({ cardId, hasNonFoil, hasFoil }: Props) {
       ) : query.isError ? (
         // Don't fall through to the steppers: they'd seed from 0, and a tap
         // would upsert an absolute quantity that clobbers the real owned count.
-        <Text style={styles.error}>Couldn't load your quantities for this card.</Text>
+        <Text style={styles.error}>Couldn’t load your quantities for this card.</Text>
       ) : (
         <View style={styles.rows}>
           {hasNonFoil ? (

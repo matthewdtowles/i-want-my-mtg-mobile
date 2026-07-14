@@ -78,7 +78,7 @@ export function AddToBuyList({ cardId, hasNonFoil, hasFoil }: Props) {
       {query.isPending ? (
         <ActivityIndicator style={styles.loading} color={colors.accent} />
       ) : query.isError ? (
-        <Text style={styles.error}>Couldn't load your buy-list for this card.</Text>
+        <Text style={styles.error}>Couldn’t load your buy-list for this card.</Text>
       ) : (
         <View style={styles.rows}>
           {hasNonFoil ? (

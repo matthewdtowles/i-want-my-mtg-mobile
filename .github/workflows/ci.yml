@@ -27,6 +27,23 @@ jobs:
 
       - run: npm run typecheck
 
+  # PR merge gate. ESLint (eslint-config-expo + react-hooks). Like typecheck it
+  # never touches the live spec, so it's safe to gate PRs on.
+  lint:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run lint
+
   # PR merge gate. Unit tests for pure helpers (node:test via tsx). Like
   # typecheck, it never touches the live spec, so it's safe to gate PRs on.
   test:
