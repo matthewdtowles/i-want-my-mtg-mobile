@@ -74,7 +74,7 @@ export async function fetchCardPriceHistory(
 ): Promise<ApiPriceHistoryPoint[]> {
   const { data, error, response } = await api.GET(
     "/api/v1/cards/{cardId}/price-history",
-    { params: { path: { cardId }, query: { days: String(days) } } },
+    { params: { path: { cardId }, query: { days } } },
   );
   if (!response.ok) throw new Error(errMessage(error, "Failed to load price history."));
   return data?.data ?? [];

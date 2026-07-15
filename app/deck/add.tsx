@@ -12,7 +12,8 @@ import {
   View,
 } from "react-native";
 
-import { cardsSearchKey, searchCards, type Page } from "../../lib/api/catalog";
+import { cardsSearchKey, searchCards } from "../../lib/api/catalog";
+import { nextPage } from "../../lib/pagination";
 import { DECKS_KEY, addDeckCard, deckKey } from "../../lib/api/decks";
 import type { ApiCard } from "../../lib/api/types";
 import { CardThumb } from "../../components/CardThumb";
@@ -21,11 +22,6 @@ import { formatPrice } from "../../lib/format";
 import { useDebounce } from "../../lib/useDebounce";
 import { useTheme } from "../../lib/theme/ThemeContext";
 import type { ThemeColors } from "../../lib/theme/colors";
-
-function nextPage(last: Page<ApiCard>): number | undefined {
-  const m = last.meta;
-  return m && m.page < m.totalPages ? m.page + 1 : undefined;
-}
 
 type Board = "main" | "side";
 
