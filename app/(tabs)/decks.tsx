@@ -15,7 +15,7 @@ import {
 import { DECKS_KEY, fetchDecks } from "../../lib/api/decks";
 import type { ApiDeckSummary } from "../../lib/api/types";
 import { ErrorState } from "../../components/ErrorState";
-import { formatPrice } from "../../lib/format";
+import { formatDeckFormat, formatPrice } from "../../lib/format";
 import { useTheme } from "../../lib/theme/ThemeContext";
 import type { ThemeColors } from "../../lib/theme/colors";
 
@@ -88,7 +88,7 @@ function DeckRow({
         <Text style={styles.name}>{item.name}</Text>
         <Text style={styles.meta}>
           {[
-            item.format ? item.format[0].toUpperCase() + item.format.slice(1) : "No format",
+            formatDeckFormat(item.format),
             `${item.cardCount} card${item.cardCount === 1 ? "" : "s"}`,
             formatPrice(item.estimatedValue),
           ].join(" · ")}
