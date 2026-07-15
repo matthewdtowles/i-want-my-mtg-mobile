@@ -14,6 +14,7 @@ import {
 
 import { cardsSearchKey, searchCards } from "../../lib/api/catalog";
 import { nextPage } from "../../lib/pagination";
+import { firstParam } from "../../lib/params";
 import { DECKS_KEY, addDeckCard, deckKey } from "../../lib/api/decks";
 import type { ApiCard } from "../../lib/api/types";
 import { CardThumb } from "../../components/CardThumb";
@@ -30,7 +31,7 @@ export default function AddDeckCardScreen() {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const queryClient = useQueryClient();
   const params = useLocalSearchParams<{ deckId: string; name?: string }>();
-  const deckId = Number(Array.isArray(params.deckId) ? params.deckId[0] : params.deckId);
+  const deckId = Number(firstParam(params.deckId));
 
   const [text, setText] = useState("");
   const [board, setBoard] = useState<Board>("main");

@@ -13,6 +13,7 @@ import {
 
 import { cardKey, fetchCard } from "../../../lib/api/catalog";
 import { formatPrice } from "../../../lib/format";
+import { firstParam } from "../../../lib/params";
 import { CardThumb } from "../../../components/CardThumb";
 import { AddToInventory } from "../../../components/AddToInventory";
 import { AddToBuyList } from "../../../components/AddToBuyList";
@@ -29,8 +30,8 @@ export default function CardDetailScreen() {
     setCode: string | string[];
     number: string | string[];
   }>();
-  const setCode = Array.isArray(params.setCode) ? params.setCode[0] : params.setCode;
-  const number = Array.isArray(params.number) ? params.number[0] : params.number;
+  const setCode = firstParam(params.setCode);
+  const number = firstParam(params.number);
   const { width } = useWindowDimensions();
 
   const query = useQuery({
