@@ -17,7 +17,7 @@ import {
   setBuyListQuantity,
 } from "../lib/api/buyList";
 import type { ApiBuyListItem } from "../lib/api/types";
-import { BuyListListItem } from "./BuyListListItem";
+import { CardQuantityRow } from "./CardQuantityRow";
 import { ErrorState } from "./ErrorState";
 import { formatPrice } from "../lib/format";
 import { useDebouncedByKey } from "../lib/useDebouncedByKey";
@@ -145,7 +145,7 @@ export function BuyListView() {
         data={items}
         keyExtractor={(it) => `${it.cardId}-${it.isFoil}`}
         renderItem={({ item }) => (
-          <BuyListListItem
+          <CardQuantityRow
             item={item}
             onIncrement={() => step(item, 1)}
             onDecrement={() => step(item, -1)}

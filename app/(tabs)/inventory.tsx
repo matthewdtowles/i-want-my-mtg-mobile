@@ -28,7 +28,7 @@ import {
 import type { Page } from "../../lib/api/catalog";
 import { mapPageItems, nextPage } from "../../lib/pagination";
 import type { ApiInventoryItem } from "../../lib/api/types";
-import { InventoryListItem } from "../../components/InventoryListItem";
+import { CardQuantityRow } from "../../components/CardQuantityRow";
 import { ErrorState } from "../../components/ErrorState";
 import { formatPrice } from "../../lib/format";
 import { useDebounce } from "../../lib/useDebounce";
@@ -322,7 +322,7 @@ export default function InventoryScreen() {
         data={visible}
         keyExtractor={(it) => `${it.cardId}-${it.isFoil}`}
         renderItem={({ item }) => (
-          <InventoryListItem
+          <CardQuantityRow
             item={item}
             onIncrement={() => step(item, 1)}
             onDecrement={() => step(item, -1)}
