@@ -1,9 +1,8 @@
-import { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { ApiNotification } from "../lib/api/types";
 import { formatPrice } from "../lib/format";
-import { useTheme } from "../lib/theme/ThemeContext";
+import { useTheme, useThemedStyles } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
 
 type Props = {
@@ -13,7 +12,7 @@ type Props = {
 
 export function NotificationListItem({ item, onPress }: Props) {
   const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = useThemedStyles(createStyles);
   const rose = item.newPrice >= item.oldPrice;
   const when = new Date(item.createdAt).toLocaleDateString();
 

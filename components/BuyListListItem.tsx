@@ -1,10 +1,9 @@
 import { Link } from "expo-router";
-import { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { ApiBuyListItem } from "../lib/api/types";
 import { formatPrice } from "../lib/format";
-import { useTheme } from "../lib/theme/ThemeContext";
+import { useThemedStyles } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
 import { CardThumb } from "./CardThumb";
 
@@ -16,8 +15,7 @@ type Props = {
 };
 
 export function BuyListListItem({ item, onIncrement, onDecrement, onRemove }: Props) {
-  const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = useThemedStyles(createStyles);
   const price = item.isFoil ? item.priceFoil : item.priceNormal;
   // Card fields are optional on the DTO; only link to detail when navigable.
   const navigable = !!item.setCode && !!item.cardNumber;

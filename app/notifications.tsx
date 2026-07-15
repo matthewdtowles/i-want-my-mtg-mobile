@@ -4,7 +4,6 @@ import {
   type InfiniteData,
 } from "@tanstack/react-query";
 import { Stack, useRouter } from "expo-router";
-import { useMemo } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -28,7 +27,7 @@ import type { ApiNotification } from "../lib/api/types";
 import { NotificationListItem } from "../components/NotificationListItem";
 import { ErrorState } from "../components/ErrorState";
 import { useNotifications, useUnreadCount } from "../lib/useNotifications";
-import { useTheme } from "../lib/theme/ThemeContext";
+import { useTheme, useThemedStyles } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
 
 type NotificationData = InfiniteData<Page<ApiNotification>>;
@@ -36,7 +35,7 @@ type NotificationData = InfiniteData<Page<ApiNotification>>;
 
 export default function NotificationsScreen() {
   const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = useThemedStyles(createStyles);
   const queryClient = useQueryClient();
   const router = useRouter();
   const { query, items } = useNotifications();

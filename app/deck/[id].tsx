@@ -24,7 +24,7 @@ import { BUY_LIST_KEY } from "../../lib/api/buyList";
 import type { ApiDeckCard, ApiDeckDetail } from "../../lib/api/types";
 import { ErrorState } from "../../components/ErrorState";
 import { formatDeckFormat, formatPrice } from "../../lib/format";
-import { useTheme } from "../../lib/theme/ThemeContext";
+import { useTheme, useThemedStyles } from "../../lib/theme/ThemeContext";
 import type { ThemeColors } from "../../lib/theme/colors";
 
 function sameCard(a: ApiDeckCard, c: { cardId: string; isSideboard: boolean }): boolean {
@@ -49,7 +49,7 @@ function applyQuantity(
 
 export default function DeckDetailScreen() {
   const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const queryClient = useQueryClient();
   const params = useLocalSearchParams<{ id: string }>();

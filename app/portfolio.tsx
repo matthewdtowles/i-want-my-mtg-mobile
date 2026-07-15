@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -19,14 +18,14 @@ import {
 } from "../lib/api/portfolio";
 import { formatPrice } from "../lib/format";
 import { ErrorState } from "../components/ErrorState";
-import { useTheme } from "../lib/theme/ThemeContext";
+import { useTheme, useThemedStyles } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
 
 const KEY = PORTFOLIO_SUMMARY_KEY;
 
 export default function PortfolioScreen() {
   const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = useThemedStyles(createStyles);
   const queryClient = useQueryClient();
 
   const query = useQuery({

@@ -1,7 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { useMemo } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -16,12 +15,12 @@ import { DECKS_KEY, fetchDecks } from "../../lib/api/decks";
 import type { ApiDeckSummary } from "../../lib/api/types";
 import { ErrorState } from "../../components/ErrorState";
 import { formatDeckFormat, formatPrice } from "../../lib/format";
-import { useTheme } from "../../lib/theme/ThemeContext";
+import { useTheme, useThemedStyles } from "../../lib/theme/ThemeContext";
 import type { ThemeColors } from "../../lib/theme/colors";
 
 export default function DecksScreen() {
   const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = useThemedStyles(createStyles);
   const router = useRouter();
 
   const query = useQuery({ queryKey: DECKS_KEY, queryFn: fetchDecks });

@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
   Alert,
   Pressable,
@@ -19,7 +19,7 @@ import {
   createTransaction,
   updateTransaction,
 } from "../../lib/api/transactions";
-import { useTheme } from "../../lib/theme/ThemeContext";
+import { useTheme, useThemedStyles } from "../../lib/theme/ThemeContext";
 import type { ThemeColors } from "../../lib/theme/colors";
 
 function one(v: string | string[] | undefined): string {
@@ -37,7 +37,7 @@ function todayLocal(): string {
 
 export default function NewTransactionScreen() {
   const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = useThemedStyles(createStyles);
   const params = useLocalSearchParams();
   const cardId = one(params.cardId);
   const name = one(params.name);

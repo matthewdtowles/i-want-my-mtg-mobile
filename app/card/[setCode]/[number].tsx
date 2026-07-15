@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, Stack, useLocalSearchParams } from "expo-router";
-import { useMemo } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -20,12 +19,12 @@ import { AddToBuyList } from "../../../components/AddToBuyList";
 import { CardPriceAlert } from "../../../components/CardPriceAlert";
 import { CardPriceHistory } from "../../../components/CardPriceHistory";
 import { ErrorState } from "../../../components/ErrorState";
-import { useTheme } from "../../../lib/theme/ThemeContext";
+import { useTheme, useThemedStyles } from "../../../lib/theme/ThemeContext";
 import type { ThemeColors } from "../../../lib/theme/colors";
 
 export default function CardDetailScreen() {
   const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = useThemedStyles(createStyles);
   const params = useLocalSearchParams<{
     setCode: string | string[];
     number: string | string[];

@@ -28,7 +28,7 @@ import { nextPage } from "../lib/pagination";
 import type { ApiTransaction } from "../lib/api/types";
 import { TransactionListItem } from "../components/TransactionListItem";
 import { ErrorState } from "../components/ErrorState";
-import { useTheme } from "../lib/theme/ThemeContext";
+import { useTheme, useThemedStyles } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
 
 const KEY = TRANSACTIONS_KEY;
@@ -36,7 +36,7 @@ type TxData = InfiniteData<Page<ApiTransaction>>;
 
 export default function TransactionsScreen() {
   const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const queryClient = useQueryClient();
   const query = useInfiniteQuery({

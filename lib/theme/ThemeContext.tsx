@@ -70,3 +70,13 @@ export function useTheme(): ThemeState {
   }
   return ctx;
 }
+
+/**
+ * Memoize a `StyleSheet` factory against the active theme colors, so screens
+ * stop repeating `useMemo(() => createStyles(colors), [colors])`. The factory is
+ * a stable module-level function, so this recomputes only when the theme changes.
+ */
+export function useThemedStyles<T>(factory: (colors: ThemeColors) => T): T {
+  const { colors } = useTheme();
+  return useMemo(() => factory(colors), [colors, factory]);
+}

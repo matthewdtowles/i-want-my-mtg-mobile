@@ -20,12 +20,12 @@ import type { ApiCard } from "../../lib/api/types";
 import { CardListItem } from "../../components/CardListItem";
 import { ErrorState } from "../../components/ErrorState";
 import { BulkAddBar } from "../../components/BulkAddBar";
-import { useTheme } from "../../lib/theme/ThemeContext";
+import { useTheme, useThemedStyles } from "../../lib/theme/ThemeContext";
 import type { ThemeColors } from "../../lib/theme/colors";
 
 export default function SetDetailScreen() {
   const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = useThemedStyles(createStyles);
   const queryClient = useQueryClient();
   const params = useLocalSearchParams<{ code: string | string[] }>();
   const code = firstParam(params.code);
