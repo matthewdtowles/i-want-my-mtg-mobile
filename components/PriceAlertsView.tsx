@@ -1,4 +1,3 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import {
   ActivityIndicator,
@@ -11,13 +10,12 @@ import {
   View,
 } from "react-native";
 
-import {
-  PRICE_ALERTS_KEY,
-  deletePriceAlert,
-  fetchPriceAlerts,
-  updatePriceAlert,
-} from "../lib/api/priceAlerts";
 import type { ApiPriceAlert } from "../lib/api/types";
+import {
+  useDeletePriceAlert,
+  usePriceAlerts,
+  useTogglePriceAlert,
+} from "../lib/hooks/usePriceAlerts";
 import { ErrorState } from "./ErrorState";
 import { useTheme, useThemedStyles } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
@@ -25,25 +23,11 @@ import type { ThemeColors } from "../lib/theme/colors";
 export function PriceAlertsView() {
   const { colors } = useTheme();
   const styles = useThemedStyles(createStyles);
-  const queryClient = useQueryClient();
   const router = useRouter();
 
-  const query = useQuery({ queryKey: PRICE_ALERTS_KEY, queryFn: fetchPriceAlerts });
-
-  const toggle = useMutation({
-    mutationFn: (alert: ApiPriceAlert) =>
-      updatePriceAlert(alert.id, { isActive: !alert.isActive }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: PRICE_ALERTS_KEY }),
-    onError: (e) =>
-      Alert.alert("Couldn't update alert", e instanceof Error ? e.message : "Please try again."),
-  });
-
-  const remove = useMutation({
-    mutationFn: (id: number) => deletePriceAlert(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: PRICE_ALERTS_KEY }),
-    onError: (e) =>
-      Alert.alert("Couldn't delete alert", e instanceof Error ? e.message : "Please try again."),
-  });
+  const query = usePriceAlerts();
+  const toggle = useTogglePriceAlert();
+  const remove = useDeletePriceAlert();
 
   function confirmDelete(alert: ApiPriceAlert) {
     Alert.alert("Delete alert", `Stop watching ${alert.cardName ?? "this card"}?`, [

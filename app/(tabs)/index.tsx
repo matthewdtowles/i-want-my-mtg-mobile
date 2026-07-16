@@ -133,14 +133,12 @@ function CardResults({
     () => query.data?.pages.flatMap((p) => p.items) ?? [],
     [query.data],
   );
-  if (cards.length === 0) {
-    return <Text style={styles.message}>No cards found.</Text>;
-  }
   return (
     <FlatList
       data={cards}
       keyExtractor={(c) => c.id}
       renderItem={({ item }) => <CardListItem card={item} />}
+      ListEmptyComponent={<Text style={styles.message}>No cards found.</Text>}
       onEndReached={() => query.hasNextPage && query.fetchNextPage()}
       onEndReachedThreshold={0.5}
       refreshControl={

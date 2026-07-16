@@ -5,7 +5,7 @@ Where the build stands and how to pick it up.
 **All feature work (v1 + v2) is shipped. The only remaining work is the two
 public store releases — [`GO-LIVE.md`](GO-LIVE.md) is the single source of
 truth for that.** This file is the reference for what exists and how to work
-on it. _Last updated: 2026-07-04._
+on it. _Last updated: 2026-07-16._
 
 ## What this is
 
@@ -72,9 +72,8 @@ profiles (#61); Android card images fixed via `expo-image` + custom User-Agent
   ~1/hour and the 429 must surface (alert), not fail silently.
 - **Buy-list ≠ `/cards/{cardId}/buylist`** — the latter is vendor sell-to
   pricing. Buy-list and price-alert list endpoints are **not** paginated.
-- **Notifications:** unread badge derives from the auto-paged list
-  (`lib/useNotifications.ts`); the `unread-count` endpoint is untyped and
-  intentionally unused.
+- **Notifications:** the bell badge uses the `unread-count` endpoint; the
+  inbox paginates on scroll (`lib/hooks/useNotifications.ts`).
 - **Price alerts are percent thresholds** (`increasePct`/`decreasePct`), not
   absolute target prices.
 - **Push no-ops in Expo Go / simulators** (`Device.isDevice` guard) — real
@@ -99,8 +98,14 @@ profiles (#61); Android card images fixed via `expo-image` + custom User-Agent
 - `lib/auth/` — `AuthContext` (`useAuth()`, incl. `sessionExpired`), token in
   `expo-secure-store`. Sign-up opens web `/user/create` (email verification
   lives there).
+- `lib/hooks/` — domain data hooks (`useInventoryQuantities`, `useBuyList`,
+  `usePriceAlerts`, `useNotifications`) own query keys, fetching, and
+  optimistic mutations so components stay presentational.
+- `lib/useOptimisticMutation.ts` — the optimistic-mutation convention in one
+  place: cancel/snapshot/rollback, an error `Alert` on every failure, and
+  settle-time invalidation declared per call site.
 - `lib/theme/` — `colors.ts` light/dark palettes + `ThemeContext`; components
-  use `createStyles(colors)` factories.
+  use `createStyles(colors)` factories via `useThemedStyles`.
 - `lib/push.ts` + `lib/usePushNotifications.ts` — Expo push registration
   (gated on auth), notification tap-routing.
 - `app/` — expo-router routes: `(tabs)` shell (4 core tabs), `sign-in`,
@@ -108,8 +113,12 @@ profiles (#61); Android card images fixed via `expo-image` + custom User-Agent
   `card/[setCode]/[number]`, `transaction/new` (create + edit), `buy-list`,
   `buy-list-import`, `notifications`, `price-alerts`, `decks`, `deck/[id]`,
   `deck/new` (create / import / edit), `deck/add`.
-- `components/` — shared UI incl. `ErrorState`, `BulkAddBar`,
-  `CardPriceHistory` (dependency-free bar chart), `CardListItem`.
+- `components/` — shared UI incl. `ErrorState` (full + `inline` variants),
+  `QuantityStepper`/`FinishStepper`, `SegmentedControl`, `Chip`, `CardPanel`
+  (card-detail section chrome), `CardQuantityRow`, `BulkAddBar`,
+  `CardPriceHistory` (dependency-free chart), `CardListItem`.
+- Edit screens (`transaction/new`, `deck/new`) take only an `id` param and
+  read the entity from the query cache (deck edit falls back to a fetch).
 
 ## Conventions
 

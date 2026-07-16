@@ -23,7 +23,9 @@ import { deckOwnedKey, fetchQuantities } from "../../lib/api/inventory";
 import { BUY_LIST_KEY } from "../../lib/api/buyList";
 import type { ApiDeckCard, ApiDeckDetail } from "../../lib/api/types";
 import { ErrorState } from "../../components/ErrorState";
+import { QuantityStepper } from "../../components/QuantityStepper";
 import { formatDeckFormat, formatPrice } from "../../lib/format";
+import { useOptimisticMutation } from "../../lib/useOptimisticMutation";
 import { useTheme, useThemedStyles } from "../../lib/theme/ThemeContext";
 import type { ThemeColors } from "../../lib/theme/colors";
 
@@ -83,31 +85,16 @@ export default function DeckDetailScreen() {
 
   const KEY = deckKey(id);
 
-  const setQty = useMutation({
-    mutationFn: ({
-      cardId,
-      isSideboard,
-      quantity,
-    }: {
-      cardId: string;
-      isSideboard: boolean;
-      quantity: number;
-    }) => setDeckCardQuantity(id, cardId, isSideboard, quantity),
-    async onMutate(vars) {
-      await queryClient.cancelQueries({ queryKey: KEY });
-      const previous = queryClient.getQueryData<ApiDeckDetail>(KEY);
-      queryClient.setQueryData<ApiDeckDetail>(KEY, (old) =>
-        applyQuantity(old, vars, vars.quantity),
-      );
-      return { previous };
-    },
-    onError(_e, _vars, ctx) {
-      if (ctx?.previous) queryClient.setQueryData(KEY, ctx.previous);
-    },
-    onSettled() {
-      queryClient.invalidateQueries({ queryKey: KEY });
-      queryClient.invalidateQueries({ queryKey: DECKS_KEY });
-    },
+  const setQty = useOptimisticMutation<
+    ApiDeckDetail,
+    { cardId: string; isSideboard: boolean; quantity: number }
+  >({
+    queryKey: KEY,
+    mutationFn: ({ cardId, isSideboard, quantity }) =>
+      setDeckCardQuantity(id, cardId, isSideboard, quantity),
+    apply: (old, vars) => applyQuantity(old, vars, vars.quantity),
+    errorTitle: "Couldn't update quantity",
+    invalidates: [KEY, DECKS_KEY],
   });
 
   const missingToBuyList = useMutation({
@@ -180,10 +167,9 @@ export default function DeckDetailScreen() {
             <Pressable
               hitSlop={8}
               onPress={() =>
-                router.push({
-                  pathname: "/deck/new",
-                  params: { id: String(deck.id), name: deck.name, format: deck.format ?? "" },
-                })
+                // Only the id travels; the edit screen reads the deck from the
+                // query cache (with a fetch fallback).
+                router.push({ pathname: "/deck/new", params: { id: String(deck.id) } })
               }
               style={styles.editBtn}
               accessibilityLabel="Edit deck"
@@ -285,37 +271,25 @@ export default function DeckDetailScreen() {
                     .join(" · ")}
                 </Text>
               </Pressable>
-              <View style={styles.stepper}>
-                <Pressable
-                  onPress={() =>
-                    setQty.mutate({
-                      cardId: item.cardId,
-                      isSideboard: item.isSideboard,
-                      quantity: item.quantity - 1,
-                    })
-                  }
-                  hitSlop={8}
-                  style={styles.stepBtn}
-                  accessibilityLabel={`Decrease ${item.cardName ?? "card"} quantity`}
-                >
-                  <Text style={styles.stepText}>−</Text>
-                </Pressable>
-                <Text style={styles.qty}>{item.quantity}</Text>
-                <Pressable
-                  onPress={() =>
-                    setQty.mutate({
-                      cardId: item.cardId,
-                      isSideboard: item.isSideboard,
-                      quantity: item.quantity + 1,
-                    })
-                  }
-                  hitSlop={8}
-                  style={styles.stepBtn}
-                  accessibilityLabel={`Increase ${item.cardName ?? "card"} quantity`}
-                >
-                  <Text style={styles.stepText}>+</Text>
-                </Pressable>
-              </View>
+              <QuantityStepper
+                quantity={item.quantity}
+                size={34}
+                subject={`${item.cardName ?? "card"} quantity`}
+                onDecrement={() =>
+                  setQty.mutate({
+                    cardId: item.cardId,
+                    isSideboard: item.isSideboard,
+                    quantity: item.quantity - 1,
+                  })
+                }
+                onIncrement={() =>
+                  setQty.mutate({
+                    cardId: item.cardId,
+                    isSideboard: item.isSideboard,
+                    quantity: item.quantity + 1,
+                  })
+                }
+              />
             </View>
           );
         }}
@@ -394,18 +368,6 @@ const createStyles = (colors: ThemeColors) =>
     rowMain: { flex: 1, gap: 2, paddingRight: 12 },
     cardName: { fontSize: 15, fontWeight: "600", color: colors.textPrimary },
     cardMeta: { fontSize: 13, color: colors.textSecondary },
-    stepper: { flexDirection: "row", alignItems: "center", gap: 10 },
-    stepBtn: {
-      width: 34,
-      height: 34,
-      borderRadius: 17,
-      borderWidth: 1,
-      borderColor: colors.inputBorder,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    stepText: { fontSize: 20, color: colors.textSecondary },
-    qty: { fontSize: 16, fontWeight: "600", minWidth: 22, textAlign: "center", color: colors.textPrimary },
     emptyHint: { fontSize: 14, color: colors.textMuted, textAlign: "center", marginTop: 24 },
     footer: { gap: 12, marginTop: 24 },
     actionBtn: {

@@ -6,6 +6,7 @@ import {
   Alert,
   FlatList,
   Pressable,
+  RefreshControl,
   StyleSheet,
   Text,
   TextInput,
@@ -19,6 +20,7 @@ import { DECKS_KEY, addDeckCard, deckKey } from "../../lib/api/decks";
 import type { ApiCard } from "../../lib/api/types";
 import { CardThumb } from "../../components/CardThumb";
 import { ErrorState } from "../../components/ErrorState";
+import { SegmentedControl } from "../../components/SegmentedControl";
 import { formatPrice } from "../../lib/format";
 import { useDebounce } from "../../lib/useDebounce";
 import { useTheme, useThemedStyles } from "../../lib/theme/ThemeContext";
@@ -85,24 +87,15 @@ export default function AddDeckCardScreen() {
     <View style={styles.container}>
       <Stack.Screen options={{ title: params.name ? `Add to ${params.name}` : "Add cards" }} />
 
-      <View style={styles.segment}>
-        {(["main", "side"] as Board[]).map((b) => {
-          const active = board === b;
-          return (
-            <Pressable
-              key={b}
-              style={[styles.segmentBtn, active && styles.segmentBtnActive]}
-              onPress={() => setBoard(b)}
-              accessibilityRole="button"
-              accessibilityState={{ selected: active }}
-            >
-              <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
-                {b === "main" ? "Main deck" : "Sideboard"}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      <SegmentedControl
+        options={[
+          { label: "Main deck", value: "main" },
+          { label: "Sideboard", value: "side" },
+        ]}
+        value={board}
+        onChange={setBoard}
+        style={styles.segment}
+      />
 
       <TextInput
         style={styles.search}
@@ -125,11 +118,17 @@ export default function AddDeckCardScreen() {
           message={search.error instanceof Error ? search.error.message : "Search failed."}
           onRetry={() => search.refetch()}
         />
-      ) : cards.length === 0 ? (
-        <Text style={styles.message}>No cards found.</Text>
       ) : (
         <FlatList
           data={cards}
+          ListEmptyComponent={<Text style={styles.message}>No cards found.</Text>}
+          refreshControl={
+            <RefreshControl
+              refreshing={search.isRefetching && !search.isFetchingNextPage}
+              onRefresh={() => search.refetch()}
+              tintColor={colors.accent}
+            />
+          }
           keyExtractor={(c) => c.id}
           renderItem={({ item }) => (
             <View style={styles.row}>
@@ -172,19 +171,7 @@ export default function AddDeckCardScreen() {
 const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background, paddingTop: 12 },
-    segment: {
-      flexDirection: "row",
-      marginHorizontal: 16,
-      marginBottom: 10,
-      borderWidth: 1,
-      borderColor: colors.inputBorder,
-      borderRadius: 10,
-      overflow: "hidden",
-    },
-    segmentBtn: { flex: 1, paddingVertical: 10, alignItems: "center", backgroundColor: colors.surface },
-    segmentBtnActive: { backgroundColor: colors.accent },
-    segmentText: { fontSize: 14, fontWeight: "600", color: colors.textSecondary },
-    segmentTextActive: { color: colors.onAccent },
+    segment: { marginHorizontal: 16, marginBottom: 10 },
     search: {
       marginHorizontal: 16,
       marginBottom: 8,

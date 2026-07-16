@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Link } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { useUnreadCount } from "../lib/useNotifications";
+import { useUnreadCount } from "../lib/hooks/useNotifications";
 import { useTheme } from "../lib/theme/ThemeContext";
 
 export function NotificationBell() {

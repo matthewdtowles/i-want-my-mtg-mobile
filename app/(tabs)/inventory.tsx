@@ -1,7 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import {
   useInfiniteQuery,
-  useMutation,
   useQueryClient,
   type InfiniteData,
 } from "@tanstack/react-query";
@@ -9,7 +8,6 @@ import { useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Pressable,
   RefreshControl,
@@ -29,10 +27,12 @@ import type { Page } from "../../lib/api/catalog";
 import { mapPageItems, nextPage } from "../../lib/pagination";
 import type { ApiInventoryItem } from "../../lib/api/types";
 import { CardQuantityRow } from "../../components/CardQuantityRow";
+import { Chip } from "../../components/Chip";
 import { ErrorState } from "../../components/ErrorState";
 import { formatPrice } from "../../lib/format";
 import { useDebounce } from "../../lib/useDebounce";
 import { useDebouncedByKey } from "../../lib/useDebouncedByKey";
+import { useOptimisticMutation } from "../../lib/useOptimisticMutation";
 import { useTheme, useThemedStyles } from "../../lib/theme/ThemeContext";
 import type { ThemeColors } from "../../lib/theme/colors";
 
@@ -137,21 +137,18 @@ export default function InventoryScreen() {
   }, [items, q, finish, sortKey, sortAsc]);
 
   // The write is debounced (below), so the mutation only fires with the final
-  // absolute quantity. It carries no optimistic onMutate of its own - the tap
+  // absolute quantity. It carries no optimistic `apply` of its own - the tap
   // handler updates the cache instantly - and re-syncs from the server on
   // settle so any drift self-heals.
-  const setQuantity = useMutation({
-    mutationFn: ({ item, quantity }: { item: ApiInventoryItem; quantity: number }) =>
+  const setQuantity = useOptimisticMutation<
+    InventoryData,
+    { item: ApiInventoryItem; quantity: number }
+  >({
+    queryKey: KEY,
+    mutationFn: ({ item, quantity }) =>
       saveInventory([{ cardId: item.cardId, quantity, isFoil: item.isFoil }]),
-    onError(err) {
-      Alert.alert(
-        "Couldn't update quantity",
-        err instanceof Error ? err.message : "Please try again.",
-      );
-    },
-    onSettled() {
-      queryClient.invalidateQueries({ queryKey: KEY });
-    },
+    errorTitle: "Couldn't update quantity",
+    invalidates: [KEY],
   });
 
   const writeQuantity = useDebouncedByKey(
@@ -173,26 +170,13 @@ export default function InventoryScreen() {
     writeQuantity(`${item.cardId}-${item.isFoil}`, item, quantity);
   }
 
-  const remove = useMutation({
-    mutationFn: (item: ApiInventoryItem) => deleteInventory(item.cardId, item.isFoil),
-    async onMutate(item) {
-      await queryClient.cancelQueries({ queryKey: KEY });
-      const previous = queryClient.getQueryData<InventoryData>(KEY);
-      queryClient.setQueryData<InventoryData>(KEY, (old) =>
-        mapPageItems(old, (items) => items.filter((it) => !sameRow(it, item))),
-      );
-      return { previous };
-    },
-    onError(err, _item, ctx) {
-      if (ctx?.previous) queryClient.setQueryData(KEY, ctx.previous);
-      Alert.alert(
-        "Couldn't remove card",
-        err instanceof Error ? err.message : "Please try again.",
-      );
-    },
-    onSettled() {
-      queryClient.invalidateQueries({ queryKey: KEY });
-    },
+  const remove = useOptimisticMutation<InventoryData, ApiInventoryItem>({
+    queryKey: KEY,
+    mutationFn: (item) => deleteInventory(item.cardId, item.isFoil),
+    apply: (old, item) =>
+      mapPageItems(old, (items) => items.filter((it) => !sameRow(it, item))),
+    errorTitle: "Couldn't remove card",
+    invalidates: [KEY],
   });
 
   const hub = (
@@ -276,42 +260,28 @@ export default function InventoryScreen() {
         />
 
         <View style={styles.filterRow}>
-          {(["all", "normal", "foil"] as const).map((f) => {
-            const active = finish === f;
-            return (
-              <Pressable
-                key={f}
-                style={[styles.chip, active && styles.chipActive]}
-                onPress={() => setFinish(f)}
-                accessibilityRole="button"
-                accessibilityState={{ selected: active }}
-              >
-                <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                  {f === "all" ? "All" : f === "normal" ? "Normal" : "Foil"}
-                </Text>
-              </Pressable>
-            );
-          })}
+          {(["all", "normal", "foil"] as const).map((f) => (
+            <Chip
+              key={f}
+              label={f === "all" ? "All" : f === "normal" ? "Normal" : "Foil"}
+              active={finish === f}
+              onPress={() => setFinish(f)}
+            />
+          ))}
         </View>
 
         <View style={styles.filterRow}>
           {SORTS.map((s) => {
             const active = sortKey === s.key;
             return (
-              <Pressable
+              <Chip
                 key={s.key}
-                style={[styles.chip, active && styles.chipActive]}
+                label={`${s.label}${active ? (sortAsc ? " ↑" : " ↓") : ""}`}
+                active={active}
                 onPress={() =>
                   active ? setSortAsc((v) => !v) : (setSortKey(s.key), setSortAsc(true))
                 }
-                accessibilityRole="button"
-                accessibilityState={{ selected: active }}
-              >
-                <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                  {s.label}
-                  {active ? (sortAsc ? " ↑" : " ↓") : ""}
-                </Text>
-              </Pressable>
+              />
             );
           })}
         </View>
@@ -396,17 +366,6 @@ const createStyles = (colors: ThemeColors) =>
       backgroundColor: colors.surface,
     },
     filterRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-    chip: {
-      paddingVertical: 6,
-      paddingHorizontal: 12,
-      borderRadius: 16,
-      borderWidth: 1,
-      borderColor: colors.inputBorder,
-      backgroundColor: colors.surface,
-    },
-    chipActive: { backgroundColor: colors.accent, borderColor: colors.accent },
-    chipText: { fontSize: 13, fontWeight: "600", color: colors.textSecondary },
-    chipTextActive: { color: colors.onAccent },
     noMatch: { textAlign: "center", marginTop: 32, color: colors.textMuted },
     empty: { fontSize: 16, fontWeight: "600", color: colors.textSecondary },
     emptyHint: {

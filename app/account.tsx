@@ -14,6 +14,8 @@ import {
 
 import { API_BASE_URL } from "../lib/api/config";
 import { USER_PROFILE_KEY, deleteAccount, fetchProfile } from "../lib/api/user";
+import { ErrorState } from "../components/ErrorState";
+import { SegmentedControl } from "../components/SegmentedControl";
 import { useAuth } from "../lib/auth/AuthContext";
 import { useTheme, useThemedStyles, type ThemeMode } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
@@ -89,11 +91,15 @@ export default function AccountScreen() {
         {profile.isPending ? (
           <ActivityIndicator style={styles.loading} color={colors.accent} />
         ) : profile.isError ? (
-          <Text style={styles.errorText}>
-            {profile.error instanceof Error
-              ? profile.error.message
-              : "Couldn't load your account."}
-          </Text>
+          <ErrorState
+            variant="inline"
+            message={
+              profile.error instanceof Error
+                ? profile.error.message
+                : "Couldn't load your account."
+            }
+            onRetry={() => profile.refetch()}
+          />
         ) : (
           <>
             {profile.data.name ? (
@@ -105,24 +111,7 @@ export default function AccountScreen() {
       </View>
 
       <Text style={styles.sectionLabel}>APPEARANCE</Text>
-      <View style={styles.segment}>
-        {APPEARANCE.map((opt) => {
-          const active = mode === opt.value;
-          return (
-            <Pressable
-              key={opt.value}
-              style={[styles.segmentBtn, active && styles.segmentBtnActive]}
-              onPress={() => setMode(opt.value)}
-              accessibilityRole="button"
-              accessibilityState={{ selected: active }}
-            >
-              <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
-                {opt.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      <SegmentedControl options={APPEARANCE} value={mode} onChange={setMode} size="large" />
 
       <Text style={styles.sectionLabel}>ACTIONS</Text>
       <Pressable
@@ -180,25 +169,8 @@ const createStyles = (colors: ThemeColors) =>
       padding: 16,
     },
     loading: { marginVertical: 4 },
-    errorText: { color: colors.danger, fontSize: 14 },
     accountName: { fontSize: 17, fontWeight: "700", color: colors.textPrimary },
     accountEmail: { fontSize: 15, color: colors.textSecondary, marginTop: 2 },
-    segment: {
-      flexDirection: "row",
-      borderWidth: 1,
-      borderColor: colors.inputBorder,
-      borderRadius: 10,
-      overflow: "hidden",
-    },
-    segmentBtn: {
-      flex: 1,
-      paddingVertical: 12,
-      alignItems: "center",
-      backgroundColor: colors.surface,
-    },
-    segmentBtnActive: { backgroundColor: colors.accent },
-    segmentText: { fontSize: 15, fontWeight: "600", color: colors.textSecondary },
-    segmentTextActive: { color: colors.onAccent },
     row: {
       flexDirection: "row",
       alignItems: "center",

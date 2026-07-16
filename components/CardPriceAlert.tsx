@@ -1,4 +1,3 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -11,13 +10,14 @@ import {
 } from "react-native";
 
 import {
-  PRICE_ALERTS_KEY,
-  createPriceAlert,
-  deletePriceAlert,
-  fetchPriceAlerts,
-} from "../lib/api/priceAlerts";
+  useCreatePriceAlert,
+  useDeletePriceAlert,
+  usePriceAlerts,
+} from "../lib/hooks/usePriceAlerts";
 import { useTheme, useThemedStyles } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
+import { CardPanel } from "./CardPanel";
+import { ErrorState } from "./ErrorState";
 
 type Props = { cardId: string };
 
@@ -34,41 +34,15 @@ function parsePct(raw: string): number | null | undefined {
 export function CardPriceAlert({ cardId }: Props) {
   const { colors } = useTheme();
   const styles = useThemedStyles(createStyles);
-  const queryClient = useQueryClient();
 
   const [rise, setRise] = useState("");
   const [fall, setFall] = useState("");
 
-  const query = useQuery({ queryKey: PRICE_ALERTS_KEY, queryFn: fetchPriceAlerts });
+  const query = usePriceAlerts();
   const alert = query.data?.find((a) => a.cardId === cardId);
 
-  const create = useMutation({
-    mutationFn: createPriceAlert,
-    onSuccess() {
-      setRise("");
-      setFall("");
-      queryClient.invalidateQueries({ queryKey: PRICE_ALERTS_KEY });
-    },
-    onError(err) {
-      Alert.alert(
-        "Couldn't set alert",
-        err instanceof Error ? err.message : "Please try again.",
-      );
-    },
-  });
-
-  const remove = useMutation({
-    mutationFn: (id: number) => deletePriceAlert(id),
-    onSuccess() {
-      queryClient.invalidateQueries({ queryKey: PRICE_ALERTS_KEY });
-    },
-    onError(err) {
-      Alert.alert(
-        "Couldn't remove alert",
-        err instanceof Error ? err.message : "Please try again.",
-      );
-    },
-  });
+  const create = useCreatePriceAlert();
+  const remove = useDeletePriceAlert();
 
   function onSet() {
     const increasePct = parsePct(rise);
@@ -81,17 +55,27 @@ export function CardPriceAlert({ cardId }: Props) {
       Alert.alert("Set a threshold", "Enter a rise or fall percent (or both).");
       return;
     }
-    create.mutate({ cardId, increasePct, decreasePct });
+    create.mutate(
+      { cardId, increasePct, decreasePct },
+      {
+        onSuccess() {
+          setRise("");
+          setFall("");
+        },
+      },
+    );
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.heading}>Price alert</Text>
-
+    <CardPanel title="Price alert">
       {query.isPending ? (
         <ActivityIndicator style={styles.loading} color={colors.accent} />
       ) : query.isError ? (
-        <Text style={styles.error}>Couldn&apos;t load your price alert for this card.</Text>
+        <ErrorState
+          variant="inline"
+          message="Couldn't load your price alert for this card."
+          onRetry={() => query.refetch()}
+        />
       ) : alert ? (
         <View style={styles.rows}>
           {alert.increasePct != null ? (
@@ -147,23 +131,13 @@ export function CardPriceAlert({ cardId }: Props) {
           </Pressable>
         </View>
       )}
-    </View>
+    </CardPanel>
   );
 }
 
 const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
-    container: {
-      marginTop: 12,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 12,
-      padding: 16,
-      backgroundColor: colors.surface,
-    },
-    heading: { fontSize: 16, fontWeight: "700", marginBottom: 8, color: colors.textPrimary },
     loading: { marginVertical: 8 },
-    error: { color: colors.danger, fontSize: 14 },
     rows: { gap: 12 },
     hint: { fontSize: 14, color: colors.textSecondary },
     activeLine: { fontSize: 15, fontWeight: "600", color: colors.textPrimary },
