@@ -6,7 +6,7 @@ import {
 import { Alert } from "react-native";
 
 type Options<TCache, TVars, TData> = {
-  /** The cache entry being optimistically edited (also cancelled on mutate). */
+  /** The cache entry being optimistically edited (cancelled on mutate when `apply` is set). */
   queryKey: QueryKey;
   mutationFn: (vars: TVars) => Promise<TData>;
   /**
@@ -49,6 +49,9 @@ export function useOptimisticMutation<TCache, TVars = void, TData = unknown>({
       return { previous };
     },
     onError(err, _vars, ctx) {
+      // previous === undefined means the cache was empty at mutate time, so no
+      // optimistic value was written (setQueryData bails on undefined) and
+      // there is nothing to restore; settle-time invalidation re-syncs anyway.
       if (apply && ctx?.previous !== undefined) {
         queryClient.setQueryData(queryKey, ctx.previous);
       }
