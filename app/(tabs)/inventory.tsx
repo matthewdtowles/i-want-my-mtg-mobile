@@ -28,12 +28,12 @@ import {
 import type { Page } from "../../lib/api/catalog";
 import { mapPageItems, nextPage } from "../../lib/pagination";
 import type { ApiInventoryItem } from "../../lib/api/types";
-import { InventoryListItem } from "../../components/InventoryListItem";
+import { CardQuantityRow } from "../../components/CardQuantityRow";
 import { ErrorState } from "../../components/ErrorState";
 import { formatPrice } from "../../lib/format";
 import { useDebounce } from "../../lib/useDebounce";
 import { useDebouncedByKey } from "../../lib/useDebouncedByKey";
-import { useTheme } from "../../lib/theme/ThemeContext";
+import { useTheme, useThemedStyles } from "../../lib/theme/ThemeContext";
 import type { ThemeColors } from "../../lib/theme/colors";
 
 type InventoryData = InfiniteData<Page<ApiInventoryItem>>;
@@ -60,7 +60,7 @@ function unitPrice(item: ApiInventoryItem): number {
 
 export default function InventoryScreen() {
   const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = useThemedStyles(createStyles);
   const queryClient = useQueryClient();
   const router = useRouter();
 
@@ -322,7 +322,7 @@ export default function InventoryScreen() {
         data={visible}
         keyExtractor={(it) => `${it.cardId}-${it.isFoil}`}
         renderItem={({ item }) => (
-          <InventoryListItem
+          <CardQuantityRow
             item={item}
             onIncrement={() => step(item, 1)}
             onDecrement={() => step(item, -1)}

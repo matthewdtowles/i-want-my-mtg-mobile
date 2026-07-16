@@ -1,5 +1,5 @@
 import * as WebBrowser from "expo-web-browser";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -16,7 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "../lib/auth/AuthContext";
 import { API_BASE_URL } from "../lib/api/config";
-import { useTheme } from "../lib/theme/ThemeContext";
+import { useTheme, useThemedStyles } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
 
 // No API signup endpoint exists (registration needs email verification, which
@@ -25,7 +25,7 @@ const SIGN_UP_URL = `${API_BASE_URL}/user/create`;
 
 export default function SignInScreen() {
   const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = useThemedStyles(createStyles);
   const { signIn, sessionExpired } = useAuth();
   const insets = useSafeAreaInsets();
   const [email, setEmail] = useState("");

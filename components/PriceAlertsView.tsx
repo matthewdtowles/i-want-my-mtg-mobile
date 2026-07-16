@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { useMemo } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -20,12 +19,12 @@ import {
 } from "../lib/api/priceAlerts";
 import type { ApiPriceAlert } from "../lib/api/types";
 import { ErrorState } from "./ErrorState";
-import { useTheme } from "../lib/theme/ThemeContext";
+import { useTheme, useThemedStyles } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
 
 export function PriceAlertsView() {
   const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = useThemedStyles(createStyles);
   const queryClient = useQueryClient();
   const router = useRouter();
 

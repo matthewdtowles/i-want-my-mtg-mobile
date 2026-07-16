@@ -1,11 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Link } from "expo-router";
-import { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { ApiCard } from "../lib/api/types";
 import { formatPrice } from "../lib/format";
-import { useTheme } from "../lib/theme/ThemeContext";
+import { useTheme, useThemedStyles } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
 import { CardThumb } from "./CardThumb";
 
@@ -18,7 +17,7 @@ type Props = { card: ApiCard } & (
 
 export function CardListItem({ card, selectable, selected, onToggleSelect }: Props) {
   const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = useThemedStyles(createStyles);
 
   const body = (
     <>

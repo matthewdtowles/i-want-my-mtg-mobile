@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, Stack, useLocalSearchParams } from "expo-router";
-import { useMemo } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -13,24 +12,25 @@ import {
 
 import { cardKey, fetchCard } from "../../../lib/api/catalog";
 import { formatPrice } from "../../../lib/format";
+import { firstParam } from "../../../lib/params";
 import { CardThumb } from "../../../components/CardThumb";
 import { AddToInventory } from "../../../components/AddToInventory";
 import { AddToBuyList } from "../../../components/AddToBuyList";
 import { CardPriceAlert } from "../../../components/CardPriceAlert";
 import { CardPriceHistory } from "../../../components/CardPriceHistory";
 import { ErrorState } from "../../../components/ErrorState";
-import { useTheme } from "../../../lib/theme/ThemeContext";
+import { useTheme, useThemedStyles } from "../../../lib/theme/ThemeContext";
 import type { ThemeColors } from "../../../lib/theme/colors";
 
 export default function CardDetailScreen() {
   const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = useThemedStyles(createStyles);
   const params = useLocalSearchParams<{
     setCode: string | string[];
     number: string | string[];
   }>();
-  const setCode = Array.isArray(params.setCode) ? params.setCode[0] : params.setCode;
-  const number = Array.isArray(params.number) ? params.number[0] : params.number;
+  const setCode = firstParam(params.setCode);
+  const number = firstParam(params.number);
   const { width } = useWindowDimensions();
 
   const query = useQuery({

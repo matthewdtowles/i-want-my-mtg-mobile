@@ -23,8 +23,8 @@ import { deckOwnedKey, fetchQuantities } from "../../lib/api/inventory";
 import { BUY_LIST_KEY } from "../../lib/api/buyList";
 import type { ApiDeckCard, ApiDeckDetail } from "../../lib/api/types";
 import { ErrorState } from "../../components/ErrorState";
-import { formatPrice } from "../../lib/format";
-import { useTheme } from "../../lib/theme/ThemeContext";
+import { formatDeckFormat, formatPrice } from "../../lib/format";
+import { useTheme, useThemedStyles } from "../../lib/theme/ThemeContext";
 import type { ThemeColors } from "../../lib/theme/colors";
 
 function sameCard(a: ApiDeckCard, c: { cardId: string; isSideboard: boolean }): boolean {
@@ -49,7 +49,7 @@ function applyQuantity(
 
 export default function DeckDetailScreen() {
   const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const queryClient = useQueryClient();
   const params = useLocalSearchParams<{ id: string }>();
@@ -227,7 +227,7 @@ export default function DeckDetailScreen() {
           <View style={styles.summaryWrap}>
             <Text style={styles.summary}>
               {[
-                deck.format ? deck.format[0].toUpperCase() + deck.format.slice(1) : "No format",
+                formatDeckFormat(deck.format),
                 `${deck.cardCount} card${deck.cardCount === 1 ? "" : "s"}`,
                 formatPrice(deck.estimatedValue),
               ].join(" · ")}

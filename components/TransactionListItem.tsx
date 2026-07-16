@@ -1,10 +1,9 @@
 import { Link } from "expo-router";
-import { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { ApiTransaction } from "../lib/api/types";
 import { formatPrice } from "../lib/format";
-import { useTheme } from "../lib/theme/ThemeContext";
+import { useThemedStyles } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
 
 export function TransactionListItem({
@@ -14,8 +13,7 @@ export function TransactionListItem({
   tx: ApiTransaction;
   onLongPress?: () => void;
 }) {
-  const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = useThemedStyles(createStyles);
   const isSell = tx.type === "SELL";
   const total = tx.quantity * tx.pricePerUnit;
   // Only link to card detail when we have both pieces of the route; some rows

@@ -14,23 +14,24 @@ import {
 
 import { cardsSearchKey, searchCards } from "../../lib/api/catalog";
 import { nextPage } from "../../lib/pagination";
+import { firstParam } from "../../lib/params";
 import { DECKS_KEY, addDeckCard, deckKey } from "../../lib/api/decks";
 import type { ApiCard } from "../../lib/api/types";
 import { CardThumb } from "../../components/CardThumb";
 import { ErrorState } from "../../components/ErrorState";
 import { formatPrice } from "../../lib/format";
 import { useDebounce } from "../../lib/useDebounce";
-import { useTheme } from "../../lib/theme/ThemeContext";
+import { useTheme, useThemedStyles } from "../../lib/theme/ThemeContext";
 import type { ThemeColors } from "../../lib/theme/colors";
 
 type Board = "main" | "side";
 
 export default function AddDeckCardScreen() {
   const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = useThemedStyles(createStyles);
   const queryClient = useQueryClient();
   const params = useLocalSearchParams<{ deckId: string; name?: string }>();
-  const deckId = Number(Array.isArray(params.deckId) ? params.deckId[0] : params.deckId);
+  const deckId = Number(firstParam(params.deckId));
 
   const [text, setText] = useState("");
   const [board, setBoard] = useState<Board>("main");

@@ -13,7 +13,7 @@ import Svg, { Circle, Polyline } from "react-native-svg";
 import { cardPriceHistoryKey, fetchCardPriceHistory } from "../lib/api/catalog";
 import type { ApiPriceHistoryPoint } from "../lib/api/types";
 import { formatPrice } from "../lib/format";
-import { useTheme } from "../lib/theme/ThemeContext";
+import { useTheme, useThemedStyles } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
 
 type Finish = "normal" | "foil";
@@ -40,7 +40,7 @@ type Props = {
 
 export function CardPriceHistory({ cardId, hasNonFoil, hasFoil }: Props) {
   const { colors, scheme } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = useThemedStyles(createStyles);
   const [days, setDays] = useState(90);
   const [finish, setFinish] = useState<Finish>(hasNonFoil ? "normal" : "foil");
   const lineColor = LINE_COLORS[scheme][finish];

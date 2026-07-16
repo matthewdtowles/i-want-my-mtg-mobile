@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -16,7 +16,7 @@ import {
   deletePriceAlert,
   fetchPriceAlerts,
 } from "../lib/api/priceAlerts";
-import { useTheme } from "../lib/theme/ThemeContext";
+import { useTheme, useThemedStyles } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
 
 type Props = { cardId: string };
@@ -33,7 +33,7 @@ function parsePct(raw: string): number | null | undefined {
 
 export function CardPriceAlert({ cardId }: Props) {
   const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = useThemedStyles(createStyles);
   const queryClient = useQueryClient();
 
   const [rise, setRise] = useState("");

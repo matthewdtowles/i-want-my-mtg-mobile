@@ -24,12 +24,12 @@ import type { ApiCard, ApiSet } from "../../lib/api/types";
 import { CardListItem } from "../../components/CardListItem";
 import { ErrorState } from "../../components/ErrorState";
 import { useDebounce } from "../../lib/useDebounce";
-import { useTheme } from "../../lib/theme/ThemeContext";
+import { useTheme, useThemedStyles } from "../../lib/theme/ThemeContext";
 import type { ThemeColors } from "../../lib/theme/colors";
 
 export default function BrowseScreen() {
   const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = useThemedStyles(createStyles);
   const [query, setQuery] = useState("");
   const q = useDebounce(query.trim(), 350);
   const searching = q.length > 0;

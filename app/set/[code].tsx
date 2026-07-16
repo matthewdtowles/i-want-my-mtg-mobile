@@ -13,21 +13,22 @@ import {
 } from "react-native";
 
 import { setCardsKey, fetchSetCards } from "../../lib/api/catalog";
+import { firstParam } from "../../lib/params";
 import { nextPage } from "../../lib/pagination";
 import { INVENTORY_KEY , bulkAddToInventory } from "../../lib/api/inventory";
 import type { ApiCard } from "../../lib/api/types";
 import { CardListItem } from "../../components/CardListItem";
 import { ErrorState } from "../../components/ErrorState";
 import { BulkAddBar } from "../../components/BulkAddBar";
-import { useTheme } from "../../lib/theme/ThemeContext";
+import { useTheme, useThemedStyles } from "../../lib/theme/ThemeContext";
 import type { ThemeColors } from "../../lib/theme/colors";
 
 export default function SetDetailScreen() {
   const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = useThemedStyles(createStyles);
   const queryClient = useQueryClient();
   const params = useLocalSearchParams<{ code: string | string[] }>();
-  const code = Array.isArray(params.code) ? params.code[0] : params.code;
+  const code = firstParam(params.code);
 
   // Multi-select state: cardId -> card, so we know each card's finish support.
   const [selectMode, setSelectMode] = useState(false);

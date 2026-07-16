@@ -9,9 +9,9 @@ import type {
 
 /** Browse + card catalog query keys. */
 export const SETS_KEY = ["sets"] as const;
-export const setCardsKey = (code: string) => ["set", code, "cards"] as const;
+export const setCardsKey = (code: string | undefined) => ["set", code, "cards"] as const;
 export const cardsSearchKey = (q: string) => ["cards", "search", q] as const;
-export const cardKey = (setCode: string, number: string) =>
+export const cardKey = (setCode: string | undefined, number: string | undefined) =>
   ["card", setCode, number] as const;
 export const cardPriceHistoryKey = (cardId: string, days: number) =>
   ["card", cardId, "price-history", days] as const;

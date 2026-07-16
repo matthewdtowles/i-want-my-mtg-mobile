@@ -1,17 +1,16 @@
 import { useRouter } from "expo-router";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { BuyListView } from "../../components/BuyListView";
 import { PriceAlertsView } from "../../components/PriceAlertsView";
-import { useTheme } from "../../lib/theme/ThemeContext";
+import { useThemedStyles } from "../../lib/theme/ThemeContext";
 import type { ThemeColors } from "../../lib/theme/colors";
 
 type Tab = "buy" | "alerts";
 
 export default function WatchlistScreen() {
-  const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("buy");
 

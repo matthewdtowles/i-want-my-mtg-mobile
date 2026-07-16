@@ -1,11 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo } from "react";
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { BUY_LIST_KEY, fetchBuyList, setBuyListQuantity } from "../lib/api/buyList";
 import type { ApiBuyListItem } from "../lib/api/types";
 import { useDebouncedByKey } from "../lib/useDebouncedByKey";
-import { useTheme } from "../lib/theme/ThemeContext";
+import { useTheme, useThemedStyles } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
 
 type Props = {
@@ -39,7 +38,7 @@ function upsert(
 
 export function AddToBuyList({ cardId, hasNonFoil, hasFoil }: Props) {
   const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = useThemedStyles(createStyles);
   const queryClient = useQueryClient();
 
   const query = useQuery({ queryKey: KEY, queryFn: fetchBuyList });

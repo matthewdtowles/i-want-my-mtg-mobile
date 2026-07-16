@@ -1,7 +1,6 @@
-import { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { useTheme } from "../lib/theme/ThemeContext";
+import { useThemedStyles } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
 
 type Props = {
@@ -16,8 +15,7 @@ type Props = {
  * transient network failure is recoverable in place instead of a dead end.
  */
 export function ErrorState({ message, onRetry }: Props) {
-  const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.container}>
       <Text style={styles.message}>{message ?? "Something went wrong."}</Text>

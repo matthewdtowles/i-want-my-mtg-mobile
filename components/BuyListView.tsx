@@ -17,11 +17,11 @@ import {
   setBuyListQuantity,
 } from "../lib/api/buyList";
 import type { ApiBuyListItem } from "../lib/api/types";
-import { BuyListListItem } from "./BuyListListItem";
+import { CardQuantityRow } from "./CardQuantityRow";
 import { ErrorState } from "./ErrorState";
 import { formatPrice } from "../lib/format";
 import { useDebouncedByKey } from "../lib/useDebouncedByKey";
-import { useTheme } from "../lib/theme/ThemeContext";
+import { useTheme, useThemedStyles } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
 
 const KEY = BUY_LIST_KEY;
@@ -36,7 +36,7 @@ function unitPrice(item: ApiBuyListItem): number {
 
 export function BuyListView() {
   const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = useThemedStyles(createStyles);
   const queryClient = useQueryClient();
 
   const query = useQuery({ queryKey: KEY, queryFn: fetchBuyList });
@@ -145,7 +145,7 @@ export function BuyListView() {
         data={items}
         keyExtractor={(it) => `${it.cardId}-${it.isFoil}`}
         renderItem={({ item }) => (
-          <BuyListListItem
+          <CardQuantityRow
             item={item}
             onIncrement={() => step(item, 1)}
             onDecrement={() => step(item, -1)}

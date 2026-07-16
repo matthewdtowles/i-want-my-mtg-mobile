@@ -1,23 +1,37 @@
 import { Link } from "expo-router";
-import { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import type { ApiInventoryItem } from "../lib/api/types";
 import { formatPrice } from "../lib/format";
-import { useTheme } from "../lib/theme/ThemeContext";
+import { useThemedStyles } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
 import { CardThumb } from "./CardThumb";
 
+/**
+ * The card fields both the inventory and buy-list rows render. Both API DTOs
+ * (`ApiInventoryItem` / `ApiBuyListItem`) satisfy this shape, so this one row
+ * component backs both lists (they were ~identical - MB7 2.2).
+ */
+export type CardQuantityRowItem = {
+  cardId: string;
+  cardName?: string;
+  setCode?: string;
+  cardNumber?: string;
+  imgSrc?: string;
+  isFoil: boolean;
+  quantity: number;
+  priceNormal?: number;
+  priceFoil?: number;
+};
+
 type Props = {
-  item: ApiInventoryItem;
+  item: CardQuantityRowItem;
   onIncrement: () => void;
   onDecrement: () => void;
   onRemove: () => void;
 };
 
-export function InventoryListItem({ item, onIncrement, onDecrement, onRemove }: Props) {
-  const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+export function CardQuantityRow({ item, onIncrement, onDecrement, onRemove }: Props) {
+  const styles = useThemedStyles(createStyles);
   const price = item.isFoil ? item.priceFoil : item.priceNormal;
   // setCode/cardNumber are optional on the DTO (absent for orphan rows whose
   // card relation is null); only link to the card detail when both are present.
