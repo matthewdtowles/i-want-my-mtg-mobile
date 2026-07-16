@@ -4,6 +4,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useTheme, useThemedStyles } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
+import { QuantityStepper } from "./QuantityStepper";
+import { SegmentedControl } from "./SegmentedControl";
 
 type Props = {
   count: number;
@@ -20,9 +22,10 @@ export function BulkAddBar({ count, submitting, onAdd, onCancel }: Props) {
   const { colors } = useTheme();
   const styles = useThemedStyles(createStyles);
   const insets = useSafeAreaInsets();
-  const [isFoil, setIsFoil] = useState(false);
+  const [finish, setFinish] = useState<"normal" | "foil">("normal");
   const [qty, setQty] = useState(1);
 
+  const isFoil = finish === "foil";
   const disabled = count === 0 || submitting;
 
   return (
@@ -37,48 +40,23 @@ export function BulkAddBar({ count, submitting, onAdd, onCancel }: Props) {
       </View>
 
       <View style={styles.controls}>
-        <View style={styles.finish}>
-          {([
-            { label: "Normal", foil: false },
-            { label: "Foil", foil: true },
-          ] as const).map((opt) => {
-            const active = isFoil === opt.foil;
-            return (
-              <Pressable
-                key={opt.label}
-                style={[styles.finishBtn, active && styles.finishBtnActive]}
-                onPress={() => setIsFoil(opt.foil)}
-                accessibilityRole="button"
-                accessibilityState={{ selected: active }}
-              >
-                <Text style={[styles.finishText, active && styles.finishTextActive]}>
-                  {opt.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        <SegmentedControl
+          options={[
+            { label: "Normal", value: "normal" },
+            { label: "Foil", value: "foil" },
+          ]}
+          value={finish}
+          onChange={setFinish}
+          size="compact"
+          hug
+        />
 
-        <View style={styles.stepper}>
-          <Pressable
-            onPress={() => setQty((q) => Math.max(1, q - 1))}
-            disabled={qty <= 1}
-            hitSlop={8}
-            style={[styles.stepBtn, qty <= 1 && styles.stepBtnDisabled]}
-            accessibilityLabel="Decrease quantity"
-          >
-            <Text style={styles.stepText}>−</Text>
-          </Pressable>
-          <Text style={styles.qty}>{qty}</Text>
-          <Pressable
-            onPress={() => setQty((q) => q + 1)}
-            hitSlop={8}
-            style={styles.stepBtn}
-            accessibilityLabel="Increase quantity"
-          >
-            <Text style={styles.stepText}>+</Text>
-          </Pressable>
-        </View>
+        <QuantityStepper
+          quantity={qty}
+          min={1}
+          onDecrement={() => setQty((q) => Math.max(1, q - 1))}
+          onIncrement={() => setQty((q) => q + 1)}
+        />
       </View>
 
       <Pressable
@@ -111,30 +89,6 @@ const createStyles = (colors: ThemeColors) =>
     count: { fontSize: 15, fontWeight: "600", color: colors.textPrimary },
     cancel: { fontSize: 15, color: colors.accent, fontWeight: "600" },
     controls: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-    finish: {
-      flexDirection: "row",
-      borderWidth: 1,
-      borderColor: colors.inputBorder,
-      borderRadius: 8,
-      overflow: "hidden",
-    },
-    finishBtn: { paddingVertical: 8, paddingHorizontal: 16, backgroundColor: colors.surface },
-    finishBtnActive: { backgroundColor: colors.accent },
-    finishText: { fontSize: 14, fontWeight: "600", color: colors.textSecondary },
-    finishTextActive: { color: colors.onAccent },
-    stepper: { flexDirection: "row", alignItems: "center", gap: 12 },
-    stepBtn: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      borderWidth: 1,
-      borderColor: colors.inputBorder,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    stepBtnDisabled: { opacity: 0.4 },
-    stepText: { fontSize: 20, color: colors.textSecondary },
-    qty: { fontSize: 17, fontWeight: "600", minWidth: 24, textAlign: "center", color: colors.textPrimary },
     addBtn: {
       backgroundColor: colors.accent,
       borderRadius: 10,

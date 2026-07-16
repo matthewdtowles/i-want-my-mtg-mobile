@@ -1,7 +1,8 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -13,8 +14,20 @@ import {
   View,
 } from "react-native";
 
-import { DECKS_KEY, createDeck, deckKey, importDeck, updateDeck } from "../../lib/api/decks";
-import type { DeckFormat } from "../../lib/api/types";
+import {
+  DECKS_KEY,
+  createDeck,
+  deckKey,
+  fetchDeck,
+  importDeck,
+  updateDeck,
+} from "../../lib/api/decks";
+import type { ApiDeckDetail, DeckFormat } from "../../lib/api/types";
+import { Chip } from "../../components/Chip";
+import { ErrorState } from "../../components/ErrorState";
+import { SegmentedControl } from "../../components/SegmentedControl";
+import { formatDeckFormat } from "../../lib/format";
+import { firstParam } from "../../lib/params";
 import { useTheme, useThemedStyles } from "../../lib/theme/ThemeContext";
 import type { ThemeColors } from "../../lib/theme/colors";
 
@@ -37,19 +50,60 @@ type Mode = "create" | "import";
 export default function NewDeckScreen() {
   const { colors } = useTheme();
   const styles = useThemedStyles(createStyles);
-  const router = useRouter();
-  const queryClient = useQueryClient();
 
-  const params = useLocalSearchParams<{ id?: string; name?: string; format?: string }>();
-  const str = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
-  const editId = params.id ? Number(str(params.id)) : null;
+  // Edit mode: only the id travels through the route; the deck comes from the
+  // query cache (warm when arriving from the deck screen) with a fetch
+  // fallback, instead of param-packing name/format.
+  const params = useLocalSearchParams<{ id?: string }>();
+  const editIdRaw = firstParam(params.id);
+  const editId = editIdRaw ? Number(editIdRaw) : null;
   const isEdit = editId !== null && Number.isFinite(editId);
 
+  const deckQuery = useQuery({
+    queryKey: deckKey(editId ?? -1),
+    queryFn: () => fetchDeck(editId ?? -1),
+    enabled: isEdit,
+  });
+
+  if (!isEdit) {
+    return <DeckForm />;
+  }
+  if (deckQuery.isPending) {
+    return (
+      <>
+        <Stack.Screen options={{ title: "Edit deck" }} />
+        <ActivityIndicator style={styles.center} size="large" color={colors.accent} />
+      </>
+    );
+  }
+  if (deckQuery.isError) {
+    return (
+      <>
+        <Stack.Screen options={{ title: "Edit deck" }} />
+        <ErrorState
+          message={
+            deckQuery.error instanceof Error ? deckQuery.error.message : "Failed to load deck."
+          }
+          onRetry={() => deckQuery.refetch()}
+        />
+      </>
+    );
+  }
+  return <DeckForm deck={deckQuery.data} />;
+}
+
+function DeckForm({ deck }: { deck?: ApiDeckDetail }) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(createStyles);
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const isEdit = deck != null;
+
   const [mode, setMode] = useState<Mode>("create");
-  const [name, setName] = useState(() => str(params.name));
+  const [name, setName] = useState(deck?.name ?? "");
   const [format, setFormat] = useState<DeckFormat | null>(() => {
-    const f = str(params.format) as DeckFormat;
-    return FORMATS.includes(f) ? f : null;
+    const f = deck?.format as DeckFormat | undefined;
+    return f && FORMATS.includes(f) ? f : null;
   });
   const [text, setText] = useState("");
 
@@ -61,7 +115,7 @@ export default function NewDeckScreen() {
 
   const create = useMutation({
     mutationFn: () => createDeck({ name: name.trim(), format: format ?? undefined }),
-    onSuccess: (deck) => goToDeck(deck.id),
+    onSuccess: (created) => goToDeck(created.id),
     onError: (e) =>
       Alert.alert("Couldn't create deck", e instanceof Error ? e.message : "Please try again."),
   });
@@ -83,9 +137,9 @@ export default function NewDeckScreen() {
   });
 
   const update = useMutation({
-    mutationFn: () => updateDeck(editId!, { name: name.trim(), format: format ?? undefined }),
+    mutationFn: () => updateDeck(deck!.id, { name: name.trim(), format: format ?? undefined }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: deckKey(editId!) });
+      queryClient.invalidateQueries({ queryKey: deckKey(deck!.id) });
       queryClient.invalidateQueries({ queryKey: DECKS_KEY });
       router.back();
     },
@@ -113,24 +167,15 @@ export default function NewDeckScreen() {
       <Stack.Screen options={{ title: isEdit ? "Edit deck" : "New deck" }} />
       <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
         {!isEdit ? (
-          <View style={styles.segment}>
-            {(["create", "import"] as Mode[]).map((m) => {
-              const active = mode === m;
-              return (
-                <Pressable
-                  key={m}
-                  style={[styles.segmentBtn, active && styles.segmentBtnActive]}
-                  onPress={() => setMode(m)}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: active }}
-                >
-                  <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
-                    {m === "create" ? "Create empty" : "Import list"}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
+          <SegmentedControl
+            options={[
+              { label: "Create empty", value: "create" },
+              { label: "Import list", value: "import" },
+            ]}
+            value={mode}
+            onChange={setMode}
+            size="large"
+          />
         ) : null}
 
         <View style={styles.field}>
@@ -147,14 +192,14 @@ export default function NewDeckScreen() {
         <View style={styles.field}>
           <Text style={styles.label}>Format</Text>
           <View style={styles.chips}>
-            <Chip label="None" active={format === null} onPress={() => setFormat(null)} styles={styles} />
+            <Chip label="None" active={format === null} onPress={() => setFormat(null)} size="large" />
             {FORMATS.map((f) => (
               <Chip
                 key={f}
-                label={f[0].toUpperCase() + f.slice(1)}
+                label={formatDeckFormat(f)}
                 active={format === f}
                 onPress={() => setFormat(f)}
-                styles={styles}
+                size="large"
               />
             ))}
           </View>
@@ -196,45 +241,12 @@ export default function NewDeckScreen() {
   );
 }
 
-function Chip({
-  label,
-  active,
-  onPress,
-  styles,
-}: {
-  label: string;
-  active: boolean;
-  onPress: () => void;
-  styles: ReturnType<typeof createStyles>;
-}) {
-  return (
-    <Pressable
-      style={[styles.chip, active && styles.chipActive]}
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityState={{ selected: active }}
-    >
-      <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
-    </Pressable>
-  );
-}
-
 const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     flex: { flex: 1, backgroundColor: colors.background },
     screen: { backgroundColor: colors.background },
     content: { padding: 24, gap: 16 },
-    segment: {
-      flexDirection: "row",
-      borderWidth: 1,
-      borderColor: colors.inputBorder,
-      borderRadius: 10,
-      overflow: "hidden",
-    },
-    segmentBtn: { flex: 1, paddingVertical: 12, alignItems: "center", backgroundColor: colors.surface },
-    segmentBtnActive: { backgroundColor: colors.accent },
-    segmentText: { fontSize: 15, fontWeight: "600", color: colors.textSecondary },
-    segmentTextActive: { color: colors.onAccent },
+    center: { marginTop: 40 },
     field: { gap: 6 },
     label: { fontSize: 14, color: colors.textSecondary, fontWeight: "600" },
     input: {
@@ -250,17 +262,6 @@ const createStyles = (colors: ThemeColors) =>
     textarea: { minHeight: 140, textAlignVertical: "top" },
     hint: { fontSize: 12, color: colors.textMuted },
     chips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-    chip: {
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      borderRadius: 16,
-      borderWidth: 1,
-      borderColor: colors.inputBorder,
-      backgroundColor: colors.surface,
-    },
-    chipActive: { backgroundColor: colors.accent, borderColor: colors.accent },
-    chipText: { fontSize: 14, color: colors.textSecondary, fontWeight: "600" },
-    chipTextActive: { color: colors.onAccent },
     submit: {
       marginTop: 4,
       backgroundColor: colors.accent,

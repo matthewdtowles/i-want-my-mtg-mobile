@@ -3,7 +3,6 @@ import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   type LayoutChangeEvent,
-  Pressable,
   StyleSheet,
   Text,
   View,
@@ -15,6 +14,9 @@ import type { ApiPriceHistoryPoint } from "../lib/api/types";
 import { formatPrice } from "../lib/format";
 import { useTheme, useThemedStyles } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
+import { CardPanel } from "./CardPanel";
+import { Chip } from "./Chip";
+import { ErrorState } from "./ErrorState";
 
 type Finish = "normal" | "foil";
 
@@ -56,27 +58,24 @@ export function CardPriceHistory({ cardId, hasNonFoil, hasFoil }: Props) {
   );
 
   return (
-    <View style={styles.container}>
-      <View style={styles.headerRow}>
-        <Text style={styles.heading}>Price history</Text>
-        {series.current != null ? (
+    <CardPanel
+      title="Price history"
+      headerRight={
+        series.current != null ? (
           <Text style={styles.current}>{formatPrice(series.current)}</Text>
-        ) : null}
-      </View>
-
+        ) : null
+      }
+    >
       <View style={styles.chips}>
-        {RANGES.map((r) => {
-          const active = days === r.days;
-          return (
-            <Chip
-              key={r.days}
-              label={r.label}
-              active={active}
-              onPress={() => setDays(r.days)}
-              styles={styles}
-            />
-          );
-        })}
+        {RANGES.map((r) => (
+          <Chip
+            key={r.days}
+            label={r.label}
+            active={days === r.days}
+            onPress={() => setDays(r.days)}
+            size="small"
+          />
+        ))}
         {hasNonFoil && hasFoil ? (
           <View style={styles.finishChips}>
             {(["normal", "foil"] as const).map((f) => (
@@ -85,7 +84,7 @@ export function CardPriceHistory({ cardId, hasNonFoil, hasFoil }: Props) {
                 label={f === "normal" ? "Normal" : "Foil"}
                 active={finish === f}
                 onPress={() => setFinish(f)}
-                styles={styles}
+                size="small"
               />
             ))}
           </View>
@@ -96,45 +95,18 @@ export function CardPriceHistory({ cardId, hasNonFoil, hasFoil }: Props) {
         <ActivityIndicator style={styles.state} color={colors.accent} />
       ) : query.isError ? (
         <View style={styles.state}>
-          <Text style={styles.muted}>Couldn’t load price history.</Text>
-          <Pressable
-            onPress={() => query.refetch()}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel="Retry"
-          >
-            <Text style={styles.retry}>Retry</Text>
-          </Pressable>
+          <ErrorState
+            variant="inline"
+            message="Couldn’t load price history."
+            onRetry={() => query.refetch()}
+          />
         </View>
       ) : series.definedCount < 2 ? (
         <Text style={styles.empty}>Not enough price history yet.</Text>
       ) : (
         <Chart series={series} color={lineColor} styles={styles} />
       )}
-    </View>
-  );
-}
-
-function Chip({
-  label,
-  active,
-  onPress,
-  styles,
-}: {
-  label: string;
-  active: boolean;
-  onPress: () => void;
-  styles: ReturnType<typeof createStyles>;
-}) {
-  return (
-    <Pressable
-      style={[styles.chip, active && styles.chipActive]}
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityState={{ selected: active }}
-    >
-      <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
-    </Pressable>
+    </CardPanel>
   );
 }
 
@@ -242,37 +214,11 @@ function Chart({
 
 const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
-    container: {
-      marginTop: 12,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 12,
-      padding: 16,
-      backgroundColor: colors.surface,
-    },
-    headerRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-    },
-    heading: { fontSize: 16, fontWeight: "700", color: colors.textPrimary },
     current: { fontSize: 16, fontWeight: "700", color: colors.success },
-    chips: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 10, flexWrap: "wrap" },
+    // CardPanel's heading row carries 8 of the 10px gap the chips used to add.
+    chips: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 2, flexWrap: "wrap" },
     finishChips: { flexDirection: "row", gap: 8, marginLeft: "auto" },
-    chip: {
-      paddingVertical: 5,
-      paddingHorizontal: 12,
-      borderRadius: 14,
-      borderWidth: 1,
-      borderColor: colors.inputBorder,
-      backgroundColor: colors.surface,
-    },
-    chipActive: { backgroundColor: colors.accent, borderColor: colors.accent },
-    chipText: { fontSize: 12, fontWeight: "600", color: colors.textSecondary },
-    chipTextActive: { color: colors.onAccent },
-    state: { marginTop: 16, alignItems: "center", gap: 8 },
-    muted: { color: colors.textMuted, fontSize: 14 },
-    retry: { color: colors.accent, fontSize: 14, fontWeight: "600" },
+    state: { marginTop: 16 },
     empty: { marginTop: 16, color: colors.textMuted, fontSize: 14 },
     chart: {
       height: CHART_HEIGHT,

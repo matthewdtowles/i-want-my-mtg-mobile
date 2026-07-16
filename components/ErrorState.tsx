@@ -8,14 +8,39 @@ type Props = {
   message?: string;
   /** When provided, renders a Retry button that calls this. */
   onRetry?: () => void;
+  /**
+   * "full" centers itself in the available space (screen-level failures);
+   * "inline" is a compact block for a failed section inside a working screen
+   * (card-detail panels, the account profile card).
+   */
+  variant?: "full" | "inline";
 };
 
 /**
- * Shared error state: a centered message plus an optional Retry button, so a
- * transient network failure is recoverable in place instead of a dead end.
+ * Shared error state: a message plus an optional Retry action, so a transient
+ * network failure is recoverable in place instead of a dead end.
  */
-export function ErrorState({ message, onRetry }: Props) {
+export function ErrorState({ message, onRetry, variant = "full" }: Props) {
   const styles = useThemedStyles(createStyles);
+
+  if (variant === "inline") {
+    return (
+      <View style={styles.inlineContainer}>
+        <Text style={styles.inlineMessage}>{message ?? "Something went wrong."}</Text>
+        {onRetry ? (
+          <Pressable
+            onPress={onRetry}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Retry"
+          >
+            <Text style={styles.inlineRetry}>Retry</Text>
+          </Pressable>
+        ) : null}
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <Text style={styles.message}>{message ?? "Something went wrong."}</Text>
@@ -57,4 +82,7 @@ const createStyles = (colors: ThemeColors) =>
       alignItems: "center",
     },
     buttonText: { color: colors.accent, fontSize: 15, fontWeight: "600" },
+    inlineContainer: { gap: 8 },
+    inlineMessage: { color: colors.danger, fontSize: 14 },
+    inlineRetry: { color: colors.accent, fontSize: 14, fontWeight: "600" },
   });

@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { BuyListView } from "../../components/BuyListView";
 import { PriceAlertsView } from "../../components/PriceAlertsView";
+import { SegmentedControl } from "../../components/SegmentedControl";
 import { useThemedStyles } from "../../lib/theme/ThemeContext";
 import type { ThemeColors } from "../../lib/theme/colors";
 
@@ -17,24 +18,16 @@ export default function WatchlistScreen() {
   return (
     <View style={styles.screen}>
       <View style={styles.bar}>
-        <View style={styles.segment}>
-          {(["buy", "alerts"] as const).map((t) => {
-            const active = tab === t;
-            return (
-              <Pressable
-                key={t}
-                style={[styles.segmentBtn, active && styles.segmentBtnActive]}
-                onPress={() => setTab(t)}
-                accessibilityRole="button"
-                accessibilityState={{ selected: active }}
-              >
-                <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
-                  {t === "buy" ? "Buy-list" : "Price alerts"}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        <SegmentedControl
+          options={[
+            { label: "Buy-list", value: "buy" },
+            { label: "Price alerts", value: "alerts" },
+          ]}
+          value={tab}
+          onChange={setTab}
+          size="compact"
+          style={styles.segment}
+        />
         {tab === "buy" ? (
           <Pressable
             hitSlop={8}
@@ -64,22 +57,6 @@ const createStyles = (colors: ThemeColors) =>
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.border,
     },
-    segment: {
-      flex: 1,
-      flexDirection: "row",
-      borderWidth: 1,
-      borderColor: colors.inputBorder,
-      borderRadius: 10,
-      overflow: "hidden",
-    },
-    segmentBtn: {
-      flex: 1,
-      paddingVertical: 8,
-      alignItems: "center",
-      backgroundColor: colors.surface,
-    },
-    segmentBtnActive: { backgroundColor: colors.accent },
-    segmentText: { fontSize: 14, fontWeight: "600", color: colors.textSecondary },
-    segmentTextActive: { color: colors.onAccent },
+    segment: { flex: 1 },
     import: { color: colors.accent, fontSize: 15, fontWeight: "600" },
   });

@@ -1,9 +1,4 @@
-import {
-  useInfiniteQuery,
-  useMutation,
-  useQueryClient,
-  type InfiniteData,
-} from "@tanstack/react-query";
+import { useInfiniteQuery, type InfiniteData } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useMemo } from "react";
 import {
@@ -24,10 +19,11 @@ import {
   fetchTransactions,
 } from "../lib/api/transactions";
 import type { Page } from "../lib/api/catalog";
-import { nextPage } from "../lib/pagination";
+import { mapPageItems, nextPage } from "../lib/pagination";
 import type { ApiTransaction } from "../lib/api/types";
 import { TransactionListItem } from "../components/TransactionListItem";
 import { ErrorState } from "../components/ErrorState";
+import { useOptimisticMutation } from "../lib/useOptimisticMutation";
 import { useTheme, useThemedStyles } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
 
@@ -38,7 +34,6 @@ export default function TransactionsScreen() {
   const { colors } = useTheme();
   const styles = useThemedStyles(createStyles);
   const router = useRouter();
-  const queryClient = useQueryClient();
   const query = useInfiniteQuery({
     queryKey: KEY,
     queryFn: ({ pageParam }) => fetchTransactions(pageParam),
@@ -51,37 +46,13 @@ export default function TransactionsScreen() {
     [query.data],
   );
 
-  const remove = useMutation({
-    mutationFn: (tx: ApiTransaction) => deleteTransaction(tx.id),
-    async onMutate(tx) {
-      await queryClient.cancelQueries({ queryKey: KEY });
-      const previous = queryClient.getQueryData<TxData>(KEY);
-      queryClient.setQueryData<TxData>(KEY, (old) =>
-        old
-          ? {
-              ...old,
-              pages: old.pages.map((p) => ({
-                ...p,
-                items: p.items.filter((t) => t.id !== tx.id),
-              })),
-            }
-          : old,
-      );
-      return { previous };
-    },
-    onError(err, _tx, ctx) {
-      if (ctx?.previous) queryClient.setQueryData(KEY, ctx.previous);
-      Alert.alert(
-        "Couldn't delete",
-        err instanceof Error ? err.message : "Please try again.",
-      );
-    },
-    onSettled() {
-      // A deleted transaction re-syncs inventory and shifts portfolio totals.
-      queryClient.invalidateQueries({ queryKey: KEY });
-      queryClient.invalidateQueries({ queryKey: INVENTORY_KEY });
-      queryClient.invalidateQueries({ queryKey: PORTFOLIO_KEY });
-    },
+  const remove = useOptimisticMutation<TxData, ApiTransaction>({
+    queryKey: KEY,
+    mutationFn: (tx) => deleteTransaction(tx.id),
+    apply: (old, tx) => mapPageItems(old, (list) => list.filter((t) => t.id !== tx.id)),
+    errorTitle: "Couldn't delete",
+    // A deleted transaction re-syncs inventory and shifts portfolio totals.
+    invalidates: [KEY, INVENTORY_KEY, PORTFOLIO_KEY],
   });
 
   function openActions(tx: ApiTransaction) {
@@ -96,21 +67,11 @@ export default function TransactionsScreen() {
       {
         text: "Edit",
         onPress: () =>
+          // Only the id travels; the edit screen reads the transaction from
+          // the query cache (it's only reachable from this list).
           router.push({
             pathname: "/transaction/new",
-            params: {
-              id: String(tx.id),
-              cardId: tx.cardId,
-              name: tx.cardName ?? "",
-              setCode: tx.setCode ?? "",
-              number: tx.cardNumber ?? "",
-              type: tx.type,
-              quantity: String(tx.quantity),
-              price: String(tx.pricePerUnit),
-              isFoil: String(tx.isFoil),
-              date: tx.date,
-              notes: tx.notes ?? "",
-            },
+            params: { id: String(tx.id) },
           }),
       },
       {

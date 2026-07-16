@@ -1,4 +1,8 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQueryClient,
+  type InfiniteData,
+} from "@tanstack/react-query";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import {
@@ -12,6 +16,7 @@ import {
   View,
 } from "react-native";
 
+import type { Page } from "../../lib/api/catalog";
 import { INVENTORY_KEY } from "../../lib/api/inventory";
 import { PORTFOLIO_KEY } from "../../lib/api/portfolio";
 import {
@@ -19,12 +24,11 @@ import {
   createTransaction,
   updateTransaction,
 } from "../../lib/api/transactions";
+import type { ApiTransaction } from "../../lib/api/types";
+import { ErrorState } from "../../components/ErrorState";
+import { firstParam } from "../../lib/params";
 import { useTheme, useThemedStyles } from "../../lib/theme/ThemeContext";
 import type { ThemeColors } from "../../lib/theme/colors";
-
-function one(v: string | string[] | undefined): string {
-  return Array.isArray(v) ? v[0] : v ?? "";
-}
 
 // Local calendar date as YYYY-MM-DD. toISOString() would use UTC, defaulting to
 // the wrong day for users whose local date differs from UTC.
@@ -39,32 +43,45 @@ export default function NewTransactionScreen() {
   const { colors } = useTheme();
   const styles = useThemedStyles(createStyles);
   const params = useLocalSearchParams();
-  const cardId = one(params.cardId);
-  const name = one(params.name);
-  const setCode = one(params.setCode);
-  const number = one(params.number);
-  const canBeFoil = one(params.hasFoil) === "true";
-  const canBeNonFoil = one(params.hasNonFoil) === "true";
 
-  // Edit mode: an `id` param means we're editing an existing transaction. The
+  // Edit mode: an `id` param means we're editing an existing transaction. Only
+  // the id travels through the route; the entity comes from the transactions
+  // query cache (edit is only reachable from that list, so it's warm). The
   // update API only accepts quantity/price/date/notes — type and finish are
   // immutable — so those controls are locked when editing.
-  const editId = one(params.id);
+  const editId = firstParam(params.id) ?? "";
   const editing = editId !== "";
 
   const router = useRouter();
   const queryClient = useQueryClient();
 
-  const [type, setType] = useState<"BUY" | "SELL">(
-    one(params.type) === "SELL" ? "SELL" : "BUY",
+  // Read once on mount: the row can't change underneath this modal, and the
+  // form state below must not be re-seeded by a background refetch.
+  const [tx] = useState<ApiTransaction | undefined>(() =>
+    editing
+      ? queryClient
+          .getQueryData<InfiniteData<Page<ApiTransaction>>>(TRANSACTIONS_KEY)
+          ?.pages.flatMap((p) => p.items)
+          .find((t) => String(t.id) === editId)
+      : undefined,
   );
-  const [quantity, setQuantity] = useState(editing ? one(params.quantity) || "1" : "1");
-  const [price, setPrice] = useState(editing ? one(params.price) : "");
+
+  // Create mode gets its card context from the card-detail screen's params.
+  const cardId = editing ? tx?.cardId ?? "" : firstParam(params.cardId) ?? "";
+  const name = editing ? tx?.cardName ?? "" : firstParam(params.name) ?? "";
+  const setCode = editing ? tx?.setCode ?? "" : firstParam(params.setCode) ?? "";
+  const number = editing ? tx?.cardNumber ?? "" : firstParam(params.number) ?? "";
+  const canBeFoil = firstParam(params.hasFoil) === "true";
+  const canBeNonFoil = firstParam(params.hasNonFoil) === "true";
+
+  const [type, setType] = useState<"BUY" | "SELL">(tx?.type === "SELL" ? "SELL" : "BUY");
+  const [quantity, setQuantity] = useState(tx ? String(tx.quantity) : "1");
+  const [price, setPrice] = useState(tx ? String(tx.pricePerUnit) : "");
   const [isFoil, setIsFoil] = useState(
-    editing ? one(params.isFoil) === "true" : canBeFoil && !canBeNonFoil,
+    tx ? tx.isFoil : canBeFoil && !canBeNonFoil,
   );
-  const [date, setDate] = useState(editing ? one(params.date) || todayLocal() : todayLocal());
-  const [notes, setNotes] = useState(editing ? one(params.notes) : "");
+  const [date, setDate] = useState(tx?.date || todayLocal());
+  const [notes, setNotes] = useState(tx?.notes ?? "");
 
   // Number() (unlike parseInt/parseFloat) returns NaN for trailing garbage like
   // "1abc" / "1.2.3" instead of truncating; the trim()!=="" guards stop an empty
@@ -116,6 +133,17 @@ export default function NewTransactionScreen() {
   function onSubmit() {
     if (!valid) return;
     mutation.mutate();
+  }
+
+  // Cache miss (e.g. the entry was gc'd): there's no single-transaction GET to
+  // fall back on, so send the user back to the list to reload it.
+  if (editing && !tx) {
+    return (
+      <>
+        <Stack.Screen options={{ title: "Edit transaction" }} />
+        <ErrorState message="This transaction is no longer available. Go back and try again." />
+      </>
+    );
   }
 
   return (

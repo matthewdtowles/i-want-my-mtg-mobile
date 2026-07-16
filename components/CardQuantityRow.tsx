@@ -5,6 +5,7 @@ import { formatPrice } from "../lib/format";
 import { useThemedStyles } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
 import { CardThumb } from "./CardThumb";
+import { QuantityStepper } from "./QuantityStepper";
 
 /**
  * The card fields both the inventory and buy-list rows render. Both API DTOs
@@ -76,23 +77,13 @@ export function CardQuantityRow({ item, onIncrement, onDecrement, onRemove }: Pr
       )}
 
       <View style={styles.stepper}>
-        <Pressable
-          onPress={item.quantity <= 1 ? onRemove : onDecrement}
-          hitSlop={8}
-          style={styles.stepBtn}
-          accessibilityLabel={item.quantity <= 1 ? "Remove" : "Decrease quantity"}
-        >
-          <Text style={styles.stepText}>{item.quantity <= 1 ? "🗑" : "−"}</Text>
-        </Pressable>
-        <Text style={styles.qty}>{item.quantity}</Text>
-        <Pressable
-          onPress={onIncrement}
-          hitSlop={8}
-          style={styles.stepBtn}
-          accessibilityLabel="Increase quantity"
-        >
-          <Text style={styles.stepText}>+</Text>
-        </Pressable>
+        <QuantityStepper
+          quantity={item.quantity}
+          size={32}
+          onIncrement={onIncrement}
+          onDecrement={onDecrement}
+          onRemove={onRemove}
+        />
       </View>
     </View>
   );
@@ -123,22 +114,5 @@ const createStyles = (colors: ThemeColors) =>
     badgeText: { fontSize: 11, fontWeight: "600", color: colors.badgeText },
     foilBadgeText: { color: colors.foilText },
     price: { fontSize: 13, color: colors.success, marginTop: 2 },
-    stepper: { flexDirection: "row", alignItems: "center", gap: 6, marginLeft: 8 },
-    stepBtn: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
-      borderWidth: 1,
-      borderColor: colors.inputBorder,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    stepText: { fontSize: 18, color: colors.textSecondary },
-    qty: {
-      fontSize: 16,
-      fontWeight: "600",
-      minWidth: 24,
-      textAlign: "center",
-      color: colors.textPrimary,
-    },
+    stepper: { marginLeft: 8 },
   });
