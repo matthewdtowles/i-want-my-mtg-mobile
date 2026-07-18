@@ -15,6 +15,7 @@ import { queryClient } from "../queryClient";
 import { isExpiringSoon } from "./jwt";
 import { login as loginRequest } from "./loginRequest";
 import { RefreshRejectedError, refreshSession, revokeSession } from "./session";
+import { verifyEmailToken } from "./signUpRequest";
 import {
   clearSession,
   getStoredSession,
@@ -34,6 +35,8 @@ type AuthState = {
    */
   sessionExpired: boolean;
   signIn: (email: string, password: string) => Promise<void>;
+  /** Exchange an emailed verification token for a session (completes sign-up). */
+  verifyEmail: (token: string) => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -158,6 +161,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       sessionExpired,
       async signIn(email, password) {
         const session = await loginRequest(email, password);
+        setSessionExpired(false);
+        applySession(session);
+      },
+      async verifyEmail(token) {
+        const session = await verifyEmailToken(token);
         setSessionExpired(false);
         applySession(session);
       },

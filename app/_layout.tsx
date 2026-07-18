@@ -20,10 +20,17 @@ function RootNavigator() {
 
   useEffect(() => {
     if (initializing) return;
-    const onSignIn = segments[0] === "sign-in";
-    if (!isAuthenticated && !onSignIn) {
+    // Routes reachable while signed out: sign-in, sign-up, and the emailed
+    // verification landing (user/verify) which establishes a session itself.
+    const onPublicRoute =
+      segments[0] === "sign-in" ||
+      segments[0] === "sign-up" ||
+      segments[0] === "user";
+    if (!isAuthenticated && !onPublicRoute) {
       router.replace("/sign-in");
-    } else if (isAuthenticated && onSignIn) {
+    } else if (isAuthenticated && onPublicRoute) {
+      // Covers post-verification: once verify-email lands a session, leave the
+      // public route for the authenticated tabs.
       router.replace("/");
     }
   }, [initializing, isAuthenticated, segments, router]);
@@ -60,12 +67,15 @@ function RootNavigator() {
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="sign-in" options={{ headerShown: false }} />
+        <Stack.Screen name="sign-up" options={{ headerBackTitle: "Back" }} />
+        <Stack.Screen name="user/verify" options={{ headerShown: false }} />
         <Stack.Screen name="set/[code]" options={{ headerBackTitle: "Back" }} />
         <Stack.Screen
           name="card/[setCode]/[number]"
           options={{ headerBackTitle: "Back" }}
         />
         <Stack.Screen name="account" options={{ headerBackTitle: "Back" }} />
+        <Stack.Screen name="privacy" options={{ headerBackTitle: "Back" }} />
         <Stack.Screen name="notifications" options={{ headerBackTitle: "Back" }} />
         <Stack.Screen
           name="portfolio"

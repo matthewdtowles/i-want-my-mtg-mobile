@@ -73,6 +73,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/register": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Register a new account; emails a verification link to complete signup */
+        post: operations["AuthApiController_register"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/verify-email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify an emailed token and obtain access + refresh tokens (completes signup) */
+        post: operations["AuthApiController_verifyEmail"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/refresh": {
         parameters: {
             query?: never;
@@ -1156,6 +1190,33 @@ export interface components {
              */
             deviceLabel?: string;
         };
+        RegisterResponseDto: {
+            /** @description A uniform acknowledgement shown regardless of whether the email was new, already registered, or already pending — the response never reveals which. */
+            message: string;
+        };
+        RegisterRequestDto: {
+            /** @example user@example.com */
+            email: string;
+            /**
+             * @description Display name. Letters, numbers, spaces, hyphens, and underscores only.
+             * @example planeswalker42
+             */
+            name: string;
+            /**
+             * @description At least 8 characters with at least 1 uppercase, 1 lowercase, 1 number, and 1 special character.
+             * @example Sup3rSecret!
+             */
+            password: string;
+        };
+        VerifyEmailRequestDto: {
+            /** @description The raw verification token from the emailed link (its `token` query param). */
+            token: string;
+            /**
+             * @description Optional device label stored with the refresh token issued on success.
+             * @example iPhone 15
+             */
+            deviceLabel?: string;
+        };
         RefreshRequestDto: {
             /** @description The refresh token issued at login (or the previous refresh call). */
             refreshToken: string;
@@ -1849,6 +1910,73 @@ export interface operations {
             };
             /** @description Invalid credentials */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthApiController_register: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterRequestDto"];
+            };
+        };
+        responses: {
+            /** @description Signup acknowledged — check email to verify (uniform, non-enumerating) */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data?: components["schemas"]["RegisterResponseDto"];
+                        error?: string;
+                        message?: string;
+                        meta?: components["schemas"]["PaginationMeta"] | components["schemas"]["BlockPaginationMeta"];
+                    };
+                };
+            };
+        };
+    };
+    AuthApiController_verifyEmail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyEmailRequestDto"];
+            };
+        };
+        responses: {
+            /** @description Email verified; session issued */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data?: components["schemas"]["LoginResponseDto"];
+                        error?: string;
+                        message?: string;
+                        meta?: components["schemas"]["PaginationMeta"] | components["schemas"]["BlockPaginationMeta"];
+                    };
+                };
+            };
+            /** @description Invalid or expired verification token */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };
