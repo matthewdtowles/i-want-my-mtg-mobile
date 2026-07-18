@@ -1,4 +1,4 @@
-import * as WebBrowser from "expo-web-browser";
+import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -15,18 +15,14 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "../lib/auth/AuthContext";
-import { API_BASE_URL } from "../lib/api/config";
 import { useTheme, useThemedStyles } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
-
-// No API signup endpoint exists (registration needs email verification, which
-// is handled by the web app), so sign-up opens the web registration page.
-const SIGN_UP_URL = `${API_BASE_URL}/user/create`;
 
 export default function SignInScreen() {
   const { colors } = useTheme();
   const styles = useThemedStyles(createStyles);
   const { signIn, sessionExpired } = useAuth();
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -110,13 +106,7 @@ export default function SignInScreen() {
 
       <View style={styles.signupRow}>
         <Text style={styles.signupText}>New here? </Text>
-        <Pressable
-          onPress={() => {
-            WebBrowser.openBrowserAsync(SIGN_UP_URL).catch(() => {
-              Alert.alert("Couldn't open the browser", "Please try again.");
-            });
-          }}
-        >
+        <Pressable onPress={() => router.push("/sign-up")}>
           <Text style={styles.signupLink}>Create an account</Text>
         </Pressable>
       </View>

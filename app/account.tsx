@@ -1,7 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import Constants from "expo-constants";
-import { Stack } from "expo-router";
-import * as WebBrowser from "expo-web-browser";
+import { Stack, useRouter } from "expo-router";
 import {
   ActivityIndicator,
   Alert,
@@ -12,15 +11,12 @@ import {
   View,
 } from "react-native";
 
-import { API_BASE_URL } from "../lib/api/config";
 import { USER_PROFILE_KEY, deleteAccount, fetchProfile } from "../lib/api/user";
 import { ErrorState } from "../components/ErrorState";
 import { SegmentedControl } from "../components/SegmentedControl";
 import { useAuth } from "../lib/auth/AuthContext";
 import { useTheme, useThemedStyles, type ThemeMode } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
-
-const PRIVACY_URL = `${API_BASE_URL}/privacy`;
 
 const APPEARANCE: { label: string; value: ThemeMode }[] = [
   { label: "System", value: "system" },
@@ -32,6 +28,7 @@ export default function AccountScreen() {
   const { colors, mode, setMode } = useTheme();
   const styles = useThemedStyles(createStyles);
   const { signOut } = useAuth();
+  const router = useRouter();
 
   const profile = useQuery({ queryKey: USER_PROFILE_KEY, queryFn: fetchProfile });
 
@@ -123,15 +120,11 @@ export default function AccountScreen() {
       </Pressable>
       <Pressable
         style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
-        onPress={() => {
-          WebBrowser.openBrowserAsync(PRIVACY_URL).catch(() => {
-            Alert.alert("Couldn't open the browser", "Please try again.");
-          });
-        }}
+        onPress={() => router.push("/privacy")}
         accessibilityRole="button"
       >
         <Text style={styles.rowText}>Privacy policy</Text>
-        <Text style={styles.rowHint}>Web ›</Text>
+        <Text style={styles.rowHint}>›</Text>
       </Pressable>
       <Pressable
         style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
