@@ -22,10 +22,11 @@ function RootNavigator() {
     if (initializing) return;
     // Routes reachable while signed out: sign-in, sign-up, and the emailed
     // verification landing (user/verify) which establishes a session itself.
+    const route = segments.join("/");
     const onPublicRoute =
       segments[0] === "sign-in" ||
       segments[0] === "sign-up" ||
-      segments[0] === "user";
+      route === "user/verify";
     if (!isAuthenticated && !onPublicRoute) {
       router.replace("/sign-in");
     } else if (isAuthenticated && onPublicRoute) {

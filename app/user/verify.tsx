@@ -16,10 +16,14 @@ export default function VerifyScreen() {
   const styles = useThemedStyles(createStyles);
   const { verifyEmail } = useAuth();
   const router = useRouter();
-  const { token } = useLocalSearchParams<{ token?: string }>();
-  const [error, setError] = useState<string | null>(
-    token ? null : "This verification link is missing its token.",
-  );
+  // Repeated query params surface as string[]; take the first value.
+  const { token: rawToken } = useLocalSearchParams<{ token?: string | string[] }>();
+  const token = Array.isArray(rawToken) ? rawToken[0] : rawToken;
+  const [verifyError, setVerifyError] = useState<string | null>(null);
+  // Params can be undefined on the first render and arrive shortly after, so
+  // derive the missing-token error at render time rather than freezing it at init.
+  const error =
+    verifyError ?? (token ? null : "This verification link is missing its token.");
   // Guard against re-running the (single-use) token exchange on re-render.
   const attempted = useRef(false);
 
@@ -27,7 +31,7 @@ export default function VerifyScreen() {
     if (attempted.current || !token) return;
     attempted.current = true;
     verifyEmail(token).catch((err) => {
-      setError(err instanceof Error ? err.message : "Verification failed.");
+      setVerifyError(err instanceof Error ? err.message : "Verification failed.");
     });
     // On success the root navigator routes to the authenticated tabs.
   }, [token, verifyEmail]);
