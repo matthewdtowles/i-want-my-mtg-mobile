@@ -59,7 +59,7 @@ export default function TransactionsScreen() {
     if (tx.editable === false) {
       Alert.alert(
         "Can't edit this transaction",
-        "It's outside the editable window for your plan.",
+        "It's outside the window where transactions can still be edited.",
       );
       return;
     }

@@ -96,8 +96,8 @@ profiles (#61); Android card images fixed via `expo-image` + custom User-Agent
   transactions, portfolio, buyList, decks, priceAlerts, notifications,
   devices, user).
 - `lib/auth/` — `AuthContext` (`useAuth()`, incl. `sessionExpired`), token in
-  `expo-secure-store`. Sign-up opens web `/user/create` (email verification
-  lives there).
+  `expo-secure-store`. Sign-up is native (`signUpRequest.ts` →
+  `/api/v1/auth/register`, verification deep-links back into the app).
 - `lib/hooks/` — domain data hooks (`useInventoryQuantities`, `useBuyList`,
   `usePriceAlerts`, `useNotifications`) own query keys, fetching, and
   optimistic mutations so components stay presentational.

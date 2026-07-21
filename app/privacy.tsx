@@ -6,7 +6,8 @@ import type { ThemeColors } from "../lib/theme/colors";
 
 // Mirrors the web privacy policy (iwantmymtg.net/privacy). A few client-specific
 // lines are adapted for the native app (e.g. session tokens are stored in the
-// device keychain rather than a browser cookie).
+// device keychain rather than a browser cookie). The web policy's TCGPlayer
+// affiliate clause is omitted: the app has no outbound purchase links.
 const LAST_UPDATED = "April 14, 2026";
 
 type Block =
@@ -98,10 +99,6 @@ const SECTIONS: Section[] = [
           {
             label: "Expo",
             text: "delivers push notifications you opt into, via Expo's push service.",
-          },
-          {
-            label: "TCGPlayer (via Impact)",
-            text: 'only involved when you tap a "Buy on TCGPlayer" link. Their site receives standard referral information and, if you make a purchase, the Service may earn a commission at no additional cost to you.',
           },
         ],
       },
