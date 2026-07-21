@@ -140,8 +140,11 @@ on a 401.
   users here and authenticated users back to the tabs.
 - `app/sign-up.tsx` + `lib/auth/signUpRequest.ts` - fully native registration
   (`POST /api/v1/auth/register`, then `/api/v1/auth/verify-email`). The
-  verification email deep-links to `iwantmymtg://user/verify?token=…`
-  (`app/user/verify.tsx`). The app opens no web pages anywhere.
+  verification email deep-links to `https://iwantmymtg.net/user/verify?token=…`,
+  which opens the app directly via Universal Links (iOS `associatedDomains`)
+  and App Links (Android `intentFilters`, `autoVerify`); the `iwantmymtg://`
+  custom scheme is the fallback. Both land on `app/user/verify.tsx`. The app
+  opens no web pages anywhere.
 
 ## Versioning & releases
 

@@ -331,7 +331,7 @@ above and let it supersede the rejected one.
 
   We found what you were seeing. Our app displays error messages returned by our server, and two of those messages named our web product's paid tier and pointed to a pricing page. They appeared when adding a 6th price alert, or when setting both a rise and a fall threshold on the same card. You were reading real text in our app; our replies denying it were mistaken.
 
-  Build 8 removes those messages entirely. There is now no occurrence of "premium," "upgrade," "free plan," or any pricing reference anywhere in the app, from any screen or any server response. The app sells nothing, contains no in-app purchases or subscriptions, opens no web pages, and has no link to any external site or payment mechanism.
+  Build 8 removes those messages entirely. No text displayed anywhere in the app -- on any screen, and in any error message returned by our server to the app -- contains "premium," "upgrade," "free plan," or any pricing reference. The app sells nothing, contains no in-app purchases or subscriptions, opens no web pages, and has no link to any external site or payment mechanism.
 
   For full transparency: I Want My MTG is a multiplatform service. Our website offers an optional paid tier, purchased on the web. It is never mentioned, promoted, or reachable from the iOS app, and the app provides no path toward acquiring it. We believe this is what Guideline 3.1.3(b) contemplates for multiplatform services, and we are glad to make any further change you would like.
 
