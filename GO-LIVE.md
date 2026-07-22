@@ -2,7 +2,7 @@
 
 **This file is the single source of truth for what remains.** Everything that is
 already done lives in `HANDOFF.md` ("Shipped" section) — this file only tracks
-what's left, across all four repos. Last verified 2026-07-04.
+what's left, across all four repos. Last verified 2026-07-21.
 
 | Piece | Where it runs | Status |
 |---|---|---|
@@ -10,7 +10,7 @@ what's left, across all four repos. Last verified 2026-07-04.
 | Scry ingest (`scry`) | Prod host (binary extracted by the web deploy) | ✅ **Live.** Nothing to do. |
 | MCP server (`iwantmymtg-mcp`) | npm / MCP Registry / Smithery | ✅ **Live.** CI auto-publishes on merge. Nothing to do. |
 | **Mobile — Android** | Play **closed testing (Alpha)** since 2026-07-02 | 🟡 Production gated by Google's 12-tester / 14-day test → **section 2** |
-| **Mobile — iOS** | **TestFlight** since 2026-06-24 | 🟡 Public App Store submission not started → **section 3** |
+| **Mobile — iOS** | **TestFlight** since 2026-06-24 | 🔴 App Store submission **rejected 4× under Guideline 3.1.1** through build 0.2.0 (7). Root-caused and fixed 2026-07-21 → **section 3**, then [3H](#3h-guideline-311-what-went-wrong-and-the-standing-rule) |
 
 Everything below is mobile. **1 is one-time setup (~30 min), 2 is
 calendar-bound so its clock should start immediately, 3 can run fully in
@@ -205,21 +205,28 @@ I Want My MTG is unofficial Fan Content permitted under the Wizards of the Coast
 No third-party SDKs collect anything (no analytics, no ads, no crash
 reporting). Card images come from Scryfall's CDN but nothing is collected.
 
-**Age Rating** — answer **None/No** to everything (no violence, no gambling,
-no unrestricted web access — sign-up opens one specific page, not a browser).
-Result: **4+**.
+**Age Rating** — answer **None/No** to everything (no violence, no gambling, no
+unrestricted web access — the app opens no web pages at all). Result: **4+**.
 
 ### 3F. Policy self-check (~10 min, in the app)
 
-The two classic rejection traps; both should already pass, verify anyway:
+The classic rejection traps. **3.1.1 is the one that actually bit us** — see
+[3H](#3h-guideline-311-what-went-wrong-and-the-standing-rule) before touching
+anything that touches tiers.
 
 - [ ] **No external-purchase steering:** walk every screen a reviewer can
-      reach — there must be no upgrade/subscribe button and no link to a web
-      page that sells premium. Specifically open **Sign up** from the sign-in
-      screen and confirm `iwantmymtg.net/user/create` shows no
-      pricing/premium links (it opens in an in-app browser sheet, so the
-      reviewer sees it). Launch posture is read/track-only; premium stays
-      Stripe-on-web and unmentioned in the app.
+      reach — no upgrade/subscribe button, no link to a page that sells
+      premium, and **no on-screen text containing "Premium", "Upgrade",
+      "Free plan", or a pricing URL**. That includes *server* error strings:
+      the app renders API error messages verbatim
+      (`lib/api/envelope.ts` → `errMessage`), so a tier-steering message
+      thrown by the backend appears as a native iOS alert. Exercise the two
+      free-tier limits directly: create a 6th price alert, and set **both**
+      Rise % and Fall % on one card (`components/CardPriceAlert.tsx`).
+      Both must produce neutral wording.
+- [ ] **Sign-up is fully native** (since #82) — no in-app browser, no web
+      redirect anywhere in the app. The only outbound hosts are Scryfall's
+      image CDN and our own API origin.
 - [ ] **Account deletion** — already ships in-app (Account screen → delete,
       double-confirmed). Nothing to do; just know it's there if review asks.
 
@@ -239,11 +246,15 @@ The two classic rejection traps; both should already pass, verify anyway:
       demo credentials. **Notes** (paste, after filling in the password):
 
   ```
-  Demo account (the app requires sign-in): email matthewdtowles+appreview@gmail.com, password <fill in>.
+  Demo account (the app requires sign-in): email matthewdtowles+appreview@gmail.com, password <fill in>. This is a standard free account.
 
-  New-account registration happens on our website (opened from the app's sign-up link) because it requires email verification; the demo account above is already verified.
+  Account creation and email verification are fully native in the app (Sign in -> "Create account"). The app opens no web pages and contains no web links.
 
-  The app is a free companion to our web service (iwantmymtg.net) for tracking Magic: The Gathering card collections. There are no purchases, subscriptions, or paid features in the app. Account deletion is available in-app: Account screen (person icon, top right) → Delete account.
+  REGARDING GUIDELINE 3.1.1: The iOS app sells nothing. It contains no in-app purchases, no subscriptions, no upgrade or subscribe buttons, no pricing information, and no links to any external site or payment mechanism. Nothing in the app can be bought, unlocked, or paid for by any means.
+
+  I Want My MTG is a multiplatform service (web at iwantmymtg.net, plus this iOS app) for tracking Magic: The Gathering card collections. The web product does offer an optional paid tier, purchased on the web and never mentioned, promoted, or reachable from the iOS app. Per Guideline 3.1.3(b) (Multiplatform Services), a user who happens to hold a web subscription may see their own previously-created content in the app; the app does not sell that access, does not advertise it, and provides no path toward acquiring it.
+
+  Account deletion is available in-app: Account screen (person icon, top right) -> Delete account.
   ```
 
 - [ ] Upload the 3B screenshots.
@@ -251,10 +262,81 @@ The two classic rejection traps; both should already pass, verify anyway:
       Release after approval; switch to automatic on later releases).
 - [ ] **Submit for Review** → wait ~1–3 days → **Release**. 🎉 **iOS live.**
 
-**If rejected:** the likely flags are the demo account (fix credentials,
-resubmit — fast) or Guideline 5.2 intellectual property (respond in Resolution
-Center citing the WotC **Fan Content Policy** — the disclaimer is already in
-the description — and that card data/images come from Scryfall's public API).
+**If rejected:** for **3.1.1** see [3H](#3h-guideline-311-what-went-wrong-and-the-standing-rule).
+For **5.2 intellectual property**, respond in Resolution Center citing the WotC
+**Fan Content Policy** (the disclaimer is already in the description) and that
+card data/images come from Scryfall's public API.
+
+### 3H. Guideline 3.1.1 — what went wrong, and the standing rule
+
+**Status: root-caused 2026-07-21.** Builds through **0.2.0 (7)** were rejected
+four times under 3.1.1 ("accesses digital content purchased outside the app,
+such as premium…"). Three replies denying that premium existed made it worse,
+because the reviewer was quoting text the app really did display.
+
+**Root cause — server error strings rendered as native alerts.** The app
+surfaces API error messages verbatim (`lib/api/envelope.ts` → `errMessage`).
+Three messages in the backend's `price-alert.service.ts` named the paid tier
+and pointed at a pricing page:
+
+> "Multi-threshold alerts … are a **Premium** feature. **Upgrade at /pricing** to enable."
+> "**Free plan** is limited to 5 active price alerts. **Upgrade at /pricing** for unlimited alerts."
+
+`components/CardPriceAlert.tsx` shows Rise % and Fall % side by side, so a
+reviewer testing price alerts — a headline feature in the description — filled
+in both and got an iOS alert containing the word *Premium* and a pricing URL.
+That is textbook external-purchase steering.
+
+**Fixed (2026-07-21):**
+
+| Repo | Change |
+|---|---|
+| `i-want-my-mtg` | `src/core/price-alert/price-alert.service.ts` — all three messages made tier-neutral ("Only one threshold direction…", "This account is limited to 5 active price alerts."). Specs + `freemium-gates` e2e updated. |
+| mobile | `app/transactions.tsx` — "outside the editable window **for your plan**" → plan-free wording (the backend gate is a flat time window, never plan-based). |
+| mobile | `app/privacy.tsx` — dropped the TCGPlayer affiliate bullet describing a "Buy on TCGPlayer" link and purchase commission. The app has no such link. |
+| this file | Review notes rewritten (they still claimed sign-up happened on the website — untrue since #82 — and claimed "no paid features," which contradicted what the reviewer saw). |
+
+**Standing rule — the API is a shipping surface of the iOS app.** Any string
+the backend can return in a `4xx` body can appear as a native iOS alert.
+Therefore **no API error message may contain "Premium", "Upgrade", "Free
+plan", a tier name, or a pricing URL** — state the limit neutrally and let each
+client decide how to present it. The web frontend does its own steering through
+its own UI. This does not apply to the MCP server (`iwantmymtg-mcp`), which is
+a separate developer product Apple never sees, and whose premium wording is
+left intentionally intact.
+
+**Known and deliberate:** three endpoints the app calls do return more data to
+web subscribers — transactions (30-day free cutoff,
+`transaction-api.controller.ts`), set-completion (`set-api.controller.ts`), and
+the price-alert cap. That is legitimate under **3.1.3(b) Multiplatform
+Services** and is now disclosed in the review notes rather than denied. Do not
+claim "no paid features" again — it is checkable in ten seconds on the website
+and it is what turned one rejection into four.
+
+**Resubmission is a new build, not a reply.** The reviewer has a screenshot;
+only a build without the strings clears it. Ship a fresh build with the fixes
+above and let it supersede the rejected one.
+
+**Resubmit checklist:**
+
+- [ ] Backend deployed with the `price-alert.service.ts` fix (merge to `main`
+      auto-deploys), then `npm run gen:api` in this repo so `schema.ts` matches.
+- [ ] `npm run ship:ios` → new build (0.2.x, build 8+) appears in App Store Connect.
+- [ ] Version page → select the new build; **replace the App Review Notes** with
+      the 3G block above (the old ones are actively harmful).
+- [ ] Post this in Resolution Center, then Submit:
+
+  ```
+  Thank you for the detailed reviews, and apologies for our earlier replies — we were wrong.
+
+  We found what you were seeing. Our app displays error messages returned by our server, and two of those messages named our web product's paid tier and pointed to a pricing page. They appeared when adding a 6th price alert, or when setting both a rise and a fall threshold on the same card. You were reading real text in our app; our replies denying it were mistaken.
+
+  Build 8 removes those messages entirely. No text displayed anywhere in the app -- on any screen, and in any error message returned by our server to the app -- contains "premium," "upgrade," "free plan," or any pricing reference. The app sells nothing, contains no in-app purchases or subscriptions, opens no web pages, and has no link to any external site or payment mechanism.
+
+  For full transparency: I Want My MTG is a multiplatform service. Our website offers an optional paid tier, purchased on the web. It is never mentioned, promoted, or reachable from the iOS app, and the app provides no path toward acquiring it. We believe this is what Guideline 3.1.3(b) contemplates for multiplatform services, and we are glad to make any further change you would like.
+
+  The demo account provided is a standard free account.
+  ```
 
 ---
 

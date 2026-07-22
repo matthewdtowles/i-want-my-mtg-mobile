@@ -138,9 +138,13 @@ on a 401.
 - `lib/auth/tokenStore.ts` - token persistence in `expo-secure-store`.
 - `app/sign-in.tsx` - sign-in screen. The root layout redirects unauthenticated
   users here and authenticated users back to the tabs.
-- **Sign-up** opens the web registration page (`/user/create`) in a browser:
-  there is no API signup endpoint because registration requires email
-  verification, handled by the web app.
+- `app/sign-up.tsx` + `lib/auth/signUpRequest.ts` - fully native registration
+  (`POST /api/v1/auth/register`, then `/api/v1/auth/verify-email`). The
+  verification email deep-links to `https://iwantmymtg.net/user/verify?token=…`,
+  which opens the app directly via Universal Links (iOS `associatedDomains`)
+  and App Links (Android `intentFilters`, `autoVerify`); the `iwantmymtg://`
+  custom scheme is the fallback. Both land on `app/user/verify.tsx`. The app
+  opens no web pages anywhere.
 
 ## Versioning & releases
 
