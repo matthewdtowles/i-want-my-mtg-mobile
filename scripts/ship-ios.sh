@@ -58,7 +58,7 @@ npm run --silent typecheck
 # --- 4. build + submit ------------------------------------------------------
 EAS="eas"
 command -v eas >/dev/null 2>&1 || EAS="npx eas-cli"
-echo "==> Building iOS (production) and auto-submitting to TestFlight as $version…"
+echo "==> Building iOS (production) and auto-submitting to TestFlight as ${version}…"
 $EAS build --platform ios --profile production --auto-submit
 
 echo "✓ Submitted. The build appears in App Store Connect → TestFlight once"

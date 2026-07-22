@@ -78,7 +78,7 @@ npm run --silent typecheck
 # --- 4. build + submit ------------------------------------------------------
 EAS="eas"
 command -v eas >/dev/null 2>&1 || EAS="npx eas-cli"
-echo "==> Building Android (production) as $version…"
+echo "==> Building Android (production) as ${version}…"
 $EAS build --platform android --profile production
 echo "==> Submitting latest build to the '$TRACK' Play track…"
 # `eas submit` has no --track flag; the Play track lives in eas.json. Each track
