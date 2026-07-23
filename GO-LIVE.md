@@ -2,20 +2,24 @@
 
 **This file is the single source of truth for what remains.** Everything that is
 already done lives in `HANDOFF.md` ("Shipped" section) — this file only tracks
-what's left, across all four repos. Last verified 2026-07-21.
+what's left, across all four repos. Last verified 2026-07-22.
 
 | Piece | Where it runs | Status |
 |---|---|---|
 | Web app + API (`i-want-my-mtg`) | https://iwantmymtg.net (AWS Lightsail) | ✅ **Live.** Auto-deploys on every merge to `main`. Nothing to do. |
 | Scry ingest (`scry`) | Prod host (binary extracted by the web deploy) | ✅ **Live.** Nothing to do. |
 | MCP server (`iwantmymtg-mcp`) | npm / MCP Registry / Smithery | ✅ **Live.** CI auto-publishes on merge. Nothing to do. |
-| **Mobile — Android** | Play **closed testing (Alpha)** since 2026-07-02 | 🟡 Production gated by Google's 12-tester / 14-day test → **section 2** |
-| **Mobile — iOS** | **TestFlight** since 2026-06-24 | 🔴 App Store submission **rejected 4× under Guideline 3.1.1** through build 0.2.0 (7). Root-caused and fixed 2026-07-21 → **section 3**, then [3H](#3h-guideline-311-what-went-wrong-and-the-standing-rule) |
+| **Mobile — Android** | Play **closed testing (Alpha)** since 2026-07-02 | 🟡 Closed test served, production access applied for. **One step left: promote + roll out** → **section 2** |
+| **Mobile — iOS** | **TestFlight** since 2026-06-24 | 🟡 Rejected 4× under Guideline 3.1.1 through 0.2.0 (7). Fixed and **0.2.1 verified on TestFlight**. **Two steps left: Resolution Center reply + Submit** → [3H](#3h-guideline-311-what-went-wrong-and-the-standing-rule) |
 
-Everything below is mobile. **1 is one-time setup (~30 min), 2 is
-calendar-bound so its clock should start immediately, 3 can run fully in
-parallel with 2** — section 3 is a complete runbook with every input
-pre-written; executing it is mostly pasting.
+Everything below is mobile, and it is now **three actions**, not three projects:
+
+1. **§3H** — post the Resolution Center reply and Submit for Review (iOS).
+2. **§2f** — promote the tested build to Production and roll out (Android).
+3. **§1** — optional, any time: create the Play service-account key so Android
+   submits stop needing a manual `.aab` upload.
+
+§1–§3G below are kept as reference for what is already configured, not as work.
 
 ---
 
@@ -47,7 +51,11 @@ Store Connect API key lives on EAS servers, not in this repo.)
 
 ---
 
-## 2. Android → Google Play production (calendar-bound — start the clock now)
+## 2. Android → Google Play production
+
+**Status: the calendar gate is served.** 12+ testers ran the 14-day closed test,
+a real update shipped during the window, and production access has been applied
+for. **Only 2f is left.**
 
 Google requires new personal accounts to run a closed test — **12 testers
 opted in for 14 continuous days** — before production unlocks. Full policy +
@@ -56,18 +64,18 @@ Tracker: [#60](https://github.com/matthewdtowles/i-want-my-mtg-mobile/issues/60)
 
 - [x] **2a.** Confirmed the rolled-out Alpha release is **versionCode 4** (the
       `expo-image` fix — earlier vc2 has broken card images).
-- [ ] **2b. Recruit 12+ real testers** — friends, playgroup, MTG communities.
+- [x] **2b. Recruit 12+ real testers** — friends, playgroup, MTG communities.
       Send each the **opt-in link** (Play Console → Testing → Closed testing →
       Alpha → Testers tab); they opt in with their Google account, then install
       from Play. **No paid tester farms** — policy violation, accounts get
       terminated.
-- [ ] **2c. Keep 12+ opted in for 14 continuous days.** The clock effectively
+- [x] **2c. Keep 12+ opted in for 14 continuous days.** The clock effectively
       starts when the 12th tester opts in; an opt-out resets that tester.
       Keep a running **feedback log** (who said what, links to fixes) — the
       questionnaire in 2e is written from it.
-- [ ] **2d. Ship at least one real update during the window** — any genuine
+- [x] **2d. Ship at least one real update during the window** — any genuine
       fix/tweak, then: merge the PR → `npm run ship:android alpha`. Done.
-- [ ] **2e. Apply for production access** (Play Console dashboard, appears
+- [x] **2e. Apply for production access** (Play Console dashboard, appears
       after the 14 days) and answer the 4 questions **truthfully from the
       feedback log** — templates in `docs/playstore-release.md`.
 - [ ] **2f. Promote to Production** — Play Console → *Production → Create
@@ -77,6 +85,14 @@ Tracker: [#60](https://github.com/matthewdtowles/i-want-my-mtg-mobile/issues/60)
 ---
 
 ## 3. iOS → App Store production (parallel with 2; not calendar-bound)
+
+> **Read 3H first.** Sections 3A–3G were all executed for the original
+> submission — demo account, screenshots, agreements, listing, questionnaires
+> are done and are **not** work items any more; they are kept as reference for
+> what is already in App Store Connect. The app was then rejected four times
+> under Guideline 3.1.1. **The live state is [3H](#3h-guideline-311-what-went-wrong-and-the-standing-rule)
+> and its tracker, [#84](https://github.com/matthewdtowles/i-want-my-mtg-mobile/issues/84)** —
+> steps 1–8 there are done; what remains is the Resolution Center reply and Submit.
 
 This is the complete runbook — every text input is pre-written below, so
 executing it is: do 3A–3B prep (~1 hr, the only real work), then paste your way
@@ -319,12 +335,14 @@ above and let it supersede the rejected one.
 
 **Resubmit checklist:**
 
-- [ ] Backend deployed with the `price-alert.service.ts` fix (merge to `main`
-      auto-deploys), then `npm run gen:api` in this repo so `schema.ts` matches.
-- [ ] `npm run ship:ios` → new build (0.2.x, build 8+) appears in App Store Connect.
-- [ ] Version page → select the new build; **replace the App Review Notes** with
-      the 3G block above (the old ones are actively harmful).
-- [ ] Post this in Resolution Center, then Submit:
+- [x] Backend deployed with the `price-alert.service.ts` fix (merge to `main`
+      auto-deploys). `npm run gen:api` was **not** needed — a runtime error
+      string never appears in the OpenAPI spec, so `schema.ts` is unchanged.
+- [x] `npm run ship:ios` → **0.2.1** (build 8+) is in App Store Connect and
+      verified on TestFlight against a free account.
+- [x] Version page → selected the new build; **App Review Notes replaced** with
+      the 3G block above (the old ones were actively harmful).
+- [ ] **← YOU ARE HERE.** Post this in Resolution Center, then Submit:
 
   ```
   Thank you for the detailed reviews, and apologies for our earlier replies — we were wrong.
