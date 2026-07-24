@@ -26,6 +26,7 @@ import {
   deleteInventory,
 } from "../../lib/api/inventory";
 import {
+  PORTFOLIO_KEY,
   PORTFOLIO_SUMMARY_KEY,
   fetchPortfolioSummary,
 } from "../../lib/api/portfolio";
@@ -139,7 +140,7 @@ function InventoryList() {
     mutationFn: ({ item, quantity }) =>
       saveInventory([{ cardId: item.cardId, quantity, isFoil: item.isFoil }]),
     errorTitle: "Couldn't update quantity",
-    invalidates: [INVENTORY_KEY],
+    invalidates: [INVENTORY_KEY, PORTFOLIO_KEY],
   });
 
   const writeQuantity = useDebouncedByKey(
@@ -167,7 +168,7 @@ function InventoryList() {
     apply: (old, item) =>
       mapPageItems(old, (items) => items.filter((it) => !sameRow(it, item))),
     errorTitle: "Couldn't remove card",
-    invalidates: [INVENTORY_KEY],
+    invalidates: [INVENTORY_KEY, PORTFOLIO_KEY],
   });
 
   const hub = (
