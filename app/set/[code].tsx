@@ -206,7 +206,7 @@ export default function SetDetailScreen() {
             .filter(Boolean)
             .join(" · ")}
         </Text>
-        {set?.ownedTotal != null && set.ownedTotal > 0 ? (
+        {set?.ownedTotal != null ? (
           <Text style={styles.heroOwned}>
             You own {set.ownedTotal}
             {set.completionRate != null
