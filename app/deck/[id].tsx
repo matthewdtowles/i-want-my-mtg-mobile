@@ -24,7 +24,9 @@ import { BUY_LIST_KEY } from "../../lib/api/buyList";
 import type { ApiDeckCard, ApiDeckDetail } from "../../lib/api/types";
 import { ErrorState } from "../../components/ErrorState";
 import { QuantityStepper } from "../../components/QuantityStepper";
+import { SearchField } from "../../components/SearchField";
 import { formatDeckFormat, formatPrice } from "../../lib/format";
+import { useDebounce } from "../../lib/useDebounce";
 import { useOptimisticMutation } from "../../lib/useOptimisticMutation";
 import { useTheme, useThemedStyles } from "../../lib/theme/ThemeContext";
 import type { ThemeColors } from "../../lib/theme/colors";
@@ -58,6 +60,8 @@ export default function DeckDetailScreen() {
   const id = Number(params.id);
 
   const [missingOnly, setMissingOnly] = useState(false);
+  const [search, setSearch] = useState("");
+  const q = useDebounce(search.trim().toLowerCase(), 250);
 
   const query = useQuery({
     queryKey: deckKey(id),
@@ -146,16 +150,22 @@ export default function DeckDetailScreen() {
 
   const sections = useMemo(() => {
     if (!deck) return [];
-    const visible = missingOnly
+    let visible = missingOnly
       ? deck.cards.filter((c) => c.quantity - (ownedById.get(c.cardId) ?? 0) > 0)
       : deck.cards;
+    // The whole deck is already loaded, so search filters client-side.
+    if (q) {
+      visible = visible.filter((c) =>
+        (c.cardName ?? c.cardId).toLowerCase().includes(q),
+      );
+    }
     const main = visible.filter((c) => !c.isSideboard);
     const side = visible.filter((c) => c.isSideboard);
     return [
       { title: "Main", data: main },
       { title: "Sideboard", data: side },
     ].filter((s) => s.data.length > 0);
-  }, [deck, missingOnly, ownedById]);
+  }, [deck, missingOnly, ownedById, q]);
 
   const headerScreen = (
     <Stack.Screen
@@ -224,6 +234,11 @@ export default function DeckDetailScreen() {
                 {deck.format}
               </Text>
             ) : null}
+            <SearchField
+              value={search}
+              onChangeText={setSearch}
+              placeholder="Search this deck"
+            />
             <Pressable
               style={[styles.toggle, missingOnly && styles.toggleActive]}
               onPress={() => setMissingOnly((v) => !v)}
@@ -295,7 +310,11 @@ export default function DeckDetailScreen() {
         }}
         ListEmptyComponent={
           <Text style={styles.emptyHint}>
-            {missingOnly ? "You own every card in this deck." : "This deck has no cards yet."}
+            {q
+              ? "No cards match your search."
+              : missingOnly
+                ? "You own every card in this deck."
+                : "This deck has no cards yet."}
           </Text>
         }
         ListFooterComponent={

@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import {
+  keepPreviousData,
   useInfiniteQuery,
   useMutation,
   useQuery,
@@ -35,8 +36,10 @@ import { CardListItem } from "../../components/CardListItem";
 import { CardPeekOverlay } from "../../components/CardPeekOverlay";
 import { ErrorState } from "../../components/ErrorState";
 import { BulkAddBar } from "../../components/BulkAddBar";
+import { SearchField } from "../../components/SearchField";
 import { SetSymbol } from "../../components/SetSymbol";
 import { useAuth } from "../../lib/auth/AuthContext";
+import { useDebounce } from "../../lib/useDebounce";
 import { useTheme, useThemedStyles } from "../../lib/theme/ThemeContext";
 import type { ThemeColors } from "../../lib/theme/colors";
 
@@ -57,6 +60,8 @@ export default function SetDetailScreen() {
   // Binder grid is the default view; the header icon flips to a compact list.
   const [view, setView] = useState<"grid" | "list">("grid");
   const [peek, setPeek] = useState<ApiCard | null>(null);
+  const [search, setSearch] = useState("");
+  const q = useDebounce(search.trim(), 300);
 
   // Multi-select state: cardId -> card, so we know each card's finish support.
   const [selectMode, setSelectMode] = useState(false);
@@ -70,11 +75,15 @@ export default function SetDetailScreen() {
   });
 
   const query = useInfiniteQuery({
-    queryKey: setCardsKey(code, pageSize),
-    queryFn: ({ pageParam }) => fetchSetCards(code as string, pageParam, pageSize),
+    queryKey: setCardsKey(code, pageSize, q),
+    queryFn: ({ pageParam }) =>
+      fetchSetCards(code as string, pageParam, pageSize, q || undefined),
     initialPageParam: 1,
     getNextPageParam: nextPage,
     enabled: !!code,
+    // Keep showing the old results while a new search filter loads, so the
+    // list (and the keyboard) doesn't flicker away on every keystroke.
+    placeholderData: keepPreviousData,
   });
 
   const cards = useMemo(
@@ -192,30 +201,43 @@ export default function SetDetailScreen() {
   const set = setQuery.data;
   const hero = (
     <View style={styles.hero}>
-      <SetSymbol code={set?.keyruneCode || code} size={40} />
-      <View style={styles.heroText}>
-        <Text style={styles.heroName} numberOfLines={2}>
-          {set?.name ?? code.toUpperCase()}
-        </Text>
-        <Text style={styles.heroSub}>
-          {[
-            code.toUpperCase(),
-            set?.releaseDate ? set.releaseDate.slice(0, 4) : null,
-            set?.baseSize != null ? `${set.baseSize} cards` : null,
-          ]
-            .filter(Boolean)
-            .join(" · ")}
-        </Text>
-        {set?.ownedTotal != null ? (
-          <Text style={styles.heroOwned}>
-            You own {set.ownedTotal}
-            {set.completionRate != null
-              ? ` · ${Math.round(set.completionRate)}% complete`
-              : ""}
+      <View style={styles.heroRow}>
+        <SetSymbol code={set?.keyruneCode || code} size={40} />
+        <View style={styles.heroText}>
+          <Text style={styles.heroName} numberOfLines={2}>
+            {set?.name ?? code.toUpperCase()}
           </Text>
-        ) : null}
+          <Text style={styles.heroSub}>
+            {[
+              code.toUpperCase(),
+              set?.releaseDate ? set.releaseDate.slice(0, 4) : null,
+              set?.baseSize != null ? `${set.baseSize} cards` : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </Text>
+          {set?.ownedTotal != null ? (
+            <Text style={styles.heroOwned}>
+              You own {set.ownedTotal}
+              {set.completionRate != null
+                ? ` · ${Math.round(set.completionRate)}% complete`
+                : ""}
+            </Text>
+          ) : null}
+        </View>
       </View>
+      <SearchField
+        value={search}
+        onChangeText={setSearch}
+        placeholder="Search this set"
+      />
     </View>
+  );
+
+  const emptyResult = (
+    <Text style={styles.message}>
+      {q ? "No cards match your search." : "No cards in this set."}
+    </Text>
   );
 
   const cellWidth =
@@ -250,6 +272,7 @@ export default function SetDetailScreen() {
           data={cards}
           keyExtractor={(c) => c.id}
           ListHeaderComponent={hero}
+          ListEmptyComponent={emptyResult}
           renderItem={({ item }) =>
             selectMode ? (
               <CardListItem
@@ -276,6 +299,7 @@ export default function SetDetailScreen() {
           columnWrapperStyle={styles.gridRow}
           contentContainerStyle={styles.gridContent}
           ListHeaderComponent={hero}
+          ListEmptyComponent={emptyResult}
           renderItem={({ item }) => (
             <CardGridCell
               card={item}
@@ -324,8 +348,6 @@ const createStyles = (colors: ThemeColors) =>
     },
     headerBtnText: { color: colors.accent, fontSize: 16, fontWeight: "600" },
     hero: {
-      flexDirection: "row",
-      alignItems: "center",
       gap: 12,
       paddingVertical: 12,
       paddingHorizontal: 16,
@@ -333,6 +355,7 @@ const createStyles = (colors: ThemeColors) =>
       borderBottomColor: colors.border,
       marginBottom: 10,
     },
+    heroRow: { flexDirection: "row", alignItems: "center", gap: 12 },
     heroText: { flex: 1 },
     heroName: { fontSize: 18, fontWeight: "800", color: colors.textPrimary },
     heroSub: { fontSize: 13, color: colors.textMuted, marginTop: 2 },

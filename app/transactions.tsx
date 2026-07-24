@@ -1,6 +1,10 @@
-import { useInfiniteQuery, type InfiniteData } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useInfiniteQuery,
+  type InfiniteData,
+} from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -25,6 +29,8 @@ import { mapPageItems, nextPage } from "../lib/pagination";
 import type { ApiTransaction } from "../lib/api/types";
 import { TransactionListItem } from "../components/TransactionListItem";
 import { ErrorState } from "../components/ErrorState";
+import { SearchField } from "../components/SearchField";
+import { useDebounce } from "../lib/useDebounce";
 import { useOptimisticMutation } from "../lib/useOptimisticMutation";
 import { useTheme, useThemedStyles } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
@@ -36,12 +42,15 @@ export default function TransactionsScreen() {
   const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const { pageSize } = useSettings();
-  const KEY = transactionsListKey(pageSize);
+  const [search, setSearch] = useState("");
+  const q = useDebounce(search.trim(), 300);
+  const KEY = transactionsListKey(pageSize, q);
   const query = useInfiniteQuery({
     queryKey: KEY,
-    queryFn: ({ pageParam }) => fetchTransactions(pageParam, pageSize),
+    queryFn: ({ pageParam }) => fetchTransactions(pageParam, pageSize, q || undefined),
     initialPageParam: 1,
     getNextPageParam: nextPage,
+    placeholderData: keepPreviousData,
   });
 
   const items = useMemo(
@@ -104,7 +113,8 @@ export default function TransactionsScreen() {
       />
     );
   }
-  if (items.length === 0) {
+  // First-ever transaction: no search active and nothing recorded.
+  if (items.length === 0 && !q) {
     return (
       <View style={styles.center}>
         <Text style={styles.empty}>No transactions yet.</Text>
@@ -116,36 +126,49 @@ export default function TransactionsScreen() {
   }
 
   return (
-    <FlatList
-      style={styles.list}
-      data={items}
-      keyExtractor={(tx) => String(tx.id)}
-      ListHeaderComponent={
-        <Text style={styles.hint}>Long-press a transaction to edit or delete.</Text>
-      }
-      renderItem={({ item }) => (
-        <TransactionListItem tx={item} onLongPress={() => openActions(item)} />
-      )}
-      onEndReached={() => query.hasNextPage && query.fetchNextPage()}
-      onEndReachedThreshold={0.5}
-      refreshControl={
-        <RefreshControl
-          refreshing={query.isRefetching && !query.isFetchingNextPage}
-          onRefresh={() => query.refetch()}
-          tintColor={colors.accent}
-        />
-      }
-      ListFooterComponent={
-        query.isFetchingNextPage ? (
-          <ActivityIndicator style={styles.footer} color={colors.accent} />
-        ) : null
-      }
-    />
+    <View style={styles.screen}>
+      <SearchField
+        value={search}
+        onChangeText={setSearch}
+        placeholder="Search transactions by card"
+        style={styles.search}
+      />
+      <FlatList
+        style={styles.list}
+        data={items}
+        keyExtractor={(tx) => String(tx.id)}
+        ListHeaderComponent={
+          <Text style={styles.hint}>Long-press a transaction to edit or delete.</Text>
+        }
+        ListEmptyComponent={
+          <Text style={styles.emptyHint}>No transactions match your search.</Text>
+        }
+        renderItem={({ item }) => (
+          <TransactionListItem tx={item} onLongPress={() => openActions(item)} />
+        )}
+        onEndReached={() => query.hasNextPage && query.fetchNextPage()}
+        onEndReachedThreshold={0.5}
+        refreshControl={
+          <RefreshControl
+            refreshing={query.isRefetching && !query.isFetchingNextPage}
+            onRefresh={() => query.refetch()}
+            tintColor={colors.accent}
+          />
+        }
+        ListFooterComponent={
+          query.isFetchingNextPage ? (
+            <ActivityIndicator style={styles.footer} color={colors.accent} />
+          ) : null
+        }
+      />
+    </View>
   );
 }
 
 const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
+    screen: { flex: 1, backgroundColor: colors.background },
+    search: { marginHorizontal: 16, marginTop: 8 },
     list: { backgroundColor: colors.background },
     center: {
       flex: 1,

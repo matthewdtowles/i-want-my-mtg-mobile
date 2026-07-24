@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import {
+  keepPreviousData,
   useInfiniteQuery,
   useQuery,
   useQueryClient,
@@ -104,6 +105,9 @@ function InventoryList() {
     queryFn: ({ pageParam }) => fetchInventory({ ...listOpts, page: pageParam }),
     initialPageParam: 1,
     getNextPageParam: nextPage,
+    // Keep the old rows while a new filter/sort loads so the list doesn't
+    // flash a spinner on every keystroke.
+    placeholderData: keepPreviousData,
   });
 
   // Collection-wide totals come from the portfolio summary (already computed

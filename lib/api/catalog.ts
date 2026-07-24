@@ -10,8 +10,8 @@ import type {
 /** Browse + card catalog query keys. Lists include the page size so a
  * settings change starts a fresh, consistently-sized sequence of pages. */
 export const setsKey = (limit: number) => ["sets", limit] as const;
-export const setCardsKey = (code: string | undefined, limit: number) =>
-  ["set", code, "cards", limit] as const;
+export const setCardsKey = (code: string | undefined, limit: number, filter = "") =>
+  ["set", code, "cards", limit, filter] as const;
 export const cardsSearchKey = (q: string) => ["cards", "search", q] as const;
 export const cardKey = (setCode: string | undefined, number: string | undefined) =>
   ["card", setCode, number] as const;
@@ -35,9 +35,13 @@ export async function fetchSetCards(
   code: string,
   page = 1,
   limit = 50,
+  filter?: string,
 ): Promise<Page<ApiCard>> {
   const { data, error, response } = await api.GET("/api/v1/sets/{code}/cards", {
-    params: { path: { code }, query: { page, limit } },
+    params: {
+      path: { code },
+      query: { page, limit, ...(filter ? { filter } : {}) },
+    },
   });
   if (!response.ok) throw new Error(errMessage(error, "Failed to load set cards."));
   return { items: data?.data ?? [], meta: data?.meta };

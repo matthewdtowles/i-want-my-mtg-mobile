@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -12,7 +12,9 @@ import type { ApiBuyListItem } from "../lib/api/types";
 import { useBuyList, useBuyListQuantity, useRemoveFromBuyList } from "../lib/hooks/useBuyList";
 import { CardQuantityRow } from "./CardQuantityRow";
 import { ErrorState } from "./ErrorState";
+import { SearchField } from "./SearchField";
 import { formatPrice } from "../lib/format";
+import { useDebounce } from "../lib/useDebounce";
 import { useTheme, useThemedStyles } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
 
@@ -28,6 +30,19 @@ export function BuyListView() {
   const items = useMemo(() => query.data ?? [], [query.data]);
   const { stepBy } = useBuyListQuantity();
   const remove = useRemoveFromBuyList();
+
+  const [search, setSearch] = useState("");
+  const q = useDebounce(search.trim().toLowerCase(), 250);
+  // The buy-list arrives whole (no pagination), so search filters client-side.
+  const visible = useMemo(
+    () =>
+      q
+        ? items.filter((it) =>
+            `${it.cardName ?? ""} ${it.setCode ?? ""}`.toLowerCase().includes(q),
+          )
+        : items,
+    [items, q],
+  );
 
   const summary = useMemo(() => {
     let qty = 0;
@@ -71,11 +86,19 @@ export function BuyListView() {
           {summary.cards} card{summary.cards === 1 ? "" : "s"} · {summary.qty} wanted ·{" "}
           {formatPrice(summary.value)}
         </Text>
+        <SearchField
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Search your buy-list"
+        />
       </View>
 
       <FlatList
         style={styles.list}
-        data={items}
+        data={visible}
+        ListEmptyComponent={
+          <Text style={styles.emptyHint}>No cards match your search.</Text>
+        }
         keyExtractor={(it) => `${it.cardId}-${it.isFoil}`}
         renderItem={({ item }) => (
           <CardQuantityRow
@@ -112,6 +135,7 @@ const createStyles = (colors: ThemeColors) =>
       paddingHorizontal: 16,
       paddingTop: 8,
       paddingBottom: 10,
+      gap: 8,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.border,
     },
