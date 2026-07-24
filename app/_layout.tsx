@@ -7,6 +7,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AuthProvider, useAuth } from "../lib/auth/AuthContext";
 import { queryClient } from "../lib/queryClient";
+import { SettingsProvider } from "../lib/settings/SettingsContext";
 import { ThemeProvider, useTheme } from "../lib/theme/ThemeContext";
 import { usePushNotifications } from "../lib/usePushNotifications";
 
@@ -20,18 +21,27 @@ function RootNavigator() {
 
   useEffect(() => {
     if (initializing) return;
-    // Routes reachable while signed out: sign-in, sign-up, and the emailed
-    // verification landing (user/verify) which establishes a session itself.
+    // Browsing (sets, cards, search) is public. Only account-scoped stack
+    // routes force sign-in; the auth-only tabs render their own inline
+    // sign-in prompt instead so the tab bar stays usable while signed out.
     const route = segments.join("/");
-    const onPublicRoute =
+    const onProtectedRoute =
+      segments[0] === "account" ||
+      segments[0] === "notifications" ||
+      segments[0] === "portfolio" ||
+      segments[0] === "transactions" ||
+      segments[0] === "transaction" ||
+      segments[0] === "buy-list-import" ||
+      segments[0] === "deck";
+    const onAuthEntryRoute =
       segments[0] === "sign-in" ||
       segments[0] === "sign-up" ||
       route === "user/verify";
-    if (!isAuthenticated && !onPublicRoute) {
+    if (!isAuthenticated && onProtectedRoute) {
       router.replace("/sign-in");
-    } else if (isAuthenticated && onPublicRoute) {
+    } else if (isAuthenticated && onAuthEntryRoute) {
       // Covers post-verification: once verify-email lands a session, leave the
-      // public route for the authenticated tabs.
+      // auth entry route for the tabs.
       router.replace("/");
     }
   }, [initializing, isAuthenticated, segments, router]);
@@ -76,6 +86,7 @@ function RootNavigator() {
           options={{ headerBackTitle: "Back" }}
         />
         <Stack.Screen name="account" options={{ headerBackTitle: "Back" }} />
+        <Stack.Screen name="settings" options={{ headerBackTitle: "Back" }} />
         <Stack.Screen name="privacy" options={{ headerBackTitle: "Back" }} />
         <Stack.Screen name="notifications" options={{ headerBackTitle: "Back" }} />
         <Stack.Screen
@@ -101,11 +112,13 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
-        <AuthProvider>
-          <SafeAreaProvider>
-            <RootNavigator />
-          </SafeAreaProvider>
-        </AuthProvider>
+        <SettingsProvider>
+          <AuthProvider>
+            <SafeAreaProvider>
+              <RootNavigator />
+            </SafeAreaProvider>
+          </AuthProvider>
+        </SettingsProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

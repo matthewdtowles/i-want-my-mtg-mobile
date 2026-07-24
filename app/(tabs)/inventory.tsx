@@ -1,11 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import {
   useInfiniteQuery,
+  useQuery,
   useQueryClient,
   type InfiniteData,
 } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -19,122 +20,112 @@ import {
 
 import {
   INVENTORY_KEY,
+  inventoryListKey,
   fetchInventory,
   saveInventory,
   deleteInventory,
 } from "../../lib/api/inventory";
+import {
+  PORTFOLIO_SUMMARY_KEY,
+  fetchPortfolioSummary,
+} from "../../lib/api/portfolio";
 import type { Page } from "../../lib/api/catalog";
 import { mapPageItems, nextPage } from "../../lib/pagination";
 import type { ApiInventoryItem } from "../../lib/api/types";
 import { CardQuantityRow } from "../../components/CardQuantityRow";
 import { Chip } from "../../components/Chip";
 import { ErrorState } from "../../components/ErrorState";
+import { SignInPrompt } from "../../components/SignInPrompt";
 import { formatPrice } from "../../lib/format";
+import { useAuth } from "../../lib/auth/AuthContext";
 import { useDebounce } from "../../lib/useDebounce";
 import { useDebouncedByKey } from "../../lib/useDebouncedByKey";
 import { useOptimisticMutation } from "../../lib/useOptimisticMutation";
+import { useSettings } from "../../lib/settings/SettingsContext";
 import { useTheme, useThemedStyles } from "../../lib/theme/ThemeContext";
 import type { ThemeColors } from "../../lib/theme/colors";
 
 type InventoryData = InfiniteData<Page<ApiInventoryItem>>;
 
-const KEY = INVENTORY_KEY;
-
 type SortKey = "name" | "set" | "price" | "qty";
 type Finish = "all" | "normal" | "foil";
 
-const SORTS: { key: SortKey; label: string }[] = [
-  { key: "name", label: "Name" },
-  { key: "set", label: "Set" },
-  { key: "price", label: "Price" },
-  { key: "qty", label: "Qty" },
+/** UI sort keys mapped to the backend's SortOptions values. */
+const SORTS: { key: SortKey; label: string; server: string }[] = [
+  { key: "name", label: "Name", server: "card.name" },
+  { key: "set", label: "Set", server: "card.setCode" },
+  { key: "price", label: "Price", server: "prices.normal" },
+  { key: "qty", label: "Qty", server: "inventory.quantity" },
 ];
 
 function sameRow(a: ApiInventoryItem, b: ApiInventoryItem): boolean {
   return a.cardId === b.cardId && a.isFoil === b.isFoil;
 }
 
-function unitPrice(item: ApiInventoryItem): number {
-  return (item.isFoil ? item.priceFoil : item.priceNormal) ?? 0;
+export default function InventoryScreen() {
+  const { isAuthenticated } = useAuth();
+  if (!isAuthenticated) {
+    return (
+      <SignInPrompt
+        title="Your inventory lives here"
+        message="Sign in to track the cards you own, their quantities, and what your collection is worth."
+      />
+    );
+  }
+  return <InventoryList />;
 }
 
-export default function InventoryScreen() {
+function InventoryList() {
   const { colors } = useTheme();
   const styles = useThemedStyles(createStyles);
   const queryClient = useQueryClient();
   const router = useRouter();
+  const { pageSize } = useSettings();
 
   const [search, setSearch] = useState("");
-  const q = useDebounce(search.trim().toLowerCase(), 250);
+  const q = useDebounce(search.trim(), 250);
   const [finish, setFinish] = useState<Finish>("all");
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortAsc, setSortAsc] = useState(true);
 
+  // Search, sort, and pagination all happen server-side now: the app only
+  // holds the pages the user has scrolled through, not the whole collection.
+  const listOpts = {
+    filter: q || undefined,
+    sort: SORTS.find((s) => s.key === sortKey)?.server,
+    ascend: sortAsc,
+    limit: pageSize,
+  };
+  const listKey = inventoryListKey(listOpts);
+
   const query = useInfiniteQuery({
-    queryKey: KEY,
-    queryFn: ({ pageParam }) => fetchInventory(pageParam),
+    queryKey: listKey,
+    queryFn: ({ pageParam }) => fetchInventory({ ...listOpts, page: pageParam }),
     initialPageParam: 1,
     getNextPageParam: nextPage,
   });
 
-  // Load the whole collection so search/sort and the summary totals are
-  // complete, not limited to the first page. FlatList still virtualizes rows.
-  useEffect(() => {
-    if (query.hasNextPage && !query.isFetchingNextPage) query.fetchNextPage();
-  }, [query.hasNextPage, query.isFetchingNextPage, query]);
+  // Collection-wide totals come from the portfolio summary (already computed
+  // server-side), not from summing loaded pages.
+  const summary = useQuery({
+    queryKey: PORTFOLIO_SUMMARY_KEY,
+    queryFn: fetchPortfolioSummary,
+  });
 
   const items = useMemo(
     () => query.data?.pages.flatMap((p) => p.items) ?? [],
     [query.data],
   );
+  const total = query.data?.pages[0]?.meta?.total;
 
-  const summary = useMemo(() => {
-    let qty = 0;
-    let value = 0;
-    const cardIds = new Set<string>();
-    for (const it of items) {
-      qty += it.quantity;
-      value += it.quantity * unitPrice(it);
-      cardIds.add(it.cardId);
-    }
-    // Distinct cards, not per-finish rows (a card owned in both finishes is one).
-    return { cards: cardIds.size, qty, value };
-  }, [items]);
-
-  const visible = useMemo(() => {
-    const filtered = items.filter((it) => {
-      if (finish === "normal" && it.isFoil) return false;
-      if (finish === "foil" && !it.isFoil) return false;
-      if (q) {
-        const hay = `${it.cardName ?? ""} ${it.setCode ?? ""} ${it.cardNumber ?? ""}`.toLowerCase();
-        if (!hay.includes(q)) return false;
-      }
-      return true;
-    });
-    const dir = sortAsc ? 1 : -1;
-    return filtered.sort((a, b) => {
-      let cmp = 0;
-      switch (sortKey) {
-        case "name":
-          cmp = (a.cardName ?? "").localeCompare(b.cardName ?? "");
-          break;
-        case "set":
-          cmp =
-            (a.setCode ?? "").localeCompare(b.setCode ?? "") ||
-            (a.cardNumber ?? "").localeCompare(b.cardNumber ?? "", undefined, {
-              numeric: true,
-            });
-          break;
-        case "price":
-          cmp = unitPrice(a) - unitPrice(b);
-          break;
-        case "qty":
-          cmp = a.quantity - b.quantity;
-          break;
-      }
-      return cmp * dir;
-    });
-  }, [items, q, finish, sortKey, sortAsc]);
+  // The finish chips filter the loaded rows (the API has no finish filter).
+  const visible = useMemo(
+    () =>
+      finish === "all"
+        ? items
+        : items.filter((it) => (finish === "foil" ? it.isFoil : !it.isFoil)),
+    [items, finish],
+  );
 
   // The write is debounced (below), so the mutation only fires with the final
   // absolute quantity. It carries no optimistic `apply` of its own - the tap
@@ -144,11 +135,11 @@ export default function InventoryScreen() {
     InventoryData,
     { item: ApiInventoryItem; quantity: number }
   >({
-    queryKey: KEY,
+    queryKey: listKey,
     mutationFn: ({ item, quantity }) =>
       saveInventory([{ cardId: item.cardId, quantity, isFoil: item.isFoil }]),
     errorTitle: "Couldn't update quantity",
-    invalidates: [KEY],
+    invalidates: [INVENTORY_KEY],
   });
 
   const writeQuantity = useDebouncedByKey(
@@ -159,10 +150,10 @@ export default function InventoryScreen() {
   // rendered row, which can lag a rapid double-tap), update the cache instantly
   // for a responsive UI, and debounce the server write.
   function step(item: ApiInventoryItem, delta: number) {
-    const data = queryClient.getQueryData<InventoryData>(KEY);
+    const data = queryClient.getQueryData<InventoryData>(listKey);
     const current = data?.pages.flatMap((p) => p.items).find((it) => sameRow(it, item))?.quantity;
     const quantity = Math.max(1, (current ?? item.quantity) + delta);
-    queryClient.setQueryData<InventoryData>(KEY, (old) =>
+    queryClient.setQueryData<InventoryData>(listKey, (old) =>
       mapPageItems(old, (items) =>
         items.map((it) => (sameRow(it, item) ? { ...it, quantity } : it)),
       ),
@@ -171,12 +162,12 @@ export default function InventoryScreen() {
   }
 
   const remove = useOptimisticMutation<InventoryData, ApiInventoryItem>({
-    queryKey: KEY,
+    queryKey: listKey,
     mutationFn: (item) => deleteInventory(item.cardId, item.isFoil),
     apply: (old, item) =>
       mapPageItems(old, (items) => items.filter((it) => !sameRow(it, item))),
     errorTitle: "Couldn't remove card",
-    invalidates: [KEY],
+    invalidates: [INVENTORY_KEY],
   });
 
   const hub = (
@@ -200,14 +191,6 @@ export default function InventoryScreen() {
     </View>
   );
 
-  if (query.isPending) {
-    return (
-      <View style={styles.screen}>
-        {hub}
-        <ActivityIndicator style={styles.center} size="large" color={colors.accent} />
-      </View>
-    );
-  }
   if (query.isError) {
     return (
       <View style={styles.screen}>
@@ -221,7 +204,9 @@ export default function InventoryScreen() {
       </View>
     );
   }
-  if (items.length === 0) {
+
+  // Empty collection (not just an empty filter result): no query and no rows.
+  if (!query.isPending && !q && items.length === 0) {
     return (
       <View style={styles.screen}>
         {hub}
@@ -236,17 +221,19 @@ export default function InventoryScreen() {
     );
   }
 
-  const loadingMore = query.hasNextPage || query.isFetchingNextPage;
+  const summaryLine = summary.data
+    ? `${summary.data.totalCards} card${summary.data.totalCards === 1 ? "" : "s"} · ${
+        summary.data.totalQuantity
+      } total · ${formatPrice(summary.data.totalValue)}`
+    : total != null
+      ? `${total} item${total === 1 ? "" : "s"}`
+      : " ";
 
   return (
     <View style={styles.screen}>
       {hub}
       <View style={styles.controls}>
-        <Text style={styles.summary}>
-          {summary.cards} card{summary.cards === 1 ? "" : "s"} · {summary.qty} total ·{" "}
-          {formatPrice(summary.value)}
-          {loadingMore ? " · loading…" : ""}
-        </Text>
+        <Text style={styles.summary}>{summaryLine}</Text>
 
         <TextInput
           style={styles.search}
@@ -287,29 +274,44 @@ export default function InventoryScreen() {
         </View>
       </View>
 
-      <FlatList
-        style={styles.list}
-        data={visible}
-        keyExtractor={(it) => `${it.cardId}-${it.isFoil}`}
-        renderItem={({ item }) => (
-          <CardQuantityRow
-            item={item}
-            onIncrement={() => step(item, 1)}
-            onDecrement={() => step(item, -1)}
-            onRemove={() => remove.mutate(item)}
-          />
-        )}
-        refreshControl={
-          <RefreshControl
-            refreshing={query.isRefetching && !query.isFetchingNextPage}
-            onRefresh={() => query.refetch()}
-            tintColor={colors.accent}
-          />
-        }
-        ListEmptyComponent={
-          <Text style={styles.noMatch}>No cards match your filters.</Text>
-        }
-      />
+      {query.isPending ? (
+        <ActivityIndicator style={styles.center} size="large" color={colors.accent} />
+      ) : (
+        <FlatList
+          style={styles.list}
+          data={visible}
+          keyExtractor={(it) => `${it.cardId}-${it.isFoil}`}
+          renderItem={({ item }) => (
+            <CardQuantityRow
+              item={item}
+              onIncrement={() => step(item, 1)}
+              onDecrement={() => step(item, -1)}
+              onRemove={() => remove.mutate(item)}
+            />
+          )}
+          onEndReached={() => query.hasNextPage && query.fetchNextPage()}
+          onEndReachedThreshold={0.5}
+          refreshControl={
+            <RefreshControl
+              refreshing={query.isRefetching && !query.isFetchingNextPage}
+              onRefresh={() => query.refetch()}
+              tintColor={colors.accent}
+            />
+          }
+          ListEmptyComponent={
+            <Text style={styles.noMatch}>No cards match your filters.</Text>
+          }
+          ListFooterComponent={
+            query.isFetchingNextPage ? (
+              <ActivityIndicator style={styles.footer} color={colors.accent} />
+            ) : total != null && items.length < total ? (
+              <Text style={styles.footerHint}>
+                Showing {items.length} of {total} · scroll for more
+              </Text>
+            ) : null
+          }
+        />
+      )}
     </View>
   );
 }
@@ -366,6 +368,13 @@ const createStyles = (colors: ThemeColors) =>
       backgroundColor: colors.surface,
     },
     filterRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+    footer: { marginVertical: 16 },
+    footerHint: {
+      textAlign: "center",
+      marginVertical: 14,
+      fontSize: 12,
+      color: colors.textMuted,
+    },
     noMatch: { textAlign: "center", marginTop: 32, color: colors.textMuted },
     empty: { fontSize: 16, fontWeight: "600", color: colors.textSecondary },
     emptyHint: {

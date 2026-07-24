@@ -13,7 +13,7 @@ import {
 } from "react-native";
 
 import {
-  SETS_KEY,
+  setsKey,
   cardsSearchKey,
   fetchSets,
   searchCards,
@@ -23,6 +23,7 @@ import { nextPage } from "../../lib/pagination";
 import type { ApiCard, ApiSet } from "../../lib/api/types";
 import { CardListItem } from "../../components/CardListItem";
 import { ErrorState } from "../../components/ErrorState";
+import { useSettings } from "../../lib/settings/SettingsContext";
 import { useDebounce } from "../../lib/useDebounce";
 import { useTheme, useThemedStyles } from "../../lib/theme/ThemeContext";
 import type { ThemeColors } from "../../lib/theme/colors";
@@ -30,13 +31,14 @@ import type { ThemeColors } from "../../lib/theme/colors";
 export default function BrowseScreen() {
   const { colors } = useTheme();
   const styles = useThemedStyles(createStyles);
+  const { pageSize } = useSettings();
   const [query, setQuery] = useState("");
   const q = useDebounce(query.trim(), 350);
   const searching = q.length > 0;
 
   const setsQuery = useInfiniteQuery({
-    queryKey: SETS_KEY,
-    queryFn: ({ pageParam }) => fetchSets(pageParam),
+    queryKey: setsKey(pageSize),
+    queryFn: ({ pageParam }) => fetchSets(pageParam, pageSize),
     initialPageParam: 1,
     getNextPageParam: nextPage,
     enabled: !searching,

@@ -15,9 +15,11 @@ import { INVENTORY_KEY } from "../lib/api/inventory";
 import { PORTFOLIO_KEY } from "../lib/api/portfolio";
 import {
   TRANSACTIONS_KEY,
+  transactionsListKey,
   deleteTransaction,
   fetchTransactions,
 } from "../lib/api/transactions";
+import { useSettings } from "../lib/settings/SettingsContext";
 import type { Page } from "../lib/api/catalog";
 import { mapPageItems, nextPage } from "../lib/pagination";
 import type { ApiTransaction } from "../lib/api/types";
@@ -27,16 +29,17 @@ import { useOptimisticMutation } from "../lib/useOptimisticMutation";
 import { useTheme, useThemedStyles } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
 
-const KEY = TRANSACTIONS_KEY;
 type TxData = InfiniteData<Page<ApiTransaction>>;
 
 export default function TransactionsScreen() {
   const { colors } = useTheme();
   const styles = useThemedStyles(createStyles);
   const router = useRouter();
+  const { pageSize } = useSettings();
+  const KEY = transactionsListKey(pageSize);
   const query = useInfiniteQuery({
     queryKey: KEY,
-    queryFn: ({ pageParam }) => fetchTransactions(pageParam),
+    queryFn: ({ pageParam }) => fetchTransactions(pageParam, pageSize),
     initialPageParam: 1,
     getNextPageParam: nextPage,
   });
@@ -52,7 +55,8 @@ export default function TransactionsScreen() {
     apply: (old, tx) => mapPageItems(old, (list) => list.filter((t) => t.id !== tx.id)),
     errorTitle: "Couldn't delete",
     // A deleted transaction re-syncs inventory and shifts portfolio totals.
-    invalidates: [KEY, INVENTORY_KEY, PORTFOLIO_KEY],
+    // The TRANSACTIONS_KEY prefix covers every page-size variant of the list.
+    invalidates: [TRANSACTIONS_KEY, INVENTORY_KEY, PORTFOLIO_KEY],
   });
 
   function openActions(tx: ApiTransaction) {

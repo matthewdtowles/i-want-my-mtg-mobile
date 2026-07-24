@@ -14,11 +14,26 @@ import {
 import { DECKS_KEY, fetchDecks } from "../../lib/api/decks";
 import type { ApiDeckSummary } from "../../lib/api/types";
 import { ErrorState } from "../../components/ErrorState";
+import { SignInPrompt } from "../../components/SignInPrompt";
 import { formatDeckFormat, formatPrice } from "../../lib/format";
+import { useAuth } from "../../lib/auth/AuthContext";
 import { useTheme, useThemedStyles } from "../../lib/theme/ThemeContext";
 import type { ThemeColors } from "../../lib/theme/colors";
 
 export default function DecksScreen() {
+  const { isAuthenticated } = useAuth();
+  if (!isAuthenticated) {
+    return (
+      <SignInPrompt
+        title="Build and price decks"
+        message="Sign in to create decks, import decklists, and see what each deck is worth."
+      />
+    );
+  }
+  return <DecksList />;
+}
+
+function DecksList() {
   const { colors } = useTheme();
   const styles = useThemedStyles(createStyles);
   const router = useRouter();

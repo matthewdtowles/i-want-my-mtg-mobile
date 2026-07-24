@@ -9,6 +9,26 @@ import type {
 
 /** The inventory list. */
 export const INVENTORY_KEY = ["inventory"] as const;
+
+/**
+ * Server-side list options (the API sorts/filters/pages; the app no longer
+ * drains every page client-side). `sort` takes the backend's SortOptions
+ * values, e.g. "card.name", "prices.normal", "inventory.quantity".
+ */
+export interface InventoryListOptions {
+  page?: number;
+  limit?: number;
+  filter?: string;
+  sort?: string;
+  ascend?: boolean;
+}
+
+/**
+ * One cached list per filter/sort/limit combination. Kept under the
+ * `["inventory"]` prefix so existing invalidations refresh every variant.
+ */
+export const inventoryListKey = (opts: Omit<InventoryListOptions, "page">) =>
+  ["inventory", "list", opts] as const;
 /**
  * Per-card owned quantities. Kept under the `["inventory"]` prefix so the
  * existing `invalidateQueries({ queryKey: INVENTORY_KEY })` calls cover it.
@@ -23,12 +43,22 @@ export const inventoryQuantitiesKey = (cardId: string) =>
 export const deckOwnedKey = (deckId: number, cardIds: string[]) =>
   ["inventory", "quantities", "deck", deckId, cardIds] as const;
 
-export async function fetchInventory(
+export async function fetchInventory({
   page = 1,
   limit = 50,
-): Promise<Page<ApiInventoryItem>> {
+  filter,
+  sort,
+  ascend,
+}: InventoryListOptions = {}): Promise<Page<ApiInventoryItem>> {
   const { data, error, response } = await api.GET("/api/v1/inventory", {
-    params: { query: { page, limit } },
+    params: {
+      query: {
+        page,
+        limit,
+        ...(filter ? { filter } : {}),
+        ...(sort ? { sort, ascend } : {}),
+      },
+    },
   });
   if (!response.ok) throw new Error(errMessage(error, "Failed to load inventory."));
   return { items: data?.data ?? [], meta: data?.meta };

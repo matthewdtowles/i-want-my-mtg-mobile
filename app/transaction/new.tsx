@@ -56,12 +56,15 @@ export default function NewTransactionScreen() {
   const queryClient = useQueryClient();
 
   // Read once on mount: the row can't change underneath this modal, and the
-  // form state below must not be re-seeded by a background refetch.
+  // form state below must not be re-seeded by a background refetch. The list is
+  // cached per page size, so search the TRANSACTIONS_KEY prefix.
   const [tx] = useState<ApiTransaction | undefined>(() =>
     editing
       ? queryClient
-          .getQueryData<InfiniteData<Page<ApiTransaction>>>(TRANSACTIONS_KEY)
-          ?.pages.flatMap((p) => p.items)
+          .getQueriesData<InfiniteData<Page<ApiTransaction>>>({
+            queryKey: TRANSACTIONS_KEY,
+          })
+          .flatMap(([, data]) => data?.pages.flatMap((p) => p.items) ?? [])
           .find((t) => String(t.id) === editId)
       : undefined,
   );

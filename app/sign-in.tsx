@@ -50,6 +50,18 @@ export default function SignInScreen() {
       style={[styles.container, { paddingTop: insets.top + 24 }]}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
+      {router.canGoBack() ? (
+        <Pressable
+          style={styles.close}
+          hitSlop={12}
+          onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel="Back to browsing"
+        >
+          <Text style={styles.closeText}>✕</Text>
+        </Pressable>
+      ) : null}
+
       <View style={styles.header}>
         <Image
           source={require("../assets/icon.png")}
@@ -127,6 +139,11 @@ const createStyles = (colors: ThemeColors) =>
       gap: 8,
       marginBottom: 8,
     },
+    close: {
+      alignSelf: "flex-end",
+      paddingHorizontal: 4,
+    },
+    closeText: { fontSize: 20, color: colors.textMuted },
     logo: {
       width: 96,
       height: 96,

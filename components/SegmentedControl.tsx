@@ -14,9 +14,9 @@ const SIZES = {
   large: { paddingVertical: 12, fontSize: 15 },
 } as const;
 
-type Option<T extends string> = { label: string; value: T };
+type Option<T extends string | number> = { label: string; value: T };
 
-type Props<T extends string> = {
+type Props<T extends string | number> = {
   options: readonly Option<T>[];
   value: T;
   onChange: (value: T) => void;
@@ -27,7 +27,7 @@ type Props<T extends string> = {
   style?: StyleProp<ViewStyle>;
 };
 
-export function SegmentedControl<T extends string>({
+export function SegmentedControl<T extends string | number>({
   options,
   value,
   onChange,
@@ -44,7 +44,7 @@ export function SegmentedControl<T extends string>({
         const active = value === opt.value;
         return (
           <Pressable
-            key={opt.value}
+            key={String(opt.value)}
             style={[
               hug ? styles.btnHug : styles.btn,
               { paddingVertical: s.paddingVertical },
