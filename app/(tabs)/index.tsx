@@ -1,4 +1,4 @@
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -18,6 +18,10 @@ import {
   type Page,
 } from "../../lib/api/catalog";
 import { nextPage } from "../../lib/pagination";
+import {
+  PORTFOLIO_SUMMARY_KEY,
+  fetchPortfolioSummary,
+} from "../../lib/api/portfolio";
 import type { ApiCard, ApiSet } from "../../lib/api/types";
 import { CardListItem } from "../../components/CardListItem";
 import { CollectionHero } from "../../components/CollectionHero";
@@ -102,14 +106,23 @@ function SetGallery({
     [query.data],
   );
 
-  // Signed out, the newest set is the full-width hero; signed in, the hero
-  // slot shows your collection stats instead and every set stays in the grid.
-  const featured = !isAuthenticated ? sets[0] : undefined;
+  // Signed in with a portfolio, the hero slot shows your collection stats and
+  // every set stays in the grid. Signed out — or before a portfolio exists
+  // (the summary resolves null) — the newest set is the full-width hero.
+  const summary = useQuery({
+    queryKey: PORTFOLIO_SUMMARY_KEY,
+    queryFn: fetchPortfolioSummary,
+    enabled: isAuthenticated,
+  });
+  const featured =
+    !isAuthenticated || (summary.isSuccess && summary.data == null)
+      ? sets[0]
+      : undefined;
   const gridSets = featured ? sets.slice(1) : sets;
 
   const header = (
     <View style={styles.galleryHeader}>
-      {isAuthenticated ? <CollectionHero /> : null}
+      {isAuthenticated && !featured ? <CollectionHero /> : null}
       {featured ? <SetTile set={featured} hero /> : null}
       <Text style={styles.sectionLabel}>SETS</Text>
     </View>

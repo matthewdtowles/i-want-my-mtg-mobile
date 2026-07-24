@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { cardImageUrl } from "./images";
+import { cardImageUrl, setSymbolUrl } from "./images";
 
 describe("cardImageUrl", () => {
   it("returns null for a missing source", () => {
@@ -27,5 +27,18 @@ describe("cardImageUrl", () => {
       cardImageUrl(full, "large"),
       "https://cards.scryfall.io/large/front/a/b/abc123.jpg",
     );
+  });
+});
+
+describe("setSymbolUrl", () => {
+  it("returns null for a missing code", () => {
+    assert.equal(setSymbolUrl(null), null);
+    assert.equal(setSymbolUrl(undefined), null);
+    assert.equal(setSymbolUrl(""), null);
+  });
+
+  it("builds the lowercased Scryfall SVG URL", () => {
+    assert.equal(setSymbolUrl("MH3"), "https://svgs.scryfall.io/sets/mh3.svg");
+    assert.equal(setSymbolUrl("neo"), "https://svgs.scryfall.io/sets/neo.svg");
   });
 });

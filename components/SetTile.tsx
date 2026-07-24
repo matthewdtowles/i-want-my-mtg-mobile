@@ -22,6 +22,7 @@ export function SetTile({ set, hero = false }: { set: ApiSet; hero?: boolean }) 
     queryKey: setCoverKey(set.code),
     queryFn: () => fetchSetCover(set.code),
     staleTime: Infinity,
+    gcTime: Infinity,
   });
   const uri = cardImageUrl(cover.data, "art_crop");
 
