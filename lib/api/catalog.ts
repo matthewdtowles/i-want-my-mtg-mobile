@@ -55,6 +55,20 @@ export async function searchCards(
   return { items: data?.data ?? [], meta: data?.meta };
 }
 
+/** One set's detail (name, sizes, symbol, owned stats when signed in). */
+export const setKey = (code: string | undefined) => ["set", code, "detail"] as const;
+
+export async function fetchSet(code: string): Promise<ApiSet> {
+  const { data, error, response } = await api.GET("/api/v1/sets/{code}", {
+    params: { path: { code } },
+  });
+  if (response.status === 404) throw new Error("Set not found.");
+  if (!response.ok) throw new Error(errMessage(error, "Failed to load set."));
+  const set = data?.data;
+  if (!set) throw new Error("Set not found.");
+  return set;
+}
+
 /** A set's cover art: the first card's image tail (rendered as an art crop). */
 export const setCoverKey = (code: string) => ["set", code, "cover"] as const;
 
