@@ -7,9 +7,11 @@ import type {
   ApiSet,
 } from "./types";
 
-/** Browse + card catalog query keys. */
-export const SETS_KEY = ["sets"] as const;
-export const setCardsKey = (code: string | undefined) => ["set", code, "cards"] as const;
+/** Browse + card catalog query keys. Lists include the page size so a
+ * settings change starts a fresh, consistently-sized sequence of pages. */
+export const setsKey = (limit: number) => ["sets", limit] as const;
+export const setCardsKey = (code: string | undefined, limit: number) =>
+  ["set", code, "cards", limit] as const;
 export const cardsSearchKey = (q: string) => ["cards", "search", q] as const;
 export const cardKey = (setCode: string | undefined, number: string | undefined) =>
   ["card", setCode, number] as const;

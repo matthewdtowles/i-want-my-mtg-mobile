@@ -19,6 +19,7 @@ import { AddToBuyList } from "../../../components/AddToBuyList";
 import { CardPriceAlert } from "../../../components/CardPriceAlert";
 import { CardPriceHistory } from "../../../components/CardPriceHistory";
 import { ErrorState } from "../../../components/ErrorState";
+import { useAuth } from "../../../lib/auth/AuthContext";
 import { useTheme, useThemedStyles } from "../../../lib/theme/ThemeContext";
 import type { ThemeColors } from "../../../lib/theme/colors";
 
@@ -32,6 +33,7 @@ export default function CardDetailScreen() {
   const setCode = firstParam(params.setCode);
   const number = firstParam(params.number);
   const { width } = useWindowDimensions();
+  const { isAuthenticated } = useAuth();
 
   const query = useQuery({
     queryKey: cardKey(setCode, number),
@@ -86,19 +88,33 @@ export default function CardDetailScreen() {
         <Price label="Foil" value={card.prices?.foil} show={card.hasFoil} styles={styles} />
       </View>
 
-      <AddToInventory
-        cardId={card.id}
-        hasNonFoil={card.hasNonFoil}
-        hasFoil={card.hasFoil}
-      />
+      {isAuthenticated ? (
+        <>
+          <AddToInventory
+            cardId={card.id}
+            hasNonFoil={card.hasNonFoil}
+            hasFoil={card.hasFoil}
+          />
 
-      <AddToBuyList
-        cardId={card.id}
-        hasNonFoil={card.hasNonFoil}
-        hasFoil={card.hasFoil}
-      />
+          <AddToBuyList
+            cardId={card.id}
+            hasNonFoil={card.hasNonFoil}
+            hasFoil={card.hasFoil}
+          />
 
-      <CardPriceAlert cardId={card.id} />
+          <CardPriceAlert cardId={card.id} />
+        </>
+      ) : (
+        <Link href="/sign-in" asChild>
+          <Pressable style={styles.signInCard} accessibilityRole="button">
+            <Text style={styles.signInTitle}>Track this card</Text>
+            <Text style={styles.signInText}>
+              Sign in to add it to your inventory or buy-list, set price alerts,
+              and log trades.
+            </Text>
+          </Pressable>
+        </Link>
+      )}
 
       <CardPriceHistory
         cardId={card.id}
@@ -106,24 +122,26 @@ export default function CardDetailScreen() {
         hasFoil={card.hasFoil}
       />
 
-      <Link
-        href={{
-          pathname: "/transaction/new",
-          params: {
-            cardId: card.id,
-            name: card.name,
-            setCode: card.setCode,
-            number: card.number,
-            hasFoil: String(card.hasFoil),
-            hasNonFoil: String(card.hasNonFoil),
-          },
-        }}
-        asChild
-      >
-        <Pressable style={styles.logBtn}>
-          <Text style={styles.logBtnText}>Log a transaction</Text>
-        </Pressable>
-      </Link>
+      {isAuthenticated ? (
+        <Link
+          href={{
+            pathname: "/transaction/new",
+            params: {
+              cardId: card.id,
+              name: card.name,
+              setCode: card.setCode,
+              number: card.number,
+              hasFoil: String(card.hasFoil),
+              hasNonFoil: String(card.hasNonFoil),
+            },
+          }}
+          asChild
+        >
+          <Pressable style={styles.logBtn}>
+            <Text style={styles.logBtnText}>Log a transaction</Text>
+          </Pressable>
+        </Link>
+      ) : null}
 
       {card.oracleText ? (
         <Text style={styles.oracle}>{card.oracleText}</Text>
@@ -178,6 +196,17 @@ const createStyles = (colors: ThemeColors) =>
     priceValue: { fontSize: 18, fontWeight: "700", color: colors.success, marginTop: 2 },
     oracle: { fontSize: 15, lineHeight: 22, marginTop: 8, color: colors.textPrimary },
     artist: { fontSize: 13, color: colors.textMuted, marginTop: 12 },
+    signInCard: {
+      marginTop: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 12,
+      backgroundColor: colors.surfaceAlt,
+      padding: 14,
+      gap: 4,
+    },
+    signInTitle: { fontSize: 15, fontWeight: "700", color: colors.textPrimary },
+    signInText: { fontSize: 13, color: colors.textMuted, lineHeight: 18 },
     logBtn: {
       marginTop: 12,
       borderWidth: 1,

@@ -9,6 +9,10 @@ import type {
 
 export const TRANSACTIONS_KEY = ["transactions"] as const;
 
+/** The paged list, keyed by page size (under the invalidation prefix above). */
+export const transactionsListKey = (limit: number) =>
+  ["transactions", "list", limit] as const;
+
 export async function fetchTransactions(
   page = 1,
   limit = 50,

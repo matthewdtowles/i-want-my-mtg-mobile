@@ -5,12 +5,27 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { BuyListView } from "../../components/BuyListView";
 import { PriceAlertsView } from "../../components/PriceAlertsView";
 import { SegmentedControl } from "../../components/SegmentedControl";
+import { SignInPrompt } from "../../components/SignInPrompt";
+import { useAuth } from "../../lib/auth/AuthContext";
 import { useThemedStyles } from "../../lib/theme/ThemeContext";
 import type { ThemeColors } from "../../lib/theme/colors";
 
 type Tab = "buy" | "alerts";
 
 export default function WatchlistScreen() {
+  const { isAuthenticated } = useAuth();
+  if (!isAuthenticated) {
+    return (
+      <SignInPrompt
+        title="Watch prices like a hawk"
+        message="Sign in to keep a buy-list and get alerts when a card hits your target price."
+      />
+    );
+  }
+  return <WatchlistTabs />;
+}
+
+function WatchlistTabs() {
   const styles = useThemedStyles(createStyles);
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("buy");

@@ -13,19 +13,12 @@ import {
 
 import { USER_PROFILE_KEY, deleteAccount, fetchProfile } from "../lib/api/user";
 import { ErrorState } from "../components/ErrorState";
-import { SegmentedControl } from "../components/SegmentedControl";
 import { useAuth } from "../lib/auth/AuthContext";
-import { useTheme, useThemedStyles, type ThemeMode } from "../lib/theme/ThemeContext";
+import { useTheme, useThemedStyles } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
 
-const APPEARANCE: { label: string; value: ThemeMode }[] = [
-  { label: "System", value: "system" },
-  { label: "Light", value: "light" },
-  { label: "Dark", value: "dark" },
-];
-
 export default function AccountScreen() {
-  const { colors, mode, setMode } = useTheme();
+  const { colors } = useTheme();
   const styles = useThemedStyles(createStyles);
   const { signOut } = useAuth();
   const router = useRouter();
@@ -107,10 +100,15 @@ export default function AccountScreen() {
         )}
       </View>
 
-      <Text style={styles.sectionLabel}>APPEARANCE</Text>
-      <SegmentedControl options={APPEARANCE} value={mode} onChange={setMode} size="large" />
-
       <Text style={styles.sectionLabel}>ACTIONS</Text>
+      <Pressable
+        style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+        onPress={() => router.push("/settings")}
+        accessibilityRole="button"
+      >
+        <Text style={styles.rowText}>Settings</Text>
+        <Text style={styles.rowHint}>›</Text>
+      </Pressable>
       <Pressable
         style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
         onPress={confirmSignOut}

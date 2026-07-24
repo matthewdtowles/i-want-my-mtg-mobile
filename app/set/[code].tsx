@@ -13,6 +13,7 @@ import {
 } from "react-native";
 
 import { setCardsKey, fetchSetCards } from "../../lib/api/catalog";
+import { useSettings } from "../../lib/settings/SettingsContext";
 import { firstParam } from "../../lib/params";
 import { nextPage } from "../../lib/pagination";
 import { INVENTORY_KEY , bulkAddToInventory } from "../../lib/api/inventory";
@@ -20,6 +21,7 @@ import type { ApiCard } from "../../lib/api/types";
 import { CardListItem } from "../../components/CardListItem";
 import { ErrorState } from "../../components/ErrorState";
 import { BulkAddBar } from "../../components/BulkAddBar";
+import { useAuth } from "../../lib/auth/AuthContext";
 import { useTheme, useThemedStyles } from "../../lib/theme/ThemeContext";
 import type { ThemeColors } from "../../lib/theme/colors";
 
@@ -29,6 +31,8 @@ export default function SetDetailScreen() {
   const queryClient = useQueryClient();
   const params = useLocalSearchParams<{ code: string | string[] }>();
   const code = firstParam(params.code);
+  const { pageSize } = useSettings();
+  const { isAuthenticated } = useAuth();
 
   // Multi-select state: cardId -> card, so we know each card's finish support.
   const [selectMode, setSelectMode] = useState(false);
@@ -36,8 +40,8 @@ export default function SetDetailScreen() {
   const selectedCards = Object.values(selected);
 
   const query = useInfiniteQuery({
-    queryKey: setCardsKey(code),
-    queryFn: ({ pageParam }) => fetchSetCards(code as string, pageParam),
+    queryKey: setCardsKey(code, pageSize),
+    queryFn: ({ pageParam }) => fetchSetCards(code as string, pageParam, pageSize),
     initialPageParam: 1,
     getNextPageParam: nextPage,
     enabled: !!code,
@@ -110,7 +114,8 @@ export default function SetDetailScreen() {
     });
   }
 
-  const headerButton = code
+  // Bulk-add writes to the inventory, so the Select affordance is auth-only.
+  const headerButton = code && isAuthenticated
     ? () => (
         <Pressable
           onPress={() => (selectMode ? exitSelect() : setSelectMode(true))}
