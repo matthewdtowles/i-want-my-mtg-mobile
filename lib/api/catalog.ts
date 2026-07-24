@@ -55,6 +55,14 @@ export async function searchCards(
   return { items: data?.data ?? [], meta: data?.meta };
 }
 
+/** A set's cover art: the first card's image tail (rendered as an art crop). */
+export const setCoverKey = (code: string) => ["set", code, "cover"] as const;
+
+export async function fetchSetCover(code: string): Promise<string | null> {
+  const page = await fetchSetCards(code, 1, 1);
+  return page.items[0]?.imgSrc ?? null;
+}
+
 export async function fetchCard(
   setCode: string,
   setNumber: string,

@@ -1,10 +1,8 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { Link } from "expo-router";
 import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  Pressable,
   RefreshControl,
   StyleSheet,
   Text,
@@ -22,7 +20,10 @@ import {
 import { nextPage } from "../../lib/pagination";
 import type { ApiCard, ApiSet } from "../../lib/api/types";
 import { CardListItem } from "../../components/CardListItem";
+import { CollectionHero } from "../../components/CollectionHero";
 import { ErrorState } from "../../components/ErrorState";
+import { SetTile } from "../../components/SetTile";
+import { useAuth } from "../../lib/auth/AuthContext";
 import { useSettings } from "../../lib/settings/SettingsContext";
 import { useDebounce } from "../../lib/useDebounce";
 import { useTheme, useThemedStyles } from "../../lib/theme/ThemeContext";
@@ -80,13 +81,13 @@ export default function BrowseScreen() {
       ) : searching ? (
         <CardResults query={cardsQuery} styles={styles} accent={colors.accent} />
       ) : (
-        <SetResults query={setsQuery} styles={styles} accent={colors.accent} />
+        <SetGallery query={setsQuery} styles={styles} accent={colors.accent} />
       )}
     </View>
   );
 }
 
-function SetResults({
+function SetGallery({
   query,
   styles,
   accent,
@@ -95,15 +96,34 @@ function SetResults({
   styles: ReturnType<typeof createStyles>;
   accent: string;
 }) {
+  const { isAuthenticated } = useAuth();
   const sets = useMemo(
     () => query.data?.pages.flatMap((p) => p.items) ?? [],
     [query.data],
   );
+
+  // Signed out, the newest set is the full-width hero; signed in, the hero
+  // slot shows your collection stats instead and every set stays in the grid.
+  const featured = !isAuthenticated ? sets[0] : undefined;
+  const gridSets = featured ? sets.slice(1) : sets;
+
+  const header = (
+    <View style={styles.galleryHeader}>
+      {isAuthenticated ? <CollectionHero /> : null}
+      {featured ? <SetTile set={featured} hero /> : null}
+      <Text style={styles.sectionLabel}>SETS</Text>
+    </View>
+  );
+
   return (
     <FlatList
-      data={sets}
+      data={gridSets}
       keyExtractor={(s) => s.code}
-      renderItem={({ item }) => <SetRow set={item} styles={styles} />}
+      numColumns={2}
+      columnWrapperStyle={styles.galleryRow}
+      contentContainerStyle={styles.galleryContent}
+      renderItem={({ item }) => <SetTile set={item} />}
+      ListHeaderComponent={header}
       onEndReached={() => query.hasNextPage && query.fetchNextPage()}
       onEndReachedThreshold={0.5}
       refreshControl={
@@ -159,32 +179,6 @@ function CardResults({
   );
 }
 
-function SetRow({
-  set,
-  styles,
-}: {
-  set: ApiSet;
-  styles: ReturnType<typeof createStyles>;
-}) {
-  return (
-    <Link href={{ pathname: "/set/[code]", params: { code: set.code } }} asChild>
-      <Pressable style={styles.setRow}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.setName} numberOfLines={1}>
-            {set.name}
-          </Text>
-          <Text style={styles.setSub}>
-            {set.code.toUpperCase()}
-            {set.releaseDate ? ` · ${set.releaseDate.slice(0, 4)}` : ""}
-            {set.baseSize != null ? ` · ${set.baseSize} cards` : ""}
-          </Text>
-        </View>
-        <Text style={styles.chevron}>{"›"}</Text>
-      </Pressable>
-    </Link>
-  );
-}
-
 const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
@@ -203,15 +197,14 @@ const createStyles = (colors: ThemeColors) =>
     center: { marginTop: 40 },
     footer: { marginVertical: 16 },
     message: { textAlign: "center", marginTop: 40, color: colors.textMuted },
-    setRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      paddingVertical: 12,
-      paddingHorizontal: 16,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: colors.border,
+    galleryContent: { paddingHorizontal: 16, paddingBottom: 24 },
+    galleryHeader: { gap: 12, marginBottom: 12, marginTop: 4 },
+    galleryRow: { gap: 12, marginBottom: 12 },
+    sectionLabel: {
+      fontSize: 12,
+      fontWeight: "700",
+      letterSpacing: 0.8,
+      color: colors.textMuted,
+      marginTop: 4,
     },
-    setName: { fontSize: 16, fontWeight: "600", color: colors.textPrimary },
-    setSub: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
-    chevron: { fontSize: 22, color: colors.chevron, marginLeft: 8 },
   });
