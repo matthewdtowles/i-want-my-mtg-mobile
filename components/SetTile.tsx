@@ -13,9 +13,18 @@ import { SetSymbol } from "./SetSymbol";
 /**
  * A gallery tile for one set: the set's cover art (its first card's art crop)
  * as the background, with the expansion symbol and name over a bottom scrim.
- * `hero` renders the larger featured variant used at the top of the gallery.
+ * `hero` renders the larger banner variant. `newest` adds the "NEWEST SET"
+ * badge — the gallery flags only the first set with it.
  */
-export function SetTile({ set, hero = false }: { set: ApiSet; hero?: boolean }) {
+export function SetTile({
+  set,
+  hero = false,
+  newest = false,
+}: {
+  set: ApiSet;
+  hero?: boolean;
+  newest?: boolean;
+}) {
   const styles = useThemedStyles(createStyles);
 
   const cover = useQuery({
@@ -47,7 +56,7 @@ export function SetTile({ set, hero = false }: { set: ApiSet; hero?: boolean }) 
           contentFit="cover"
           transition={200}
         />
-        {hero ? (
+        {newest ? (
           <View style={styles.newBadge}>
             <Text style={styles.newBadgeText}>NEWEST SET</Text>
           </View>

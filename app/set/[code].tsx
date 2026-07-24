@@ -268,6 +268,9 @@ export default function SetDetailScreen() {
         />
       ) : listMode ? (
         <FlatList
+          // Distinct key per view: without it React reuses this FlatList when
+          // toggling grid↔list and RN throws on the numColumns change.
+          key="list"
           style={styles.list}
           data={cards}
           keyExtractor={(c) => c.id}
@@ -292,6 +295,7 @@ export default function SetDetailScreen() {
         />
       ) : (
         <FlatList
+          key="grid"
           style={styles.list}
           data={cards}
           keyExtractor={(c) => c.id}
