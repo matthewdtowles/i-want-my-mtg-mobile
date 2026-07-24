@@ -1,4 +1,10 @@
-import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Ionicons } from "@expo/vector-icons";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { useMemo, useState } from "react";
 import {
@@ -9,21 +15,34 @@ import {
   RefreshControl,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from "react-native";
 
-import { setCardsKey, fetchSetCards } from "../../lib/api/catalog";
+import {
+  setCardsKey,
+  setKey,
+  fetchSet,
+  fetchSetCards,
+} from "../../lib/api/catalog";
 import { useSettings } from "../../lib/settings/SettingsContext";
 import { firstParam } from "../../lib/params";
 import { nextPage } from "../../lib/pagination";
 import { INVENTORY_KEY , bulkAddToInventory } from "../../lib/api/inventory";
 import type { ApiCard } from "../../lib/api/types";
+import { CardGridCell } from "../../components/CardGridCell";
 import { CardListItem } from "../../components/CardListItem";
+import { CardPeekOverlay } from "../../components/CardPeekOverlay";
 import { ErrorState } from "../../components/ErrorState";
 import { BulkAddBar } from "../../components/BulkAddBar";
+import { SetSymbol } from "../../components/SetSymbol";
 import { useAuth } from "../../lib/auth/AuthContext";
 import { useTheme, useThemedStyles } from "../../lib/theme/ThemeContext";
 import type { ThemeColors } from "../../lib/theme/colors";
+
+const GRID_COLUMNS = 3;
+const GRID_PADDING = 16;
+const GRID_GAP = 10;
 
 export default function SetDetailScreen() {
   const { colors } = useTheme();
@@ -33,11 +52,22 @@ export default function SetDetailScreen() {
   const code = firstParam(params.code);
   const { pageSize } = useSettings();
   const { isAuthenticated } = useAuth();
+  const { width } = useWindowDimensions();
+
+  // Binder grid is the default view; the header icon flips to a compact list.
+  const [view, setView] = useState<"grid" | "list">("grid");
+  const [peek, setPeek] = useState<ApiCard | null>(null);
 
   // Multi-select state: cardId -> card, so we know each card's finish support.
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Record<string, ApiCard>>({});
   const selectedCards = Object.values(selected);
+
+  const setQuery = useQuery({
+    queryKey: setKey(code),
+    queryFn: () => fetchSet(code as string),
+    enabled: !!code,
+  });
 
   const query = useInfiniteQuery({
     queryKey: setCardsKey(code, pageSize),
@@ -114,17 +144,39 @@ export default function SetDetailScreen() {
     });
   }
 
-  // Bulk-add writes to the inventory, so the Select affordance is auth-only.
-  const headerButton = code && isAuthenticated
+  // Selection is a checkbox-list workflow, so entering it shows the list view.
+  const listMode = view === "list" || selectMode;
+
+  const headerRight = code
     ? () => (
-        <Pressable
-          onPress={() => (selectMode ? exitSelect() : setSelectMode(true))}
-          hitSlop={12}
-          style={styles.headerBtn}
-          accessibilityRole="button"
-        >
-          <Text style={styles.headerBtnText}>{selectMode ? "Done" : "Select"}</Text>
-        </Pressable>
+        <View style={styles.headerActions}>
+          {!selectMode ? (
+            <Pressable
+              onPress={() => setView((v) => (v === "grid" ? "list" : "grid"))}
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel={
+                view === "grid" ? "Switch to list view" : "Switch to binder view"
+              }
+            >
+              <Ionicons
+                name={view === "grid" ? "list" : "grid"}
+                size={22}
+                color={colors.accent}
+              />
+            </Pressable>
+          ) : null}
+          {/* Bulk-add writes to the inventory, so Select is auth-only. */}
+          {isAuthenticated ? (
+            <Pressable
+              onPress={() => (selectMode ? exitSelect() : setSelectMode(true))}
+              hitSlop={12}
+              accessibilityRole="button"
+            >
+              <Text style={styles.headerBtnText}>{selectMode ? "Done" : "Select"}</Text>
+            </Pressable>
+          ) : null}
+        </View>
       )
     : undefined;
 
@@ -137,10 +189,53 @@ export default function SetDetailScreen() {
     );
   }
 
+  const set = setQuery.data;
+  const hero = (
+    <View style={styles.hero}>
+      <SetSymbol code={set?.keyruneCode || code} size={40} />
+      <View style={styles.heroText}>
+        <Text style={styles.heroName} numberOfLines={2}>
+          {set?.name ?? code.toUpperCase()}
+        </Text>
+        <Text style={styles.heroSub}>
+          {[
+            code.toUpperCase(),
+            set?.releaseDate ? set.releaseDate.slice(0, 4) : null,
+            set?.baseSize != null ? `${set.baseSize} cards` : null,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        </Text>
+        {set?.ownedTotal != null ? (
+          <Text style={styles.heroOwned}>
+            You own {set.ownedTotal}
+            {set.completionRate != null
+              ? ` · ${Math.round(set.completionRate)}% complete`
+              : ""}
+          </Text>
+        ) : null}
+      </View>
+    </View>
+  );
+
+  const cellWidth =
+    (width - GRID_PADDING * 2 - GRID_GAP * (GRID_COLUMNS - 1)) / GRID_COLUMNS;
+
+  const refreshControl = (
+    <RefreshControl
+      refreshing={query.isRefetching && !query.isFetchingNextPage}
+      onRefresh={() => query.refetch()}
+      tintColor={colors.accent}
+    />
+  );
+  const footer = query.isFetchingNextPage ? (
+    <ActivityIndicator style={styles.footer} color={colors.accent} />
+  ) : null;
+
   return (
     <View style={styles.screen}>
       <Stack.Screen
-        options={{ title: code.toUpperCase(), headerRight: headerButton }}
+        options={{ title: set?.name ?? code.toUpperCase(), headerRight }}
       />
       {query.isPending ? (
         <ActivityIndicator style={styles.center} size="large" color={colors.accent} />
@@ -149,11 +244,12 @@ export default function SetDetailScreen() {
           message={query.error instanceof Error ? query.error.message : "Failed to load."}
           onRetry={() => query.refetch()}
         />
-      ) : (
+      ) : listMode ? (
         <FlatList
           style={styles.list}
           data={cards}
           keyExtractor={(c) => c.id}
+          ListHeaderComponent={hero}
           renderItem={({ item }) =>
             selectMode ? (
               <CardListItem
@@ -168,18 +264,30 @@ export default function SetDetailScreen() {
           }
           onEndReached={() => query.hasNextPage && query.fetchNextPage()}
           onEndReachedThreshold={0.5}
-          refreshControl={
-            <RefreshControl
-              refreshing={query.isRefetching && !query.isFetchingNextPage}
-              onRefresh={() => query.refetch()}
-              tintColor={colors.accent}
+          refreshControl={refreshControl}
+          ListFooterComponent={footer}
+        />
+      ) : (
+        <FlatList
+          style={styles.list}
+          data={cards}
+          keyExtractor={(c) => c.id}
+          numColumns={GRID_COLUMNS}
+          columnWrapperStyle={styles.gridRow}
+          contentContainerStyle={styles.gridContent}
+          ListHeaderComponent={hero}
+          renderItem={({ item }) => (
+            <CardGridCell
+              card={item}
+              width={cellWidth}
+              onPeek={setPeek}
+              onPeekEnd={() => setPeek(null)}
             />
-          }
-          ListFooterComponent={
-            query.isFetchingNextPage ? (
-              <ActivityIndicator style={styles.footer} color={colors.accent} />
-            ) : null
-          }
+          )}
+          onEndReached={() => query.hasNextPage && query.fetchNextPage()}
+          onEndReachedThreshold={0.5}
+          refreshControl={refreshControl}
+          ListFooterComponent={footer}
         />
       )}
 
@@ -191,6 +299,8 @@ export default function SetDetailScreen() {
           onCancel={exitSelect}
         />
       ) : null}
+
+      <CardPeekOverlay card={peek} />
     </View>
   );
 }
@@ -206,6 +316,27 @@ const createStyles = (colors: ThemeColors) =>
       marginTop: 40,
       color: colors.textMuted,
     },
-    headerBtn: { paddingHorizontal: 16 },
+    headerActions: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 16,
+      paddingHorizontal: 16,
+    },
     headerBtnText: { color: colors.accent, fontSize: 16, fontWeight: "600" },
+    hero: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
+      marginBottom: 10,
+    },
+    heroText: { flex: 1 },
+    heroName: { fontSize: 18, fontWeight: "800", color: colors.textPrimary },
+    heroSub: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
+    heroOwned: { fontSize: 13, fontWeight: "600", color: colors.accent, marginTop: 2 },
+    gridRow: { gap: GRID_GAP, paddingHorizontal: GRID_PADDING },
+    gridContent: { paddingBottom: 24, gap: 14 },
   });
