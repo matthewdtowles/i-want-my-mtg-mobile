@@ -90,10 +90,12 @@ function InventoryList() {
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortAsc, setSortAsc] = useState(true);
 
-  // Search, sort, and pagination all happen server-side now: the app only
-  // holds the pages the user has scrolled through, not the whole collection.
+  // Search, sort, finish, and pagination all happen server-side now: the app
+  // only holds the pages the user has scrolled through, not the whole
+  // collection.
   const listOpts = {
     filter: q || undefined,
+    finish: finish === "all" ? undefined : finish,
     sort: SORTS.find((s) => s.key === sortKey)?.server,
     ascend: sortAsc,
     limit: pageSize,
@@ -122,15 +124,6 @@ function InventoryList() {
     [query.data],
   );
   const total = query.data?.pages[0]?.meta?.total;
-
-  // The finish chips filter the loaded rows (the API has no finish filter).
-  const visible = useMemo(
-    () =>
-      finish === "all"
-        ? items
-        : items.filter((it) => (finish === "foil" ? it.isFoil : !it.isFoil)),
-    [items, finish],
-  );
 
   // The write is debounced (below), so the mutation only fires with the final
   // absolute quantity. It carries no optimistic `apply` of its own - the tap
@@ -210,8 +203,8 @@ function InventoryList() {
     );
   }
 
-  // Empty collection (not just an empty filter result): no query and no rows.
-  if (!query.isPending && !q && items.length === 0) {
+  // Empty collection (not just an empty filter result): no filters and no rows.
+  if (!query.isPending && !q && finish === "all" && items.length === 0) {
     return (
       <View style={styles.screen}>
         {hub}
@@ -284,7 +277,7 @@ function InventoryList() {
       ) : (
         <FlatList
           style={styles.list}
-          data={visible}
+          data={items}
           keyExtractor={(it) => `${it.cardId}-${it.isFoil}`}
           renderItem={({ item }) => (
             <CardQuantityRow
