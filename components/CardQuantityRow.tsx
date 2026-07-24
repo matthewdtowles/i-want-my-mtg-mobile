@@ -72,6 +72,8 @@ export function CardQuantityRow({ item, onIncrement, onDecrement, onRemove }: Pr
         >
           <Pressable
             style={({ pressed }) => [styles.cardLink, pressed && styles.cardLinkPressed]}
+            accessibilityRole="button"
+            accessibilityLabel={`View ${item.cardName ?? "card"}`}
           >
             {cardContent}
           </Pressable>

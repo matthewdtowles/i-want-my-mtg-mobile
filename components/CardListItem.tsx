@@ -64,7 +64,11 @@ export function CardListItem({ card, selectable, selected, onToggleSelect }: Pro
       }}
       asChild
     >
-      <Pressable style={({ pressed }) => [styles.row, pressed && styles.rowSelected]}>
+      <Pressable
+        style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+        accessibilityRole="button"
+        accessibilityLabel={`View ${card.name}`}
+      >
         {body}
       </Pressable>
     </Link>
@@ -81,6 +85,7 @@ const createStyles = (colors: ThemeColors) =>
       paddingHorizontal: 16,
     },
     rowSelected: { backgroundColor: colors.surfaceAlt },
+    rowPressed: { backgroundColor: colors.surfaceAlt },
     body: { flex: 1 },
     name: { fontSize: 15, fontWeight: "600", color: colors.textPrimary },
     sub: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
