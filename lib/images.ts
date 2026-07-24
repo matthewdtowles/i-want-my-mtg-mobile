@@ -10,7 +10,7 @@ const IMAGE_BASE = "https://cards.scryfall.io";
 // request succeeds on Android; it's harmless on iOS.
 export const SCRYFALL_USER_AGENT = "IWantMyMTG/1.0 (i-want-my-mtg-mobile)";
 
-export type CardImageSize = "small" | "normal" | "large";
+export type CardImageSize = "small" | "normal" | "large" | "art_crop";
 
 export function cardImageUrl(
   imgSrc: string | null | undefined,
@@ -24,4 +24,12 @@ export function cardImageUrl(
     ? imgSrc.slice(imgSrc.indexOf("/front/") + "/front/".length)
     : imgSrc;
   return `${IMAGE_BASE}/${size}/front/${tail}`;
+}
+
+// Scryfall's per-set symbol SVGs (the same glyphs as the Keyrune font).
+const SET_SVG_BASE = "https://svgs.scryfall.io/sets";
+
+export function setSymbolUrl(code: string | null | undefined): string | null {
+  if (!code) return null;
+  return `${SET_SVG_BASE}/${code.toLowerCase()}.svg`;
 }
