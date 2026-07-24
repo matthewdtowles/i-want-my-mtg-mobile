@@ -7,7 +7,7 @@ import {
   Text,
   View,
 } from "react-native";
-import Svg, { Circle, Polyline } from "react-native-svg";
+import Svg, { Circle, Line, Polyline } from "react-native-svg";
 
 import { cardPriceHistoryKey, fetchCardPriceHistory } from "../lib/api/catalog";
 import type { ApiPriceHistoryPoint } from "../lib/api/types";
@@ -104,7 +104,12 @@ export function CardPriceHistory({ cardId, hasNonFoil, hasFoil }: Props) {
       ) : series.definedCount < 2 ? (
         <Text style={styles.empty}>Not enough price history yet.</Text>
       ) : (
-        <Chart series={series} color={lineColor} styles={styles} />
+        <Chart
+          series={series}
+          color={lineColor}
+          styles={styles}
+          muted={colors.textMuted}
+        />
       )}
     </CardPanel>
   );
@@ -155,13 +160,27 @@ function Chart({
   series,
   color,
   styles,
+  muted,
 }: {
   series: Series;
   color: string;
   styles: ReturnType<typeof createStyles>;
+  muted: string;
 }) {
   const [width, setWidth] = useState(0);
   const onLayout = (e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width);
+  // Index into `coords` of the touched/pinned point (persists after release,
+  // mirroring the web app's chart). Guarded below in case the series shrinks.
+  const [pinned, setPinned] = useState<number | null>(null);
+
+  // A new series (finish/range switch, refetch) rebuilds `coords`, so a kept
+  // index could silently point at a different day — clear the pin instead
+  // (render-time reset, per React's derived-state pattern).
+  const [prevSeries, setPrevSeries] = useState(series);
+  if (prevSeries !== series) {
+    setPrevSeries(series);
+    setPinned(null);
+  }
 
   const range = series.max - series.min || 1;
   const count = series.points.length;
@@ -176,13 +195,37 @@ function Chart({
       if (p.value == null) return null;
       const x = CHART_PAD + (count <= 1 ? 0 : (i / (count - 1)) * plotWidth);
       const y = CHART_PAD + (1 - (p.value - series.min) / range) * plotHeight;
-      return { x, y };
+      return { x, y, date: p.date, value: p.value };
     })
-    .filter((c): c is { x: number; y: number } => c != null);
+    .filter((c): c is { x: number; y: number; date: string; value: number } => c != null);
+
+  const pinnedPt = pinned != null ? coords[pinned] : undefined;
+
+  // Touch or drag anywhere on the chart to pin the nearest real data point.
+  function pinAt(x: number) {
+    if (coords.length === 0) return;
+    let best = 0;
+    for (let i = 1; i < coords.length; i++) {
+      if (Math.abs(coords[i].x - x) < Math.abs(coords[best].x - x)) best = i;
+    }
+    setPinned(best);
+  }
 
   return (
     <View>
-      <View style={styles.chart} onLayout={onLayout}>
+      <Text style={pinnedPt ? [styles.pin, { color }] : styles.pinHint}>
+        {pinnedPt
+          ? `${pinnedPt.date} · ${formatPrice(pinnedPt.value)}`
+          : "Touch the chart to inspect a day"}
+      </Text>
+      <View
+        style={styles.chart}
+        onLayout={onLayout}
+        onStartShouldSetResponder={() => true}
+        onMoveShouldSetResponder={() => true}
+        onResponderGrant={(e) => pinAt(e.nativeEvent.locationX)}
+        onResponderMove={(e) => pinAt(e.nativeEvent.locationX)}
+      >
         {width > 0 ? (
           <Svg width={width} height={CHART_HEIGHT}>
             {coords.length === 1 ? (
@@ -197,6 +240,20 @@ function Chart({
                 strokeLinecap="round"
               />
             )}
+            {pinnedPt ? (
+              <>
+                <Line
+                  x1={pinnedPt.x}
+                  y1={CHART_PAD}
+                  x2={pinnedPt.x}
+                  y2={CHART_HEIGHT - CHART_PAD}
+                  stroke={muted}
+                  strokeWidth={1}
+                  strokeDasharray="3 3"
+                />
+                <Circle cx={pinnedPt.x} cy={pinnedPt.y} r={4.5} fill={color} />
+              </>
+            ) : null}
           </Svg>
         ) : null}
       </View>
@@ -222,8 +279,10 @@ const createStyles = (colors: ThemeColors) =>
     empty: { marginTop: 16, color: colors.textMuted, fontSize: 14 },
     chart: {
       height: CHART_HEIGHT,
-      marginTop: 16,
+      marginTop: 6,
     },
+    pin: { marginTop: 12, fontSize: 13, fontWeight: "700" },
+    pinHint: { marginTop: 12, fontSize: 12, color: colors.textMuted },
     axisRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 6 },
     axis: { fontSize: 11, color: colors.textMuted },
   });
