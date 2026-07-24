@@ -64,7 +64,9 @@ export function CardListItem({ card, selectable, selected, onToggleSelect }: Pro
       }}
       asChild
     >
-      <Pressable style={styles.row}>{body}</Pressable>
+      <Pressable style={({ pressed }) => [styles.row, pressed && styles.rowSelected]}>
+        {body}
+      </Pressable>
     </Link>
   );
 }

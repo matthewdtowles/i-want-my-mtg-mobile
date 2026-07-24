@@ -18,7 +18,11 @@ export function NotificationListItem({ item, onPress }: Props) {
 
   return (
     <Pressable
-      style={[styles.row, !item.isRead && styles.rowUnread]}
+      style={({ pressed }) => [
+        styles.row,
+        !item.isRead && styles.rowUnread,
+        pressed && styles.rowPressed,
+      ]}
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`Notification for ${item.cardName ?? item.cardId}${item.isRead ? "" : ", unread"}`}
@@ -58,6 +62,7 @@ const createStyles = (colors: ThemeColors) =>
       borderBottomColor: colors.border,
     },
     rowUnread: { backgroundColor: colors.surface },
+    rowPressed: { backgroundColor: colors.surfaceAlt },
     dotColumn: { width: 16, paddingTop: 6 },
     dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.accent },
     body: { flex: 1 },
