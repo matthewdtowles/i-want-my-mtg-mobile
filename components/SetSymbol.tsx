@@ -23,6 +23,7 @@ export function SetSymbol({ code, size = 28 }: { code: string; size?: number }) 
     queryFn: () => fetchSvg(uri as string),
     enabled: !!uri,
     staleTime: Infinity,
+    gcTime: Infinity,
   });
 
   if (!svg.data) return null;
