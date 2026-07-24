@@ -19,6 +19,8 @@ export interface InventoryListOptions {
   page?: number;
   limit?: number;
   filter?: string;
+  /** Only holdings of this finish; omit for both. */
+  finish?: "normal" | "foil";
   sort?: string;
   ascend?: boolean;
 }
@@ -47,6 +49,7 @@ export async function fetchInventory({
   page = 1,
   limit = 50,
   filter,
+  finish,
   sort,
   ascend,
 }: InventoryListOptions = {}): Promise<Page<ApiInventoryItem>> {
@@ -56,6 +59,7 @@ export async function fetchInventory({
         page,
         limit,
         ...(filter ? { filter } : {}),
+        ...(finish ? { finish } : {}),
         ...(sort ? { sort, ascend } : {}),
       },
     },

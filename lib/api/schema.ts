@@ -2943,6 +2943,8 @@ export interface operations {
         parameters: {
             query?: {
                 filter?: string;
+                /** @description Only holdings of this finish (normal or foil). */
+                finish?: "normal" | "foil";
                 ascend?: boolean;
                 sort?: string;
                 limit?: number;
