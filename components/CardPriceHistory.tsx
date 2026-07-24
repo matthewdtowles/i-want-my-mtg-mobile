@@ -173,6 +173,15 @@ function Chart({
   // mirroring the web app's chart). Guarded below in case the series shrinks.
   const [pinned, setPinned] = useState<number | null>(null);
 
+  // A new series (finish/range switch, refetch) rebuilds `coords`, so a kept
+  // index could silently point at a different day — clear the pin instead
+  // (render-time reset, per React's derived-state pattern).
+  const [prevSeries, setPrevSeries] = useState(series);
+  if (prevSeries !== series) {
+    setPrevSeries(series);
+    setPinned(null);
+  }
+
   const range = series.max - series.min || 1;
   const count = series.points.length;
   const plotHeight = CHART_HEIGHT - CHART_PAD * 2;

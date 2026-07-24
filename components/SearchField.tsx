@@ -1,4 +1,4 @@
-import { StyleSheet, TextInput, type StyleProp, type ViewStyle } from "react-native";
+import { StyleSheet, TextInput, type StyleProp, type TextStyle } from "react-native";
 
 import { useTheme, useThemedStyles } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
@@ -16,7 +16,7 @@ export function SearchField({
   value: string;
   onChangeText: (text: string) => void;
   placeholder: string;
-  style?: StyleProp<ViewStyle>;
+  style?: StyleProp<TextStyle>;
 }) {
   const { colors } = useTheme();
   const styles = useThemedStyles(createStyles);
