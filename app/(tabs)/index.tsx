@@ -1,4 +1,4 @@
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -18,10 +18,6 @@ import {
   type Page,
 } from "../../lib/api/catalog";
 import { nextPage } from "../../lib/pagination";
-import {
-  PORTFOLIO_SUMMARY_KEY,
-  fetchPortfolioSummary,
-} from "../../lib/api/portfolio";
 import type { ApiCard, ApiSet } from "../../lib/api/types";
 import { CardListItem } from "../../components/CardListItem";
 import { CollectionHero } from "../../components/CollectionHero";
@@ -106,36 +102,24 @@ function SetGallery({
     [query.data],
   );
 
-  // Signed in with a portfolio, the hero slot shows your collection stats and
-  // every set stays in the grid. Signed out — or before a portfolio exists
-  // (the summary resolves null) — the newest set is the full-width hero.
-  const summary = useQuery({
-    queryKey: PORTFOLIO_SUMMARY_KEY,
-    queryFn: fetchPortfolioSummary,
-    enabled: isAuthenticated,
-  });
-  const featured =
-    !isAuthenticated || (summary.isSuccess && summary.data == null)
-      ? sets[0]
-      : undefined;
-  const gridSets = featured ? sets.slice(1) : sets;
-
+  // Every set renders as the full-width hero banner, signed in or out. The
+  // signed-in collection summary sits above them (it self-hides with no
+  // portfolio), and only the first (newest) set carries the badge.
   const header = (
     <View style={styles.galleryHeader}>
-      {isAuthenticated && !featured ? <CollectionHero /> : null}
-      {featured ? <SetTile set={featured} hero /> : null}
+      {isAuthenticated ? <CollectionHero /> : null}
       <Text style={styles.sectionLabel}>SETS</Text>
     </View>
   );
 
   return (
     <FlatList
-      data={gridSets}
+      data={sets}
       keyExtractor={(s) => s.code}
-      numColumns={2}
-      columnWrapperStyle={styles.galleryRow}
       contentContainerStyle={styles.galleryContent}
-      renderItem={({ item }) => <SetTile set={item} />}
+      renderItem={({ item, index }) => (
+        <SetTile set={item} hero newest={index === 0} />
+      )}
       ListHeaderComponent={header}
       onEndReached={() => query.hasNextPage && query.fetchNextPage()}
       onEndReachedThreshold={0.5}
@@ -210,9 +194,8 @@ const createStyles = (colors: ThemeColors) =>
     center: { marginTop: 40 },
     footer: { marginVertical: 16 },
     message: { textAlign: "center", marginTop: 40, color: colors.textMuted },
-    galleryContent: { paddingHorizontal: 16, paddingBottom: 24 },
+    galleryContent: { paddingHorizontal: 16, paddingBottom: 24, gap: 12 },
     galleryHeader: { gap: 12, marginBottom: 12, marginTop: 4 },
-    galleryRow: { gap: 12, marginBottom: 12 },
     sectionLabel: {
       fontSize: 12,
       fontWeight: "700",

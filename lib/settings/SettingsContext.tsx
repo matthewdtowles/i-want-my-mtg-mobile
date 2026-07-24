@@ -16,7 +16,9 @@ import {
 /** How many rows long lists request per page. */
 export const PAGE_SIZES = [50, 100, 200] as const;
 export type PageSize = (typeof PAGE_SIZES)[number];
-export const DEFAULT_PAGE_SIZE: PageSize = 100;
+// 50 keeps each page request light so we stay under the API's rate limits;
+// users who want fewer round-trips can bump it in Settings.
+export const DEFAULT_PAGE_SIZE: PageSize = 50;
 
 type SettingsState = {
   pageSize: PageSize;
