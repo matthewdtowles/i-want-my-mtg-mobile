@@ -70,7 +70,13 @@ export function CardQuantityRow({ item, onIncrement, onDecrement, onRemove }: Pr
           }}
           asChild
         >
-          <Pressable style={styles.cardLink}>{cardContent}</Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.cardLink, pressed && styles.cardLinkPressed]}
+            accessibilityRole="button"
+            accessibilityLabel={`View ${item.cardName ?? "card"}`}
+          >
+            {cardContent}
+          </Pressable>
         </Link>
       ) : (
         <View style={styles.cardLink}>{cardContent}</View>
@@ -100,6 +106,7 @@ const createStyles = (colors: ThemeColors) =>
       borderBottomColor: colors.border,
     },
     cardLink: { flexDirection: "row", alignItems: "center", gap: 12, flex: 1 },
+    cardLinkPressed: { opacity: 0.6 },
     body: { flex: 1 },
     name: { fontSize: 15, fontWeight: "600", color: colors.textPrimary },
     subRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 2 },

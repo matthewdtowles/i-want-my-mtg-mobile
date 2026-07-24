@@ -53,7 +53,9 @@ export type ThemeColors = {
 };
 
 export const lightColors: ThemeColors = {
-  background: "#ffffff",
+  // Subtle off-white so white surfaces (panels, tiles, inputs) read as raised
+  // sections instead of dissolving into the page.
+  background: "#f7f7f9",
   surface: "#ffffff",
   surfaceAlt: "#f9fafb",
   border: "#e5e7eb",
