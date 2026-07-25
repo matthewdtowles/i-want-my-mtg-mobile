@@ -1,6 +1,7 @@
 import { api } from "./client";
 import type { Page } from "./catalog";
 import { errMessage } from "./envelope";
+import { PAGE_SIZE } from "../pagination";
 import type {
   ApiTransaction,
   ApiTransactionUpdate,
@@ -9,17 +10,16 @@ import type {
 
 export const TRANSACTIONS_KEY = ["transactions"] as const;
 
-/** The paged list, keyed by page size + filter (under the prefix above). */
-export const transactionsListKey = (limit: number, filter = "") =>
-  ["transactions", "list", limit, filter] as const;
+/** The paged list, keyed by filter (under the prefix above). */
+export const transactionsListKey = (filter = "") =>
+  ["transactions", "list", filter] as const;
 
 export async function fetchTransactions(
   page = 1,
-  limit = 50,
   filter?: string,
 ): Promise<Page<ApiTransaction>> {
   const { data, error, response } = await api.GET("/api/v1/transactions", {
-    params: { query: { page, limit, ...(filter ? { filter } : {}) } },
+    params: { query: { page, limit: PAGE_SIZE, ...(filter ? { filter } : {}) } },
   });
   if (!response.ok) throw new Error(errMessage(error, "Failed to load transactions."));
   return { items: data?.data ?? [], meta: data?.meta };

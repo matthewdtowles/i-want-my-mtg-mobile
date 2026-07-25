@@ -1,6 +1,7 @@
 import { api } from "./client";
 import type { Page } from "./catalog";
 import { errMessage } from "./envelope";
+import { PAGE_SIZE } from "../pagination";
 import type {
   ApiInventoryItem,
   ApiInventoryQuantity,
@@ -17,7 +18,6 @@ export const INVENTORY_KEY = ["inventory"] as const;
  */
 export interface InventoryListOptions {
   page?: number;
-  limit?: number;
   filter?: string;
   /** Only holdings of this finish; omit for both. */
   finish?: "normal" | "foil";
@@ -26,8 +26,8 @@ export interface InventoryListOptions {
 }
 
 /**
- * One cached list per filter/sort/limit combination. Kept under the
- * `["inventory"]` prefix so existing invalidations refresh every variant.
+ * One cached list per filter/sort combination. Kept under the `["inventory"]`
+ * prefix so existing invalidations refresh every variant.
  */
 export const inventoryListKey = (opts: Omit<InventoryListOptions, "page">) =>
   ["inventory", "list", opts] as const;
@@ -47,7 +47,6 @@ export const deckOwnedKey = (deckId: number, cardIds: string[]) =>
 
 export async function fetchInventory({
   page = 1,
-  limit = 50,
   filter,
   finish,
   sort,
@@ -57,7 +56,7 @@ export async function fetchInventory({
     params: {
       query: {
         page,
-        limit,
+        limit: PAGE_SIZE,
         ...(filter ? { filter } : {}),
         ...(finish ? { finish } : {}),
         ...(sort ? { sort, ascend } : {}),

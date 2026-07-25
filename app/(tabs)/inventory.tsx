@@ -15,7 +15,7 @@ import {
   RefreshControl,
   StyleSheet,
   Text,
-  TextInput,
+  useWindowDimensions,
   View,
 } from "react-native";
 
@@ -32,33 +32,46 @@ import {
   fetchPortfolioSummary,
 } from "../../lib/api/portfolio";
 import type { Page } from "../../lib/api/catalog";
+import { buildEntries, entryKey, type Entry } from "../../lib/inventoryEntries";
 import { mapPageItems, nextPage } from "../../lib/pagination";
 import type { ApiInventoryItem } from "../../lib/api/types";
 import { CardQuantityRow } from "../../components/CardQuantityRow";
 import { Chip } from "../../components/Chip";
 import { ErrorState } from "../../components/ErrorState";
+import { InventoryGridCell } from "../../components/InventoryGridCell";
+import { SearchField } from "../../components/SearchField";
+import { SetSymbol } from "../../components/SetSymbol";
 import { SignInPrompt } from "../../components/SignInPrompt";
 import { formatPrice } from "../../lib/format";
 import { useAuth } from "../../lib/auth/AuthContext";
 import { useDebounce } from "../../lib/useDebounce";
 import { useDebouncedByKey } from "../../lib/useDebouncedByKey";
 import { useOptimisticMutation } from "../../lib/useOptimisticMutation";
-import { useSettings } from "../../lib/settings/SettingsContext";
 import { useTheme, useThemedStyles } from "../../lib/theme/ThemeContext";
 import type { ThemeColors } from "../../lib/theme/colors";
 
 type InventoryData = InfiniteData<Page<ApiInventoryItem>>;
 
-type SortKey = "name" | "set" | "price" | "qty";
+type SortKey = "name" | "price" | "qty";
 type Finish = "all" | "normal" | "foil";
+
+const GRID_COLUMNS = 3;
+const GRID_PADDING = 16;
+const GRID_GAP = 10;
 
 /** UI sort keys mapped to the backend's SortOptions values. */
 const SORTS: { key: SortKey; label: string; server: string }[] = [
   { key: "name", label: "Name", server: "card.name" },
-  { key: "set", label: "Set", server: "card.setCode" },
   { key: "price", label: "Price", server: "prices.normal" },
   { key: "qty", label: "Qty", server: "inventory.quantity" },
 ];
+
+/**
+ * Grouping by set is a mode, not a sort: it takes over the ordering (newest set
+ * first, which is how collectors think about their binders) so that rows for one
+ * set arrive contiguously and can carry a section header.
+ */
+const GROUP_SORT = "set.releaseDate";
 
 function sameRow(a: ApiInventoryItem, b: ApiInventoryItem): boolean {
   return a.cardId === b.cardId && a.isFoil === b.isFoil;
@@ -82,13 +95,18 @@ function InventoryList() {
   const styles = useThemedStyles(createStyles);
   const queryClient = useQueryClient();
   const router = useRouter();
-  const { pageSize } = useSettings();
+  const { width } = useWindowDimensions();
 
   const [search, setSearch] = useState("");
   const q = useDebounce(search.trim(), 250);
   const [finish, setFinish] = useState<Finish>("all");
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortAsc, setSortAsc] = useState(true);
+  const [grouped, setGrouped] = useState(false);
+  // Binder grid is the default, matching a set's page; the header icon flips
+  // to the compact list with its always-visible steppers.
+  const [view, setView] = useState<"grid" | "list">("grid");
+  const [expanded, setExpanded] = useState<string | null>(null);
 
   // Search, sort, finish, and pagination all happen server-side now: the app
   // only holds the pages the user has scrolled through, not the whole
@@ -96,9 +114,8 @@ function InventoryList() {
   const listOpts = {
     filter: q || undefined,
     finish: finish === "all" ? undefined : finish,
-    sort: SORTS.find((s) => s.key === sortKey)?.server,
-    ascend: sortAsc,
-    limit: pageSize,
+    sort: grouped ? GROUP_SORT : SORTS.find((s) => s.key === sortKey)?.server,
+    ascend: grouped ? false : sortAsc,
   };
   const listKey = inventoryListKey(listOpts);
 
@@ -124,6 +141,12 @@ function InventoryList() {
     [query.data],
   );
   const total = query.data?.pages[0]?.meta?.total;
+
+  const columns = view === "grid" ? GRID_COLUMNS : 1;
+  const entries = useMemo(
+    () => buildEntries(items, grouped, columns),
+    [items, grouped, columns],
+  );
 
   // The write is debounced (below), so the mutation only fires with the final
   // absolute quantity. It carries no optimistic `apply` of its own - the tap
@@ -156,7 +179,7 @@ function InventoryList() {
         items.map((it) => (sameRow(it, item) ? { ...it, quantity } : it)),
       ),
     );
-    writeQuantity(`${item.cardId}-${item.isFoil}`, item, quantity);
+    writeQuantity(entryKey(item), item, quantity);
   }
 
   const remove = useOptimisticMutation<InventoryData, ApiInventoryItem>({
@@ -185,6 +208,23 @@ function InventoryList() {
       >
         <Ionicons name="swap-horizontal" size={16} color={colors.accent} />
         <Text style={styles.hubText}>Transactions</Text>
+      </Pressable>
+      <Pressable
+        style={styles.viewBtn}
+        onPress={() => {
+          setView((v) => (v === "grid" ? "list" : "grid"));
+          setExpanded(null);
+        }}
+        accessibilityRole="button"
+        accessibilityLabel={
+          view === "grid" ? "Switch to list view" : "Switch to binder view"
+        }
+      >
+        <Ionicons
+          name={view === "grid" ? "list" : "grid"}
+          size={18}
+          color={colors.accent}
+        />
       </Pressable>
     </View>
   );
@@ -227,21 +267,62 @@ function InventoryList() {
       ? `${total} item${total === 1 ? "" : "s"}`
       : " ";
 
+  const cellWidth =
+    (width - GRID_PADDING * 2 - GRID_GAP * (GRID_COLUMNS - 1)) / GRID_COLUMNS;
+
+  function renderEntry(entry: Entry<ApiInventoryItem>) {
+    if (entry.kind === "header") {
+      return (
+        <View style={styles.setHeader}>
+          <SetSymbol code={entry.keyruneCode || entry.setCode} size={20} />
+          <Text style={styles.setHeaderText}>{entry.setCode.toUpperCase()}</Text>
+          <Text style={styles.setHeaderCount}>
+            {entry.count} loaded
+          </Text>
+        </View>
+      );
+    }
+    if (view === "list") {
+      const item = entry.items[0];
+      return (
+        <CardQuantityRow
+          item={item}
+          onIncrement={() => step(item, 1)}
+          onDecrement={() => step(item, -1)}
+          onRemove={() => remove.mutate(item)}
+        />
+      );
+    }
+    return (
+      <View style={styles.gridRow}>
+        {entry.items.map((item) => (
+          <InventoryGridCell
+            key={entryKey(item)}
+            item={item}
+            width={cellWidth}
+            expanded={expanded === entryKey(item)}
+            onToggleExpand={() =>
+              setExpanded((cur) => (cur === entryKey(item) ? null : entryKey(item)))
+            }
+            onIncrement={() => step(item, 1)}
+            onDecrement={() => step(item, -1)}
+            onRemove={() => remove.mutate(item)}
+          />
+        ))}
+      </View>
+    );
+  }
+
   return (
     <View style={styles.screen}>
       {hub}
       <View style={styles.controls}>
         <Text style={styles.summary}>{summaryLine}</Text>
 
-        <TextInput
-          style={styles.search}
-          placeholder="Search your inventory"
-          placeholderTextColor={colors.placeholder}
+        <SearchField
           value={search}
           onChangeText={setSearch}
-          autoCapitalize="none"
-          autoCorrect={false}
-          clearButtonMode="while-editing"
+          placeholder="Search your inventory"
         />
 
         <View style={styles.filterRow}>
@@ -253,23 +334,34 @@ function InventoryList() {
               onPress={() => setFinish(f)}
             />
           ))}
+          <Chip
+            label="By set"
+            active={grouped}
+            onPress={() => {
+              setGrouped((v) => !v);
+              setExpanded(null);
+            }}
+          />
         </View>
 
-        <View style={styles.filterRow}>
-          {SORTS.map((s) => {
-            const active = sortKey === s.key;
-            return (
-              <Chip
-                key={s.key}
-                label={`${s.label}${active ? (sortAsc ? " ↑" : " ↓") : ""}`}
-                active={active}
-                onPress={() =>
-                  active ? setSortAsc((v) => !v) : (setSortKey(s.key), setSortAsc(true))
-                }
-              />
-            );
-          })}
-        </View>
+        {/* Grouping owns the ordering, so the sort chips step aside while it's on. */}
+        {!grouped ? (
+          <View style={styles.filterRow}>
+            {SORTS.map((s) => {
+              const active = sortKey === s.key;
+              return (
+                <Chip
+                  key={s.key}
+                  label={`${s.label}${active ? (sortAsc ? " ↑" : " ↓") : ""}`}
+                  active={active}
+                  onPress={() =>
+                    active ? setSortAsc((v) => !v) : (setSortKey(s.key), setSortAsc(true))
+                  }
+                />
+              );
+            })}
+          </View>
+        ) : null}
       </View>
 
       {query.isPending ? (
@@ -277,16 +369,10 @@ function InventoryList() {
       ) : (
         <FlatList
           style={styles.list}
-          data={items}
-          keyExtractor={(it) => `${it.cardId}-${it.isFoil}`}
-          renderItem={({ item }) => (
-            <CardQuantityRow
-              item={item}
-              onIncrement={() => step(item, 1)}
-              onDecrement={() => step(item, -1)}
-              onRemove={() => remove.mutate(item)}
-            />
-          )}
+          contentContainerStyle={styles.listContent}
+          data={entries}
+          keyExtractor={(e) => e.key}
+          renderItem={({ item }) => renderEntry(item)}
           onEndReached={() => query.hasNextPage && query.fetchNextPage()}
           onEndReachedThreshold={0.5}
           refreshControl={
@@ -338,7 +424,17 @@ const createStyles = (colors: ThemeColors) =>
       backgroundColor: colors.surface,
     },
     hubText: { fontSize: 14, fontWeight: "600", color: colors.accent },
+    viewBtn: {
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 14,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.inputBorder,
+      backgroundColor: colors.surface,
+    },
     list: { backgroundColor: colors.background },
+    listContent: { paddingBottom: 24 },
     center: {
       flex: 1,
       alignItems: "center",
@@ -355,17 +451,28 @@ const createStyles = (colors: ThemeColors) =>
       borderBottomColor: colors.border,
     },
     summary: { fontSize: 13, color: colors.textSecondary, fontWeight: "600" },
-    search: {
-      borderWidth: 1,
-      borderColor: colors.inputBorder,
-      borderRadius: 10,
-      paddingHorizontal: 14,
-      paddingVertical: 9,
-      fontSize: 15,
-      color: colors.textPrimary,
-      backgroundColor: colors.surface,
-    },
     filterRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+    gridRow: {
+      flexDirection: "row",
+      gap: GRID_GAP,
+      paddingHorizontal: GRID_PADDING,
+      marginTop: 14,
+    },
+    setHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      paddingHorizontal: GRID_PADDING,
+      paddingTop: 18,
+      paddingBottom: 2,
+    },
+    setHeaderText: {
+      fontSize: 13,
+      fontWeight: "800",
+      letterSpacing: 0.6,
+      color: colors.textPrimary,
+    },
+    setHeaderCount: { fontSize: 12, color: colors.textMuted, marginLeft: "auto" },
     footer: { marginVertical: 16 },
     footerHint: {
       textAlign: "center",

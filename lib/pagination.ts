@@ -8,6 +8,14 @@ import type { Page } from "./api/catalog";
  * "what's the next page" and "how to edit cached items" are defined once.
  */
 
+/**
+ * How many rows every long list requests per page. Fixed, not a user setting:
+ * pages scroll in automatically as you reach the end, so the number is never
+ * something a user sees or benefits from tuning. 50 also keeps each request
+ * light enough to stay well under the API's rate limits.
+ */
+export const PAGE_SIZE = 50;
+
 /** `getNextPageParam` for a `useInfiniteQuery` over `Page<T>`. */
 export function nextPage<T>(last: Page<T>): number | undefined {
   const m = last.meta;

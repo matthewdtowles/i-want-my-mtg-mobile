@@ -1,4 +1,4 @@
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -6,7 +6,6 @@ import {
   RefreshControl,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 
@@ -16,33 +15,61 @@ import {
   fetchSets,
   searchCards,
   type Page,
+  type SetSort,
 } from "../../lib/api/catalog";
 import { nextPage } from "../../lib/pagination";
 import type { ApiCard, ApiSet } from "../../lib/api/types";
 import { CardListItem } from "../../components/CardListItem";
+import { Chip } from "../../components/Chip";
 import { CollectionHero } from "../../components/CollectionHero";
 import { ErrorState } from "../../components/ErrorState";
+import { SearchField } from "../../components/SearchField";
+import { SegmentedControl } from "../../components/SegmentedControl";
+import { SetPeekOverlay } from "../../components/SetPeekOverlay";
 import { SetTile } from "../../components/SetTile";
 import { useAuth } from "../../lib/auth/AuthContext";
-import { useSettings } from "../../lib/settings/SettingsContext";
 import { useDebounce } from "../../lib/useDebounce";
 import { useTheme, useThemedStyles } from "../../lib/theme/ThemeContext";
 import type { ThemeColors } from "../../lib/theme/colors";
 
+/** What the search box searches. Sets is the default — this is the set gallery. */
+type Scope = "sets" | "cards";
+
+const SCOPES = [
+  { label: "Sets", value: "sets" as const },
+  { label: "Cards", value: "cards" as const },
+];
+
+/**
+ * Set orderings, each with the direction it should start in. Release date
+ * defaults to newest-first (the gallery's long-standing order); name to A–Z.
+ */
+const SET_SORTS: { key: SetSort; label: string; startAscending: boolean }[] = [
+  { key: "set.releaseDate", label: "Release", startAscending: false },
+  { key: "set.name", label: "Name", startAscending: true },
+];
+
 export default function BrowseScreen() {
   const { colors } = useTheme();
   const styles = useThemedStyles(createStyles);
-  const { pageSize } = useSettings();
+
+  const [scope, setScope] = useState<Scope>("sets");
   const [query, setQuery] = useState("");
   const q = useDebounce(query.trim(), 350);
-  const searching = q.length > 0;
 
+  const [sort, setSort] = useState<SetSort>("set.releaseDate");
+  const [ascend, setAscend] = useState(false);
+
+  const setOpts = { filter: q || undefined, sort, ascend };
   const setsQuery = useInfiniteQuery({
-    queryKey: setsKey(pageSize),
-    queryFn: ({ pageParam }) => fetchSets(pageParam, pageSize),
+    queryKey: setsKey(setOpts),
+    queryFn: ({ pageParam }) => fetchSets(pageParam, setOpts),
     initialPageParam: 1,
     getNextPageParam: nextPage,
-    enabled: !searching,
+    enabled: scope === "sets",
+    // Hold the previous tiles while a new filter/sort loads, so the gallery
+    // doesn't blank out on every keystroke.
+    placeholderData: keepPreviousData,
   });
 
   const cardsQuery = useInfiniteQuery({
@@ -50,36 +77,58 @@ export default function BrowseScreen() {
     queryFn: ({ pageParam }) => searchCards(q, pageParam),
     initialPageParam: 1,
     getNextPageParam: nextPage,
-    enabled: searching,
+    enabled: scope === "cards" && q.length > 0,
   });
 
-  const active = searching ? cardsQuery : setsQuery;
+  // Tapping a sort chip that's already active flips its direction, matching
+  // the inventory filter row.
+  function pickSort(next: (typeof SET_SORTS)[number]) {
+    if (sort === next.key) setAscend((v) => !v);
+    else {
+      setSort(next.key);
+      setAscend(next.startAscending);
+    }
+  }
 
-  return (
-    <View style={[styles.container, { paddingTop: 8 }]}>
-      <TextInput
-        style={styles.search}
-        placeholder="Search cards by name"
-        placeholderTextColor={colors.placeholder}
+  const controls = (
+    <View style={styles.controls}>
+      <SegmentedControl
+        options={SCOPES}
+        value={scope}
+        onChange={setScope}
+        size="compact"
+      />
+      <SearchField
         value={query}
         onChangeText={setQuery}
-        autoCapitalize="none"
-        autoCorrect={false}
-        clearButtonMode="while-editing"
-        returnKeyType="search"
+        placeholder={
+          scope === "sets" ? "Search sets by name" : "Search cards by name"
+        }
       />
+      {scope === "sets" ? (
+        <View style={styles.sortRow}>
+          {SET_SORTS.map((s) => {
+            const active = sort === s.key;
+            return (
+              <Chip
+                key={s.key}
+                label={`${s.label}${active ? (ascend ? " ↑" : " ↓") : ""}`}
+                active={active}
+                onPress={() => pickSort(s)}
+                size="small"
+              />
+            );
+          })}
+        </View>
+      ) : null}
+    </View>
+  );
 
-      {active.isPending ? (
-        <ActivityIndicator style={styles.center} size="large" color={colors.accent} />
-      ) : active.isError ? (
-        <ErrorState
-          message={
-            active.error instanceof Error ? active.error.message : "Something went wrong."
-          }
-          onRetry={() => active.refetch()}
-        />
-      ) : searching ? (
-        <CardResults query={cardsQuery} styles={styles} accent={colors.accent} />
+  return (
+    <View style={styles.container}>
+      {controls}
+      {scope === "cards" ? (
+        <CardResults query={cardsQuery} q={q} styles={styles} accent={colors.accent} />
       ) : (
         <SetGallery query={setsQuery} styles={styles} accent={colors.accent} />
       )}
@@ -97,14 +146,27 @@ function SetGallery({
   accent: string;
 }) {
   const { isAuthenticated } = useAuth();
+  const [peek, setPeek] = useState<ApiSet | null>(null);
   const sets = useMemo(
     () => query.data?.pages.flatMap((p) => p.items) ?? [],
     [query.data],
   );
 
+  if (query.isPending) {
+    return <ActivityIndicator style={styles.center} size="large" color={accent} />;
+  }
+  if (query.isError) {
+    return (
+      <ErrorState
+        message={query.error instanceof Error ? query.error.message : "Something went wrong."}
+        onRetry={() => query.refetch()}
+      />
+    );
+  }
+
   // Every set renders as the full-width hero banner, signed in or out. The
   // signed-in collection summary sits above them (it self-hides with no
-  // portfolio), and only the first (newest) set carries the badge.
+  // portfolio).
   const header = (
     <View style={styles.galleryHeader}>
       {isAuthenticated ? <CollectionHero /> : null}
@@ -113,38 +175,49 @@ function SetGallery({
   );
 
   return (
-    <FlatList
-      data={sets}
-      keyExtractor={(s) => s.code}
-      contentContainerStyle={styles.galleryContent}
-      renderItem={({ item, index }) => (
-        <SetTile set={item} hero newest={index === 0} />
-      )}
-      ListHeaderComponent={header}
-      onEndReached={() => query.hasNextPage && query.fetchNextPage()}
-      onEndReachedThreshold={0.5}
-      refreshControl={
-        <RefreshControl
-          refreshing={query.isRefetching && !query.isFetchingNextPage}
-          onRefresh={() => query.refetch()}
-          tintColor={accent}
-        />
-      }
-      ListFooterComponent={
-        query.isFetchingNextPage ? (
-          <ActivityIndicator style={styles.footer} color={accent} />
-        ) : null
-      }
-    />
+    <>
+      <FlatList
+        data={sets}
+        keyExtractor={(s) => s.code}
+        contentContainerStyle={styles.galleryContent}
+        renderItem={({ item }) => (
+          <SetTile
+            set={item}
+            hero
+            onPeek={setPeek}
+            onPeekEnd={() => setPeek(null)}
+          />
+        )}
+        ListHeaderComponent={header}
+        ListEmptyComponent={<Text style={styles.message}>No sets match your search.</Text>}
+        onEndReached={() => query.hasNextPage && query.fetchNextPage()}
+        onEndReachedThreshold={0.5}
+        refreshControl={
+          <RefreshControl
+            refreshing={query.isRefetching && !query.isFetchingNextPage}
+            onRefresh={() => query.refetch()}
+            tintColor={accent}
+          />
+        }
+        ListFooterComponent={
+          query.isFetchingNextPage ? (
+            <ActivityIndicator style={styles.footer} color={accent} />
+          ) : null
+        }
+      />
+      <SetPeekOverlay set={peek} />
+    </>
   );
 }
 
 function CardResults({
   query,
+  q,
   styles,
   accent,
 }: {
   query: ReturnType<typeof useInfiniteQuery<Page<ApiCard>>>;
+  q: string;
   styles: ReturnType<typeof createStyles>;
   accent: string;
 }) {
@@ -152,6 +225,24 @@ function CardResults({
     () => query.data?.pages.flatMap((p) => p.items) ?? [],
     [query.data],
   );
+
+  // The card query only runs with a term, so an empty box is a prompt, not a
+  // "no results" state.
+  if (!q) {
+    return <Text style={styles.message}>Type a card name to search every set.</Text>;
+  }
+  if (query.isPending) {
+    return <ActivityIndicator style={styles.center} size="large" color={accent} />;
+  }
+  if (query.isError) {
+    return (
+      <ErrorState
+        message={query.error instanceof Error ? query.error.message : "Something went wrong."}
+        onRetry={() => query.refetch()}
+      />
+    );
+  }
+
   return (
     <FlatList
       data={cards}
@@ -179,18 +270,8 @@ function CardResults({
 const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    search: {
-      marginHorizontal: 16,
-      marginBottom: 8,
-      borderWidth: 1,
-      borderColor: colors.inputBorder,
-      borderRadius: 10,
-      paddingHorizontal: 14,
-      paddingVertical: 10,
-      fontSize: 16,
-      color: colors.textPrimary,
-      backgroundColor: colors.surface,
-    },
+    controls: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 10, gap: 8 },
+    sortRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
     center: { marginTop: 40 },
     footer: { marginVertical: 16 },
     message: { textAlign: "center", marginTop: 40, color: colors.textMuted },
