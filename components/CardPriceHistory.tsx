@@ -298,7 +298,7 @@ function Chart({
 
       {/* The x-axis labels start where the plot starts, so earliest sits under
           the first point and latest under the last. */}
-      <View style={[styles.xAxisRow, { marginLeft: AXIS_GUTTER }]}>
+      <View style={styles.xAxisRow}>
         <Text style={styles.axis}>{series.first ?? ""}</Text>
         <Text style={styles.axis}>{series.last ?? ""}</Text>
       </View>
@@ -320,7 +320,16 @@ const createStyles = (colors: ThemeColors) =>
     },
     pin: { marginTop: 12, fontSize: 13, fontWeight: "700" },
     pinHint: { marginTop: 12, fontSize: 12, color: colors.textMuted },
-    xAxisRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 6 },
+    // Inset to exactly the plotted range — the first point sits at AXIS_GUTTER
+    // and the last at (width - CHART_PAD) — so both dates line up with the
+    // points they label instead of the right one overhanging by CHART_PAD.
+    xAxisRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginTop: 6,
+      marginLeft: AXIS_GUTTER,
+      marginRight: CHART_PAD,
+    },
     axis: { fontSize: 11, color: colors.textMuted },
     yAxis: {
       position: "absolute",
