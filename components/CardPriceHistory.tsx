@@ -7,7 +7,15 @@ import {
   Text,
   View,
 } from "react-native";
-import Svg, { Circle, Line, Polyline } from "react-native-svg";
+import Svg, {
+  Circle,
+  Defs,
+  Line,
+  LinearGradient,
+  Polygon,
+  Polyline,
+  Stop,
+} from "react-native-svg";
 
 import { cardPriceHistoryKey, fetchCardPriceHistory } from "../lib/api/catalog";
 import type { ApiPriceHistoryPoint } from "../lib/api/types";
@@ -155,6 +163,12 @@ function buildSeries(data: ApiPriceHistoryPoint[], finish: Finish): Series {
 /** Breathing room so the line/points never touch (or clip at) the chart edges. */
 const CHART_PAD = 4;
 const STROKE_WIDTH = 2;
+/**
+ * Left gutter the y-axis labels sit in. The plot starts after it, so the high
+ * and low price line up with the top and bottom of the line's own range rather
+ * than floating in a caption row.
+ */
+const AXIS_GUTTER = 48;
 
 function Chart({
   series,
@@ -185,7 +199,8 @@ function Chart({
   const range = series.max - series.min || 1;
   const count = series.points.length;
   const plotHeight = CHART_HEIGHT - CHART_PAD * 2;
-  const plotWidth = width - CHART_PAD * 2;
+  const plotWidth = Math.max(0, width - AXIS_GUTTER - CHART_PAD);
+  const baseline = CHART_HEIGHT - CHART_PAD;
 
   // Keep only days that have a price, then draw one continuous line through
   // them. Missing days are skipped entirely — the line passes straight from one
@@ -193,13 +208,24 @@ function Chart({
   const coords = series.points
     .map((p, i) => {
       if (p.value == null) return null;
-      const x = CHART_PAD + (count <= 1 ? 0 : (i / (count - 1)) * plotWidth);
+      const x = AXIS_GUTTER + (count <= 1 ? 0 : (i / (count - 1)) * plotWidth);
       const y = CHART_PAD + (1 - (p.value - series.min) / range) * plotHeight;
       return { x, y, date: p.date, value: p.value };
     })
     .filter((c): c is { x: number; y: number; date: string; value: number } => c != null);
 
   const pinnedPt = pinned != null ? coords[pinned] : undefined;
+
+  // The line closed down to the baseline, so the shaded area reads as volume
+  // under the curve rather than a second stroke.
+  const areaPoints =
+    coords.length > 1
+      ? [
+          `${coords[0].x},${baseline}`,
+          ...coords.map((pt) => `${pt.x},${pt.y}`),
+          `${coords[coords.length - 1].x},${baseline}`,
+        ].join(" ")
+      : "";
 
   // Touch or drag anywhere on the chart to pin the nearest real data point.
   function pinAt(x: number) {
@@ -228,6 +254,13 @@ function Chart({
       >
         {width > 0 ? (
           <Svg width={width} height={CHART_HEIGHT}>
+            <Defs>
+              <LinearGradient id="priceArea" x1="0" y1="0" x2="0" y2="1">
+                <Stop offset="0" stopColor={color} stopOpacity={0.35} />
+                <Stop offset="1" stopColor={color} stopOpacity={0.02} />
+              </LinearGradient>
+            </Defs>
+            {areaPoints ? <Polygon points={areaPoints} fill="url(#priceArea)" /> : null}
             {coords.length === 1 ? (
               <Circle cx={coords[0].x} cy={coords[0].y} r={STROKE_WIDTH} fill={color} />
             ) : (
@@ -256,12 +289,16 @@ function Chart({
             ) : null}
           </Svg>
         ) : null}
+
+        {/* The y-axis labels live in the gutter at the exact heights the high
+            and low map to, so price reads against the vertical axis. */}
+        <Text style={[styles.yAxis, styles.yAxisMax]}>{formatPrice(series.max)}</Text>
+        <Text style={[styles.yAxis, styles.yAxisMin]}>{formatPrice(series.min)}</Text>
       </View>
-      <View style={styles.axisRow}>
-        <Text style={styles.axis}>{formatPrice(series.min)}</Text>
-        <Text style={styles.axis}>{formatPrice(series.max)}</Text>
-      </View>
-      <View style={styles.axisRow}>
+
+      {/* The x-axis labels start where the plot starts, so earliest sits under
+          the first point and latest under the last. */}
+      <View style={[styles.xAxisRow, { marginLeft: AXIS_GUTTER }]}>
         <Text style={styles.axis}>{series.first ?? ""}</Text>
         <Text style={styles.axis}>{series.last ?? ""}</Text>
       </View>
@@ -283,6 +320,17 @@ const createStyles = (colors: ThemeColors) =>
     },
     pin: { marginTop: 12, fontSize: 13, fontWeight: "700" },
     pinHint: { marginTop: 12, fontSize: 12, color: colors.textMuted },
-    axisRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 6 },
+    xAxisRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 6 },
     axis: { fontSize: 11, color: colors.textMuted },
+    yAxis: {
+      position: "absolute",
+      left: 0,
+      width: AXIS_GUTTER - 8,
+      textAlign: "right",
+      fontSize: 11,
+      color: colors.textMuted,
+    },
+    // Nudged by half a line-height so each label's center sits on its gridline.
+    yAxisMax: { top: CHART_PAD - 7 },
+    yAxisMin: { top: CHART_HEIGHT - CHART_PAD - 7 },
   });

@@ -1,5 +1,6 @@
 import { api } from "./client";
 import { errMessage } from "./envelope";
+import { PAGE_SIZE } from "../pagination";
 import type {
   ApiCard,
   ApiPaginationMeta,
@@ -7,11 +8,24 @@ import type {
   ApiSet,
 } from "./types";
 
-/** Browse + card catalog query keys. Lists include the page size so a
- * settings change starts a fresh, consistently-sized sequence of pages. */
-export const setsKey = (limit: number) => ["sets", limit] as const;
-export const setCardsKey = (code: string | undefined, limit: number, filter = "") =>
-  ["set", code, "cards", limit, filter] as const;
+/**
+ * How the browse screen can order the set list. The values are the backend's
+ * `SortOptions` strings, which `/api/v1/sets` validates against its SET_SORTS
+ * allow-list — anything else 400s.
+ */
+export type SetSort = "set.releaseDate" | "set.name";
+
+export interface SetListOptions {
+  /** Substring match on set name. */
+  filter?: string;
+  sort?: SetSort;
+  ascend?: boolean;
+}
+
+/** Browse + card catalog query keys. */
+export const setsKey = (opts: SetListOptions) => ["sets", opts] as const;
+export const setCardsKey = (code: string | undefined, filter = "") =>
+  ["set", code, "cards", filter] as const;
 export const cardsSearchKey = (q: string) => ["cards", "search", q] as const;
 export const cardKey = (setCode: string | undefined, number: string | undefined) =>
   ["card", setCode, number] as const;
@@ -23,9 +37,21 @@ export interface Page<T> {
   meta?: ApiPaginationMeta;
 }
 
-export async function fetchSets(page = 1, limit = 50): Promise<Page<ApiSet>> {
+export async function fetchSets(
+  page = 1,
+  { filter, sort, ascend }: SetListOptions = {},
+): Promise<Page<ApiSet>> {
   const { data, error, response } = await api.GET("/api/v1/sets", {
-    params: { query: { page, limit } },
+    params: {
+      query: {
+        page,
+        limit: PAGE_SIZE,
+        ...(filter ? { filter } : {}),
+        // `ascend` only means something alongside a sort; without one the API
+        // falls back to its default (newest first).
+        ...(sort ? { sort, ascend } : {}),
+      },
+    },
   });
   if (!response.ok) throw new Error(errMessage(error, "Failed to load sets."));
   return { items: data?.data ?? [], meta: data?.meta };
@@ -34,8 +60,9 @@ export async function fetchSets(page = 1, limit = 50): Promise<Page<ApiSet>> {
 export async function fetchSetCards(
   code: string,
   page = 1,
-  limit = 50,
   filter?: string,
+  /** Only the cover-art lookup overrides this (it needs a single card). */
+  limit = PAGE_SIZE,
 ): Promise<Page<ApiCard>> {
   const { data, error, response } = await api.GET("/api/v1/sets/{code}/cards", {
     params: {
@@ -77,7 +104,7 @@ export async function fetchSet(code: string): Promise<ApiSet> {
 export const setCoverKey = (code: string) => ["set", code, "cover"] as const;
 
 export async function fetchSetCover(code: string): Promise<string | null> {
-  const page = await fetchSetCards(code, 1, 1);
+  const page = await fetchSetCards(code, 1, undefined, 1);
   return page.items[0]?.imgSrc ?? null;
 }
 

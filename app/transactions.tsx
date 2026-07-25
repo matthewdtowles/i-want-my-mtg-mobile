@@ -23,7 +23,6 @@ import {
   deleteTransaction,
   fetchTransactions,
 } from "../lib/api/transactions";
-import { useSettings } from "../lib/settings/SettingsContext";
 import type { Page } from "../lib/api/catalog";
 import { mapPageItems, nextPage } from "../lib/pagination";
 import type { ApiTransaction } from "../lib/api/types";
@@ -41,13 +40,12 @@ export default function TransactionsScreen() {
   const { colors } = useTheme();
   const styles = useThemedStyles(createStyles);
   const router = useRouter();
-  const { pageSize } = useSettings();
   const [search, setSearch] = useState("");
   const q = useDebounce(search.trim(), 300);
-  const KEY = transactionsListKey(pageSize, q);
+  const KEY = transactionsListKey(q);
   const query = useInfiniteQuery({
     queryKey: KEY,
-    queryFn: ({ pageParam }) => fetchTransactions(pageParam, pageSize, q || undefined),
+    queryFn: ({ pageParam }) => fetchTransactions(pageParam, q || undefined),
     initialPageParam: 1,
     getNextPageParam: nextPage,
     placeholderData: keepPreviousData,

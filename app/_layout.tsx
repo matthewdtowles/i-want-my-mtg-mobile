@@ -1,5 +1,6 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Stack, useRouter, useSegments } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
@@ -7,9 +8,13 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AuthProvider, useAuth } from "../lib/auth/AuthContext";
 import { queryClient } from "../lib/queryClient";
-import { SettingsProvider } from "../lib/settings/SettingsContext";
 import { ThemeProvider, useTheme } from "../lib/theme/ThemeContext";
 import { usePushNotifications } from "../lib/usePushNotifications";
+
+// Hold the branded launch screen past the first React frame so the cold start
+// goes logo → app, with no blank flash while the stored session is read.
+// A rejection here only means the splash was already gone; never fatal.
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 function RootNavigator() {
   const { initializing, isAuthenticated } = useAuth();
@@ -18,6 +23,12 @@ function RootNavigator() {
   const router = useRouter();
 
   usePushNotifications(isAuthenticated);
+
+  // Auth is the only thing the first screen waits on, so it's the cue to
+  // uncover the app.
+  useEffect(() => {
+    if (!initializing) SplashScreen.hideAsync().catch(() => {});
+  }, [initializing]);
 
   useEffect(() => {
     if (initializing) return;
@@ -112,13 +123,11 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
-        <SettingsProvider>
-          <AuthProvider>
-            <SafeAreaProvider>
-              <RootNavigator />
-            </SafeAreaProvider>
-          </AuthProvider>
-        </SettingsProvider>
+        <AuthProvider>
+          <SafeAreaProvider>
+            <RootNavigator />
+          </SafeAreaProvider>
+        </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

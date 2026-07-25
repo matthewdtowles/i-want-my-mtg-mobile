@@ -26,7 +26,6 @@ import {
   fetchSet,
   fetchSetCards,
 } from "../../lib/api/catalog";
-import { useSettings } from "../../lib/settings/SettingsContext";
 import { firstParam } from "../../lib/params";
 import { nextPage } from "../../lib/pagination";
 import { INVENTORY_KEY , bulkAddToInventory } from "../../lib/api/inventory";
@@ -53,7 +52,6 @@ export default function SetDetailScreen() {
   const queryClient = useQueryClient();
   const params = useLocalSearchParams<{ code: string | string[] }>();
   const code = firstParam(params.code);
-  const { pageSize } = useSettings();
   const { isAuthenticated } = useAuth();
   const { width } = useWindowDimensions();
 
@@ -75,9 +73,9 @@ export default function SetDetailScreen() {
   });
 
   const query = useInfiniteQuery({
-    queryKey: setCardsKey(code, pageSize, q),
+    queryKey: setCardsKey(code, q),
     queryFn: ({ pageParam }) =>
-      fetchSetCards(code as string, pageParam, pageSize, q || undefined),
+      fetchSetCards(code as string, pageParam, q || undefined),
     initialPageParam: 1,
     getNextPageParam: nextPage,
     enabled: !!code,
