@@ -93,9 +93,11 @@ lib/                   app-wide singletons (query client, ...)
 ```
 
 Browse (#4), Inventory (#5), Transactions (#6), and Portfolio (#7) are
-implemented. Distribution to the beta channels (#8) is done: iOS ships to
-TestFlight and Android ships to Play closed testing (Alpha). What remains is
-the two **public** store releases — see [`GO-LIVE.md`](GO-LIVE.md).
+implemented, along with decks, buy-list, and price alerts. **The app is public
+on both stores** — the iOS App Store release went live with 0.20.2
+(2026-07-21) and Google Play production was approved. Ongoing work is ordinary
+versioning; see [`HANDOFF.md`](HANDOFF.md) for what exists and how to work on
+it.
 
 ## API client
 
@@ -195,15 +197,15 @@ App Store Connect app `6784075307`, signing certs/profile + an App Store Connect
 API key all managed on EAS servers; `ITSAppUsesNonExemptEncryption: false` in
 `app.json` skips the per-build encryption-compliance prompt). Android setup is
 also done (Play Console app `com.matthewdtowles.iwantmymtg`, store listing +
-content declarations complete, closed-testing Alpha track live). The one gap:
-`eas submit` for Android needs a Google Play **service-account key** at
-`./play-service-account.json` (gitignored) - until that's created, upload the
-`.aab` from the EAS build page to the Play Console by hand.
+content declarations complete, production approved). The Google Play
+**service-account key** `eas submit` needs lives at
+`./play-service-account.json` (gitignored), so Android submits are fully
+scripted - no manual `.aab` upload.
 
 **`eas submit` for Android reaches testing tracks only** - promoting a build to
-the Production track is a separate manual action in the Play Console, and is
-gated for this account by Google's new-personal-account closed-test requirement
-(12 testers, 14 days). See `docs/playstore-release.md` and `GO-LIVE.md`.
+the Production track is a separate manual action in the Play Console. The
+new-personal-account closed-test requirement (12 testers, 14 days) has already
+been served for this account. See `docs/playstore-release.md`.
 
 ### Inviting TestFlight testers
 

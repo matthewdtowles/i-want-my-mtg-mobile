@@ -2,10 +2,11 @@
 
 Where the build stands and how to pick it up.
 
-**All feature work (v1 + v2) is shipped. The only remaining work is the two
-public store releases — [`GO-LIVE.md`](GO-LIVE.md) is the single source of
-truth for that.** This file is the reference for what exists and how to work
-on it. _Last updated: 2026-07-16._
+**The app is public on both stores.** iOS went live with **0.20.2**
+(2026-07-21) after clearing a Guideline 3.1.1 rejection; Google Play production
+was submitted and approved. Work is now ordinary version-over-version
+improvement — current build **0.26.0**. This file is the reference for what
+exists and how to work on it. _Last updated: 2026-07-26._
 
 ## What this is
 
@@ -17,8 +18,9 @@ server. Backend/API repo: `i-want-my-mtg` (overall plan: its `ROADMAP.md`
 
 ## Shipped
 
-Everything below is done, merged, and live in the beta channels (iOS
-TestFlight 2026-06-24; Android Play closed testing/Alpha 2026-07-02).
+Everything below is done, merged, and publicly released. It reached the beta
+channels first (iOS TestFlight 2026-06-24; Android Play closed testing/Alpha
+2026-07-02), then both public stores in July 2026.
 
 **v1 (#1–#8):**
 - Scaffold, generated OpenAPI client + CI drift check, auth (JWT in
@@ -44,8 +46,24 @@ TestFlight 2026-06-24; Android Play closed testing/Alpha 2026-07-02).
   backend fan-out `i-want-my-mtg` #560)
 - Decks: list/create/import/detail/edit, missing-cards → buy-list,
   add-card-via-search (#51, #52)
-- Tab bar = 4 core surfaces (Browse/Inventory/Transactions/Portfolio);
-  Buy-list/Decks/Price alerts live in the account menu
+
+**July 2026 UX overhaul (#86–#92, #94):**
+- Public browsing (no sign-in wall), Settings screen, real server-side
+  pagination (#86)
+- Home = art-backed set gallery over a signed-in collection hero (#87)
+- Set pages default to a 3-up binder grid with a list toggle; press-and-hold
+  peeks the card (#88 — added `expo-haptics`)
+- Search everywhere + interactive price-history chart (#89); style polish (#90)
+- Inventory finish chips filter server-side (#91, needs backend #611)
+- Browse set search/sort, collection binder grid + group-by-set, chart area
+  fill, launch screen (#94 — added `expo-splash-screen`; removed the
+  cards-per-page setting in favor of a fixed 50)
+
+**Navigation (current):** tab bar is **Browse / Inventory / Decks / Watchlist**.
+Watchlist is buy-list + price alerts behind a segmented control
+(`app/(tabs)/watchlist.tsx`). Transactions and Portfolio are pushed routes,
+reached from the hub buttons at the top of Inventory. Account, Settings,
+Notifications sit under the header person icon.
 
 **Backend deps** (all merged in `i-want-my-mtg`, 2026-06-28): refresh tokens
 (#558), OpenAPI annotations (#549/#550/#557/#562/#563), push device
@@ -108,15 +126,25 @@ profiles (#61); Android card images fixed via `expo-image` + custom User-Agent
   use `createStyles(colors)` factories via `useThemedStyles`.
 - `lib/push.ts` + `lib/usePushNotifications.ts` — Expo push registration
   (gated on auth), notification tap-routing.
-- `app/` — expo-router routes: `(tabs)` shell (4 core tabs), `sign-in`,
-  `account` (menu hub → Decks / Buy-list / Price alerts), `set/[code]`,
-  `card/[setCode]/[number]`, `transaction/new` (create + edit), `buy-list`,
-  `buy-list-import`, `notifications`, `price-alerts`, `decks`, `deck/[id]`,
-  `deck/new` (create / import / edit), `deck/add`.
+- `app/` — expo-router routes: `(tabs)` shell (`index` Browse, `inventory`,
+  `decks`, `watchlist`), `sign-in`, `sign-up`, `user/verify`, `account`,
+  `settings`, `privacy`, `set/[code]`, `card/[setCode]/[number]`,
+  `transaction/new` (create + edit), `transactions`, `portfolio`,
+  `buy-list-import`, `notifications`, `deck/[id]`, `deck/new` (create /
+  import / edit), `deck/add`. Buy-list and price alerts have no routes of
+  their own — they render as views inside `watchlist`.
 - `components/` — shared UI incl. `ErrorState` (full + `inline` variants),
-  `QuantityStepper`/`FinishStepper`, `SegmentedControl`, `Chip`, `CardPanel`
-  (card-detail section chrome), `CardQuantityRow`, `BulkAddBar`,
-  `CardPriceHistory` (dependency-free chart), `CardListItem`.
+  `QuantityStepper`/`FinishStepper`, `SegmentedControl`, `Chip`, `SearchField`,
+  `CardPanel` (card-detail section chrome), `CardQuantityRow`, `BulkAddBar`,
+  `CardPriceHistory` (dependency-free SVG chart), `CardListItem`.
+  Grid/gallery surfaces: `SetTile` + `SetPeekOverlay` (home), `CardGridCell` +
+  `CardPeekOverlay` (set binder), `InventoryGridCell` (collection binder),
+  `CollectionHero`, `SetSymbol`, `CardThumb`.
+- `lib/inventoryEntries.ts` — flattens the inventory into header/row entries so
+  one `FlatList` can render set-grouped section headers *and* a multi-column
+  grid (neither `SectionList` nor `numColumns` can do both). Unit-tested.
+- `lib/pagination.ts` — `nextPage`/`mapPageItems` helpers plus `PAGE_SIZE`, the
+  fixed 50-row page size every long list uses.
 - Edit screens (`transaction/new`, `deck/new`) take only an `id` param and
   read the entity from the query cache (deck edit falls back to a fetch).
 
@@ -131,16 +159,25 @@ profiles (#61); Android card images fixed via `expo-image` + custom User-Agent
   truth; `app.config.ts` resolves the version at build time and EAS manages
   build numbers remotely. Nothing version-related is ever committed.
 - **Install with `legacy-peer-deps`** (configured in `.npmrc`).
-- **Validate before a PR:** `npm run typecheck` and `npx expo export`. Booting
-  on a simulator/emulator still needs a manual smoke test.
+- **Validate before a PR:** `npm run typecheck`, `npm run lint`, `npm test`
+  (node:test over `lib/**/*.test.ts`). Booting on a simulator/emulator still
+  needs a manual smoke test — `expo start --web` cannot stand in for it, since
+  `expo-secure-store` is native-only.
+- **Releasing:** `npm run ship:ios` (→ TestFlight) and
+  `npm run ship:android [internal|alpha]` (→ Play testing tracks). Both require
+  a clean `main` and read the version from the highest SemVer git tag. Public
+  releases are a separate manual Submit-for-Review in each console. The Play
+  service-account key lives at `./play-service-account.json` (gitignored).
 
 ## Known gaps / deferred
 
 - Per-card **legality** is not in the API card response (only a search
   filter); card detail can't show it without a backend change.
-- Android `eas submit` is blocked on creating a Play service-account key —
-  `GO-LIVE.md` §1 fixes this permanently.
 - EAS Update (OTA) was never set up — JS-only fixes require a full store
-  build.
+  build. Native modules make this stricter still: `expo-haptics` (#88) and
+  `expo-splash-screen` (#94) can only arrive in a fresh binary.
+- **Backend #612** — the API intermittently 503s under load, often enough to
+  break the Browse screen. Server-side, but it is the app's most visible
+  problem post-launch.
 - Deferred analytics: portfolio `/history`, `/performance`, `/cash-flow`,
   `/breakdown` endpoints are typed but unbuilt.
