@@ -15,7 +15,7 @@ import type { ThemeColors } from "../lib/theme/colors";
  * generated shape. Optional either way, so a response without them renders the
  * art-less tile, which is also the empty-deck case.
  */
-type DeckCover = { coverImgSrc?: string; coverCardName?: string };
+type DeckCover = { coverImgSrc?: string };
 
 /**
  * A deck in the list: the art crop of its representative card as a banner with
@@ -43,15 +43,16 @@ export function DeckTile({
       accessibilityLabel={deck.name}
     >
       <View style={styles.art}>
+        {/* The art is decorative: the Pressable already announces the deck, so
+            labeling the image would add a second element saying much the same. */}
         {uri ? (
           <Image
             source={{ uri, headers: { "User-Agent": SCRYFALL_USER_AGENT } }}
             style={StyleSheet.absoluteFill}
             contentFit="cover"
             transition={200}
-            accessibilityLabel={
-              deck.coverCardName ? `Art from ${deck.coverCardName}` : undefined
-            }
+            accessible={false}
+            importantForAccessibility="no"
           />
         ) : null}
         <View style={styles.scrim}>
