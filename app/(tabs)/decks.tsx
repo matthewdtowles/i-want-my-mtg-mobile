@@ -1,10 +1,8 @@
-import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import {
   ActivityIndicator,
   FlatList,
-  Pressable,
   RefreshControl,
   StyleSheet,
   Text,
@@ -12,10 +10,9 @@ import {
 } from "react-native";
 
 import { DECKS_KEY, fetchDecks } from "../../lib/api/decks";
-import type { ApiDeckSummary } from "../../lib/api/types";
+import { DeckTile } from "../../components/DeckTile";
 import { ErrorState } from "../../components/ErrorState";
 import { SignInPrompt } from "../../components/SignInPrompt";
-import { formatDeckFormat, formatPrice } from "../../lib/format";
 import { useAuth } from "../../lib/auth/AuthContext";
 import { useTheme, useThemedStyles } from "../../lib/theme/ThemeContext";
 import type { ThemeColors } from "../../lib/theme/colors";
@@ -67,12 +64,7 @@ function DecksList() {
       data={query.data}
       keyExtractor={(it) => String(it.id)}
       renderItem={({ item }) => (
-        <DeckRow
-          item={item}
-          styles={styles}
-          chevronColor={colors.textMuted}
-          onPress={() => router.push(`/deck/${item.id}`)}
-        />
+        <DeckTile deck={item} onPress={() => router.push(`/deck/${item.id}`)} />
       )}
       refreshControl={
         <RefreshControl
@@ -82,34 +74,6 @@ function DecksList() {
         />
       }
     />
-  );
-}
-
-function DeckRow({
-  item,
-  styles,
-  chevronColor,
-  onPress,
-}: {
-  item: ApiDeckSummary;
-  styles: ReturnType<typeof createStyles>;
-  chevronColor: string;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable style={({ pressed }) => [styles.row, pressed && styles.rowPressed]} onPress={onPress}>
-      <View style={styles.rowMain}>
-        <Text style={styles.name}>{item.name}</Text>
-        <Text style={styles.meta}>
-          {[
-            formatDeckFormat(item.format),
-            `${item.cardCount} card${item.cardCount === 1 ? "" : "s"}`,
-            formatPrice(item.estimatedValue),
-          ].join(" · ")}
-        </Text>
-      </View>
-      <Ionicons name="chevron-forward" size={18} color={chevronColor} />
-    </Pressable>
   );
 }
 
@@ -126,18 +90,4 @@ const createStyles = (colors: ThemeColors) =>
     },
     empty: { fontSize: 16, fontWeight: "600", color: colors.textSecondary },
     emptyHint: { fontSize: 14, color: colors.textMuted, marginTop: 6, textAlign: "center" },
-    row: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 12,
-      backgroundColor: colors.surface,
-      padding: 16,
-    },
-    rowPressed: { backgroundColor: colors.surfaceAlt },
-    rowMain: { flex: 1, gap: 2 },
-    name: { fontSize: 16, fontWeight: "700", color: colors.textPrimary },
-    meta: { fontSize: 13, color: colors.textSecondary },
   });
