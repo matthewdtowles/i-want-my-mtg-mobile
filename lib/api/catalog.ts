@@ -61,13 +61,11 @@ export async function fetchSetCards(
   code: string,
   page = 1,
   filter?: string,
-  /** Only the cover-art lookup overrides this (it needs a single card). */
-  limit = PAGE_SIZE,
 ): Promise<Page<ApiCard>> {
   const { data, error, response } = await api.GET("/api/v1/sets/{code}/cards", {
     params: {
       path: { code },
-      query: { page, limit, ...(filter ? { filter } : {}) },
+      query: { page, limit: PAGE_SIZE, ...(filter ? { filter } : {}) },
     },
   });
   if (!response.ok) throw new Error(errMessage(error, "Failed to load set cards."));
@@ -98,14 +96,6 @@ export async function fetchSet(code: string): Promise<ApiSet> {
   const set = data?.data;
   if (!set) throw new Error("Set not found.");
   return set;
-}
-
-/** A set's cover art: the first card's image tail (rendered as an art crop). */
-export const setCoverKey = (code: string) => ["set", code, "cover"] as const;
-
-export async function fetchSetCover(code: string): Promise<string | null> {
-  const page = await fetchSetCards(code, 1, undefined, 1);
-  return page.items[0]?.imgSrc ?? null;
 }
 
 export async function fetchCard(

@@ -6,7 +6,7 @@ Where the build stands and how to pick it up.
 (2026-07-21) after clearing a Guideline 3.1.1 rejection; Google Play production
 was submitted and approved. Work is now ordinary version-over-version
 improvement — current build **0.26.0**. This file is the reference for what
-exists and how to work on it. _Last updated: 2026-07-26._
+exists and how to work on it. _Last updated: 2026-07-29._
 
 ## What this is
 
@@ -169,6 +169,25 @@ profiles (#61); Android card images fixed via `expo-image` + custom User-Agent
   releases are a separate manual Submit-for-Review in each console. The Play
   service-account key lives at `./play-service-account.json` (gitignored).
 
+## Next up (as of 2026-07-29)
+
+Ordered. The full cross-repo board lives in `i-want-my-mtg` → `ROADMAP.md` → **Now**.
+
+1. **#101 — adopt `coverImgSrc` on the set list.** `SetTile.tsx:35` still fetches a
+   card per tile, so Browse costs **51 requests**; the backend field shipped in
+   backend #615 and is live. Start with `npm run gen:api` — `lib/api/schema.ts` has
+   no `coverImgSrc` yet, so nothing compiles against it until that runs. Keep
+   `cardImageUrl(..., "art_crop")`: the **set** field is an image *tail*, while the
+   **deck** field is an absolute URL. Highest-value item in this repo.
+2. **#96 — sort Browse by set value.** No backend work; one entry in `SET_SORTS`
+   (`app/(tabs)/index.tsx:47`) and a wider `SetSort` union.
+3. **#95 — group Browse by block.** `?group=block` already exists. Note the server
+   **silently drops grouping when `sort` or a search term is set**, so grouping has
+   to be mutually exclusive with the #96 chip and the search box in the UI.
+4. **#97 — filter Browse to owned sets.** Deferred: the only mobile item needing
+   backend work (`ownedTotal` is computed after pagination), and it is worth doing
+   only if the list still feels unwieldy after 1–3.
+
 ## Known gaps / deferred
 
 - Per-card **legality** is not in the API card response (only a search
@@ -178,6 +197,9 @@ profiles (#61); Android card images fixed via `expo-image` + custom User-Agent
   `expo-splash-screen` (#94) can only arrive in a fresh binary.
 - **Backend #612** — the API intermittently 503s under load, often enough to
   break the Browse screen. Server-side, but it is the app's most visible
-  problem post-launch.
+  problem post-launch. Now an umbrella; the fixes are backend #621 (CloudFront
+  caches nothing on `/api/*`) and backend #622 (`trust proxy` unset, so the
+  60/min limit is shared per CloudFront POP — anonymous callers only, which is
+  what public Browse is). The client half is #101 above.
 - Deferred analytics: portfolio `/history`, `/performance`, `/cash-flow`,
   `/breakdown` endpoints are typed but unbuilt.

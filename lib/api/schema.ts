@@ -1398,6 +1398,10 @@ export interface components {
             id: number;
             name: string;
             format?: string | null;
+            /** @description Art-crop URL of the deck's representative card — its commander, the card it is named after, or its most valuable creature. Ready to render as-is. Absent for an empty deck. */
+            coverImgSrc?: string;
+            /** @description The cover card's name, for alt text. */
+            coverCardName?: string;
             /** @description Total card count (sum of quantities, main + side). */
             cardCount: number;
             estimatedValue: number;
@@ -1426,6 +1430,10 @@ export interface components {
             id: number;
             name: string;
             format?: string | null;
+            /** @description Art-crop URL of the deck's representative card — its commander, the card it is named after, or its most valuable creature. Ready to render as-is. Absent for an empty deck. */
+            coverImgSrc?: string;
+            /** @description The cover card's name, for alt text. */
+            coverCardName?: string;
             /** @description Total card count (sum of quantities, main + side). */
             cardCount: number;
             estimatedValue: number;
@@ -1793,6 +1801,8 @@ export interface components {
             baseSize: number;
             totalSize: number;
             keyruneCode: string;
+            /** @description Cover art tail for the set's opening card, in the same form as a card's `imgSrc`. Lets a client render set artwork from the list response instead of fetching a card per set. Absent when the set has no card image. */
+            coverImgSrc?: string;
             block?: string;
             parentCode?: string;
             isMain: boolean;
@@ -2942,9 +2952,9 @@ export interface operations {
     InventoryApiController_findAll: {
         parameters: {
             query?: {
-                filter?: string;
                 /** @description Only holdings of this finish (normal or foil). */
                 finish?: "normal" | "foil";
+                filter?: string;
                 ascend?: boolean;
                 sort?: string;
                 limit?: number;

@@ -8,16 +8,6 @@ import { useThemedStyles } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
 
 /**
- * Cover fields the API adds to a deck summary. Declared here rather than read
- * off `ApiDeckSummary` because `lib/api/schema.ts` is generated from the
- * *deployed* spec — they type as optional until the backend ships and
- * `npm run gen:api` picks them up, at which point this can be dropped for the
- * generated shape. Optional either way, so a response without them renders the
- * art-less tile, which is also the empty-deck case.
- */
-type DeckCover = { coverImgSrc?: string };
-
-/**
  * A deck in the list: the art crop of its representative card as a banner with
  * the deck name over a scrim, and the deck's stats on the surface below.
  *
@@ -29,7 +19,7 @@ export function DeckTile({
   deck,
   onPress,
 }: {
-  deck: ApiDeckSummary & DeckCover;
+  deck: ApiDeckSummary;
   onPress: () => void;
 }) {
   const styles = useThemedStyles(createStyles);
