@@ -58,6 +58,9 @@ channels first (iOS TestFlight 2026-06-24; Android Play closed testing/Alpha
 - Browse set search/sort, collection binder grid + group-by-set, chart area
   fill, launch screen (#94 — added `expo-splash-screen`; removed the
   cards-per-page setting in favor of a fixed 50)
+- Art-backed deck tiles on the Decks tab (#100)
+- Set list reads `coverImgSrc` off the list response instead of fetching a
+  card per tile — Browse cold load 51 requests → 1 (#101, backend #615)
 
 **Navigation (current):** tab bar is **Browse / Inventory / Decks / Watchlist**.
 Watchlist is buy-list + price alerts behind a segmented control
@@ -97,7 +100,10 @@ profiles (#61); Android card images fixed via `expo-image` + custom User-Agent
 - **Push no-ops in Expo Go / simulators** (`Device.isDevice` guard) — real
   pushes need an EAS build on a physical device.
 - **Card images:** browse returns an `imgSrc` tail, inventory a full URL —
-  `cardImageUrl` normalizes both (`lib/images.ts`).
+  `cardImageUrl` normalizes both (`lib/images.ts`). The two `coverImgSrc`
+  fields differ the same way: a **set**'s is a tail (needs `cardImageUrl`), a
+  **deck**'s is an absolute `art_crop` URL (render as-is). Getting it wrong
+  fails soft — the tile lays out fine with no art.
 - **Deck format enum** (from `DeckCreateApiDto`): standard / commander /
   modern / legacy / vintage / brawl / explorer / historic / oathbreaker /
   pauper / pioneer (omit for none).
@@ -173,20 +179,14 @@ profiles (#61); Android card images fixed via `expo-image` + custom User-Agent
 
 Ordered. The full cross-repo board lives in `i-want-my-mtg` → `ROADMAP.md` → **Now**.
 
-1. **#101 — adopt `coverImgSrc` on the set list.** `SetTile.tsx:35` still fetches a
-   card per tile, so Browse costs **51 requests**; the backend field shipped in
-   backend #615 and is live. Start with `npm run gen:api` — `lib/api/schema.ts` has
-   no `coverImgSrc` yet, so nothing compiles against it until that runs. Keep
-   `cardImageUrl(..., "art_crop")`: the **set** field is an image *tail*, while the
-   **deck** field is an absolute URL. Highest-value item in this repo.
-2. **#96 — sort Browse by set value.** No backend work; one entry in `SET_SORTS`
+1. **#96 — sort Browse by set value.** No backend work; one entry in `SET_SORTS`
    (`app/(tabs)/index.tsx:47`) and a wider `SetSort` union.
-3. **#95 — group Browse by block.** `?group=block` already exists. Note the server
+2. **#95 — group Browse by block.** `?group=block` already exists. Note the server
    **silently drops grouping when `sort` or a search term is set**, so grouping has
    to be mutually exclusive with the #96 chip and the search box in the UI.
-4. **#97 — filter Browse to owned sets.** Deferred: the only mobile item needing
+3. **#97 — filter Browse to owned sets.** Deferred: the only mobile item needing
    backend work (`ownedTotal` is computed after pagination), and it is worth doing
-   only if the list still feels unwieldy after 1–3.
+   only if the list still feels unwieldy after 1–2.
 
 ## Known gaps / deferred
 
@@ -200,6 +200,6 @@ Ordered. The full cross-repo board lives in `i-want-my-mtg` → `ROADMAP.md` →
   problem post-launch. Now an umbrella; the fixes are backend #621 (CloudFront
   caches nothing on `/api/*`) and backend #622 (`trust proxy` unset, so the
   60/min limit is shared per CloudFront POP — anonymous callers only, which is
-  what public Browse is). The client half is #101 above.
+  what public Browse is). The client half (#101) is done.
 - Deferred analytics: portfolio `/history`, `/performance`, `/cash-flow`,
   `/breakdown` endpoints are typed but unbuilt.
