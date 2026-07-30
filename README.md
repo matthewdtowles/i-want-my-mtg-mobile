@@ -207,6 +207,57 @@ the Production track is a separate manual action in the Play Console. The
 new-personal-account closed-test requirement (12 testers, 14 days) has already
 been served for this account. See `docs/playstore-release.md`.
 
+### Shipping an update (post-launch)
+
+Both stores are public, so every release from here is an **update** to a live
+app. The loop below is the whole process; steps 1-2 are scripted, the rest are
+deliberate manual actions in each console.
+
+#### iOS
+
+1. **Merge your PRs to `main`.** CI cuts the git tag - that tag *is* the version.
+2. **`npm run ship:ios`** - builds production and auto-submits to TestFlight.
+   ~15-25 min for the EAS build, then 5-15 min for Apple to process. Nothing to
+   commit; `buildNumber` auto-increments on EAS servers.
+3. **App Store Connect -> the app -> the `+` next to "iOS App" -> New Version.**
+   Type the version number - it must exactly match the git tag (e.g. `0.27.0`),
+   or the build won't be selectable.
+4. **Fill the version page** (~10 min): "What's New in This Version" (required,
+   users see it), pick the processed build, answer export compliance (one click
+   - `ITSAppUsesNonExemptEncryption: false` is already in `app.json`).
+   Screenshots only need updating if the UI visibly changed.
+5. **Set the release type, then Submit for Review.** Prefer **Phased Release for
+   Automatic Updates** - rolls out over 7 days and can be paused if something
+   breaks. Review is 1-3 days, usually under 24h for updates.
+
+#### Android
+
+1. **Same merge -> same tag** (one tag drives both platforms).
+2. **`npm run ship:android`** - builds and submits to the **internal** track.
+   Instant, no review. Install it and smoke-test. ~15 min.
+3. **Play Console -> Release -> Production -> Create new release -> Add from
+   library**, and pick the build you just tested. (Equivalently: Internal
+   testing -> Releases -> **Promote release -> Production**.)
+4. **Write "What's new"** (per-language, 500 char cap) and set a **staged
+   rollout** - start at 20%, watch vitals for a day, then 50% -> 100%.
+5. **Send for review.** Update reviews on Play typically take hours to ~2 days.
+
+**Note the naming trap:** the `production` *submit* profile in `eas.json` has
+`"track": "internal"`. That is deliberate - nothing run from the CLI can reach
+the Play production track, so promoting is always a human decision in the
+Console.
+
+#### Cadence
+
+TestFlight and the Play `internal` track are free and unreviewed, so ship to
+them as often as you like - every merge to `main` is fine. Batch the store
+submissions (steps 3-5 on both platforms) into one deliberate action every 1-2
+weeks, from the same tag on the same day, so the two stores stay on matching
+version numbers.
+
+There is no OTA update path (`expo-updates` is not installed), so **every**
+change - including a one-word copy fix - needs a full store round-trip.
+
 ### Inviting TestFlight testers
 
 In App Store Connect -> your app -> **TestFlight**:
