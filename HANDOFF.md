@@ -6,7 +6,7 @@ Where the build stands and how to pick it up.
 (2026-07-21) after clearing a Guideline 3.1.1 rejection; Google Play production
 was submitted and approved. Work is now ordinary version-over-version
 improvement — current build **0.26.0**. This file is the reference for what
-exists and how to work on it. _Last updated: 2026-07-26._
+exists and how to work on it. _Last updated: 2026-07-29._
 
 ## What this is
 
@@ -58,6 +58,9 @@ channels first (iOS TestFlight 2026-06-24; Android Play closed testing/Alpha
 - Browse set search/sort, collection binder grid + group-by-set, chart area
   fill, launch screen (#94 — added `expo-splash-screen`; removed the
   cards-per-page setting in favor of a fixed 50)
+- Art-backed deck tiles on the Decks tab (#100)
+- Set list reads `coverImgSrc` off the list response instead of fetching a
+  card per tile — Browse cold load 51 requests → 1 (#101, backend #615)
 
 **Navigation (current):** tab bar is **Browse / Inventory / Decks / Watchlist**.
 Watchlist is buy-list + price alerts behind a segmented control
@@ -97,7 +100,10 @@ profiles (#61); Android card images fixed via `expo-image` + custom User-Agent
 - **Push no-ops in Expo Go / simulators** (`Device.isDevice` guard) — real
   pushes need an EAS build on a physical device.
 - **Card images:** browse returns an `imgSrc` tail, inventory a full URL —
-  `cardImageUrl` normalizes both (`lib/images.ts`).
+  `cardImageUrl` normalizes both (`lib/images.ts`). The two `coverImgSrc`
+  fields differ the same way: a **set**'s is a tail (needs `cardImageUrl`), a
+  **deck**'s is an absolute `art_crop` URL (render as-is). Getting it wrong
+  fails soft — the tile lays out fine with no art.
 - **Deck format enum** (from `DeckCreateApiDto`): standard / commander /
   modern / legacy / vintage / brawl / explorer / historic / oathbreaker /
   pauper / pioneer (omit for none).
@@ -169,6 +175,19 @@ profiles (#61); Android card images fixed via `expo-image` + custom User-Agent
   releases are a separate manual Submit-for-Review in each console. The Play
   service-account key lives at `./play-service-account.json` (gitignored).
 
+## Next up (as of 2026-07-29)
+
+Ordered. The full cross-repo board lives in `i-want-my-mtg` → `ROADMAP.md` → **Now**.
+
+1. **#96 — sort Browse by set value.** No backend work; one entry in `SET_SORTS`
+   (`app/(tabs)/index.tsx:47`) and a wider `SetSort` union.
+2. **#95 — group Browse by block.** `?group=block` already exists. Note the server
+   **silently drops grouping when `sort` or a search term is set**, so grouping has
+   to be mutually exclusive with the #96 chip and the search box in the UI.
+3. **#97 — filter Browse to owned sets.** Deferred: the only mobile item needing
+   backend work (`ownedTotal` is computed after pagination), and it is worth doing
+   only if the list still feels unwieldy after 1–2.
+
 ## Known gaps / deferred
 
 - Per-card **legality** is not in the API card response (only a search
@@ -178,6 +197,9 @@ profiles (#61); Android card images fixed via `expo-image` + custom User-Agent
   `expo-splash-screen` (#94) can only arrive in a fresh binary.
 - **Backend #612** — the API intermittently 503s under load, often enough to
   break the Browse screen. Server-side, but it is the app's most visible
-  problem post-launch.
+  problem post-launch. Now an umbrella; the fixes are backend #621 (CloudFront
+  caches nothing on `/api/*`) and backend #622 (`trust proxy` unset, so the
+  60/min limit is shared per CloudFront POP — anonymous callers only, which is
+  what public Browse is). The client half (#101) is done.
 - Deferred analytics: portfolio `/history`, `/performance`, `/cash-flow`,
   `/breakdown` endpoints are typed but unbuilt.

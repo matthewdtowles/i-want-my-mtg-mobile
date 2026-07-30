@@ -1,10 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useRef } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { setCoverKey, fetchSetCover } from "../lib/api/catalog";
 import type { ApiSet } from "../lib/api/types";
 import { cardImageUrl, SCRYFALL_USER_AGENT } from "../lib/images";
 import { useThemedStyles } from "../lib/theme/ThemeContext";
@@ -33,13 +31,9 @@ export function SetTile({
   const router = useRouter();
   const peeking = useRef(false);
 
-  const cover = useQuery({
-    queryKey: setCoverKey(set.code),
-    queryFn: () => fetchSetCover(set.code),
-    staleTime: Infinity,
-    gcTime: Infinity,
-  });
-  const uri = cardImageUrl(cover.data, "art_crop");
+  // `coverImgSrc` is an image tail, like a card's `imgSrc` — the list response
+  // carries it so a page of tiles costs one request instead of one per tile.
+  const uri = cardImageUrl(set.coverImgSrc, "art_crop");
 
   const year = set.releaseDate ? set.releaseDate.slice(0, 4) : null;
   const sub = [year, set.baseSize != null ? `${set.baseSize} cards` : null]
