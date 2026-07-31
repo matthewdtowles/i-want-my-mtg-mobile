@@ -33,6 +33,7 @@ import type { ApiCard } from "../../lib/api/types";
 import { CardGridCell } from "../../components/CardGridCell";
 import { CardListItem } from "../../components/CardListItem";
 import { CardPeekOverlay } from "../../components/CardPeekOverlay";
+import { Chip } from "../../components/Chip";
 import { ErrorState } from "../../components/ErrorState";
 import { BulkAddBar } from "../../components/BulkAddBar";
 import { SearchField } from "../../components/SearchField";
@@ -45,6 +46,12 @@ import type { ThemeColors } from "../../lib/theme/colors";
 const GRID_COLUMNS = 3;
 const GRID_PADDING = 16;
 const GRID_GAP = 10;
+
+/** Base-set cards vs everything the set printed — the web app's toggle. */
+const CARD_SCOPES = [
+  { label: "Main only", value: true },
+  { label: "All cards", value: false },
+];
 
 export default function SetDetailScreen() {
   const { colors } = useTheme();
@@ -60,6 +67,10 @@ export default function SetDetailScreen() {
   const [peek, setPeek] = useState<ApiCard | null>(null);
   const [search, setSearch] = useState("");
   const q = useDebounce(search.trim(), 300);
+  // Base-set cards only, or every card the set printed (showcases, extended
+  // art, the lot). Main is the default, which is what this list already showed:
+  // the API reads an absent `baseOnly` as true.
+  const [baseOnly, setBaseOnly] = useState(true);
 
   // Multi-select state: cardId -> card, so we know each card's finish support.
   const [selectMode, setSelectMode] = useState(false);
@@ -72,10 +83,14 @@ export default function SetDetailScreen() {
     enabled: !!code,
   });
 
+  // `baseOnly` goes out even for a non-main set, where the toggle is hidden and
+  // this state is stuck at its `true` default. That is safe on two counts: the
+  // API forces `baseOnly=false` for a set whose `isMain` is false, and omitting
+  // the param would mean `true` anyway — it defaults to true, not to "all".
+  const cardOpts = { filter: q || undefined, baseOnly };
   const query = useInfiniteQuery({
-    queryKey: setCardsKey(code, q),
-    queryFn: ({ pageParam }) =>
-      fetchSetCards(code as string, pageParam, q || undefined),
+    queryKey: setCardsKey(code, cardOpts),
+    queryFn: ({ pageParam }) => fetchSetCards(code as string, pageParam, cardOpts),
     initialPageParam: 1,
     getNextPageParam: nextPage,
     enabled: !!code,
@@ -197,6 +212,11 @@ export default function SetDetailScreen() {
   }
 
   const set = setQuery.data;
+  // The API forces every card for a non-main set (a masters or commander set
+  // has no "main" half), so the toggle would be dead there. Same when the set
+  // printed no extras at all.
+  const scopeToggleable = !!set?.isMain && set.baseSize !== set.totalSize;
+  const cardCount = scopeToggleable && baseOnly ? set?.baseSize : set?.totalSize;
   const hero = (
     <View style={styles.hero}>
       <View style={styles.heroRow}>
@@ -209,7 +229,9 @@ export default function SetDetailScreen() {
             {[
               code.toUpperCase(),
               set?.releaseDate ? set.releaseDate.slice(0, 4) : null,
-              set?.baseSize != null ? `${set.baseSize} cards` : null,
+              // The count follows the toggle, so switching scope is visible
+              // before the list has finished loading.
+              cardCount != null ? `${cardCount} cards` : null,
             ]
               .filter(Boolean)
               .join(" · ")}
@@ -229,6 +251,19 @@ export default function SetDetailScreen() {
         onChangeText={setSearch}
         placeholder="Search this set"
       />
+      {scopeToggleable ? (
+        <View style={styles.scopeRow}>
+          {CARD_SCOPES.map((s) => (
+            <Chip
+              key={s.label}
+              label={s.label}
+              active={baseOnly === s.value}
+              onPress={() => setBaseOnly(s.value)}
+              size="small"
+            />
+          ))}
+        </View>
+      ) : null}
     </View>
   );
 
@@ -362,6 +397,7 @@ const createStyles = (colors: ThemeColors) =>
     heroName: { fontSize: 18, fontWeight: "800", color: colors.textPrimary },
     heroSub: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
     heroOwned: { fontSize: 13, fontWeight: "600", color: colors.accent, marginTop: 2 },
+    scopeRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
     gridRow: { gap: GRID_GAP, paddingHorizontal: GRID_PADDING },
     gridContent: { paddingBottom: 24, gap: 14 },
   });
