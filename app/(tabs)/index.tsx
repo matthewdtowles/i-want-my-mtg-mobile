@@ -14,6 +14,7 @@ import {
   cardsSearchKey,
   fetchSets,
   searchCards,
+  type CardSearchMode,
   type Page,
   type SetSort,
 } from "../../lib/api/catalog";
@@ -49,6 +50,22 @@ const SET_SORTS: { key: SetSort; label: string; startAscending: boolean }[] = [
   { key: "set.name", label: "Name", startAscending: true },
 ];
 
+/**
+ * The set-list scope, matching the web app's "Main Only"/"Show All" toggle.
+ * Main is the default on both — and is what this list has always shown, since
+ * the API treats an absent `baseOnly` as true. All sets is ~4.5x longer.
+ */
+const SET_SCOPES = [
+  { label: "Main only", value: true },
+  { label: "All sets", value: false },
+];
+
+/** How card search reports a name that was printed more than once. */
+const CARD_MODES: { label: string; value: CardSearchMode }[] = [
+  { label: "Unique", value: "unique" },
+  { label: "All printings", value: "printings" },
+];
+
 export default function BrowseScreen() {
   const { colors } = useTheme();
   const styles = useThemedStyles(createStyles);
@@ -59,8 +76,10 @@ export default function BrowseScreen() {
 
   const [sort, setSort] = useState<SetSort>("set.releaseDate");
   const [ascend, setAscend] = useState(false);
+  const [baseOnly, setBaseOnly] = useState(true);
+  const [cardMode, setCardMode] = useState<CardSearchMode>("unique");
 
-  const setOpts = { filter: q || undefined, sort, ascend };
+  const setOpts = { filter: q || undefined, sort, ascend, baseOnly };
   const setsQuery = useInfiniteQuery({
     queryKey: setsKey(setOpts),
     queryFn: ({ pageParam }) => fetchSets(pageParam, setOpts),
@@ -73,11 +92,14 @@ export default function BrowseScreen() {
   });
 
   const cardsQuery = useInfiniteQuery({
-    queryKey: cardsSearchKey(q),
-    queryFn: ({ pageParam }) => searchCards(q, pageParam),
+    queryKey: cardsSearchKey(q, cardMode),
+    queryFn: ({ pageParam }) => searchCards(q, pageParam, cardMode),
     initialPageParam: 1,
     getNextPageParam: nextPage,
     enabled: scope === "cards" && q.length > 0,
+    // Same reason as the gallery: flipping Unique/All printings shouldn't blank
+    // the list out from under the keyboard.
+    placeholderData: keepPreviousData,
   });
 
   // Tapping a sort chip that's already active flips its direction, matching
@@ -106,21 +128,46 @@ export default function BrowseScreen() {
         }
       />
       {scope === "sets" ? (
-        <View style={styles.sortRow}>
-          {SET_SORTS.map((s) => {
-            const active = sort === s.key;
-            return (
+        <>
+          <View style={styles.sortRow}>
+            {SET_SORTS.map((s) => {
+              const active = sort === s.key;
+              return (
+                <Chip
+                  key={s.key}
+                  label={`${s.label}${active ? (ascend ? " ↑" : " ↓") : ""}`}
+                  active={active}
+                  onPress={() => pickSort(s)}
+                  size="small"
+                />
+              );
+            })}
+          </View>
+          <View style={styles.sortRow}>
+            {SET_SCOPES.map((s) => (
               <Chip
-                key={s.key}
-                label={`${s.label}${active ? (ascend ? " ↑" : " ↓") : ""}`}
-                active={active}
-                onPress={() => pickSort(s)}
+                key={s.label}
+                label={s.label}
+                active={baseOnly === s.value}
+                onPress={() => setBaseOnly(s.value)}
                 size="small"
               />
-            );
-          })}
+            ))}
+          </View>
+        </>
+      ) : (
+        <View style={styles.sortRow}>
+          {CARD_MODES.map((m) => (
+            <Chip
+              key={m.value}
+              label={m.label}
+              active={cardMode === m.value}
+              onPress={() => setCardMode(m.value)}
+              size="small"
+            />
+          ))}
         </View>
-      ) : null}
+      )}
     </View>
   );
 
