@@ -83,6 +83,10 @@ export default function SetDetailScreen() {
     enabled: !!code,
   });
 
+  // `baseOnly` goes out even for a non-main set, where the toggle is hidden and
+  // this state is stuck at its `true` default. That is safe on two counts: the
+  // API forces `baseOnly=false` for a set whose `isMain` is false, and omitting
+  // the param would mean `true` anyway — it defaults to true, not to "all".
   const cardOpts = { filter: q || undefined, baseOnly };
   const query = useInfiniteQuery({
     queryKey: setCardsKey(code, cardOpts),
