@@ -32,10 +32,16 @@ async function get(url) {
 
 const { data } = await (await get(SYMBOLOGY_URL)).json();
 
+// Scryfall's response order is not part of its contract, so sort by key -
+// regenerating then only diffs the symbols that actually changed. Compare by
+// code unit rather than localeCompare, which would vary by machine locale.
+const symbols = data
+  .map((s) => ({ key: s.symbol.slice(1, -1).toUpperCase(), uri: s.svg_uri }))
+  .sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
+
 const entries = [];
-for (const symbol of data) {
-  const key = symbol.symbol.slice(1, -1).toUpperCase();
-  const svg = (await (await get(symbol.svg_uri)).text()).trim();
+for (const { key, uri } of symbols) {
+  const svg = (await (await get(uri)).text()).trim();
   entries.push(`  ${JSON.stringify(key)}: ${JSON.stringify(svg)},`);
 }
 
