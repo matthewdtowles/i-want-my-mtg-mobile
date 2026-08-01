@@ -371,6 +371,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/cards/{setCode}/{setNumber}/printings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List every printing of this card, most valuable first */
+        get: operations["getCardPrintings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/cards/{setCode}/{setNumber}": {
         parameters: {
             query?: never;
@@ -1801,7 +1818,7 @@ export interface components {
             baseSize: number;
             totalSize: number;
             keyruneCode: string;
-            /** @description Cover art tail for the set's opening card, in the same form as a card's `imgSrc`. Lets a client render set artwork from the list response instead of fetching a card per set. Absent when the set has no card image. */
+            /** @description Cover art tail for the set's most valuable card, in the same form as a card's `imgSrc`. Lets a client render set artwork from the list response instead of fetching a card per set. Absent when the set has no card image. */
             coverImgSrc?: string;
             block?: string;
             parentCode?: string;
@@ -2604,6 +2621,45 @@ export interface operations {
                     "application/json": {
                         success: boolean;
                         data?: components["schemas"]["PriceHistoryPointDto"][];
+                        error?: string;
+                        message?: string;
+                        meta?: components["schemas"]["PaginationMeta"] | components["schemas"]["BlockPaginationMeta"];
+                    };
+                };
+            };
+            /** @description Card not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getCardPrintings: {
+        parameters: {
+            query?: {
+                limit?: number;
+                page?: number;
+            };
+            header?: never;
+            path: {
+                setCode: string;
+                setNumber: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Printings of the card, including the one addressed by the path (clients that want "other printings" filter it out; the total counts every printing) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data?: components["schemas"]["CardApiResponseDto"][];
                         error?: string;
                         message?: string;
                         meta?: components["schemas"]["PaginationMeta"] | components["schemas"]["BlockPaginationMeta"];
