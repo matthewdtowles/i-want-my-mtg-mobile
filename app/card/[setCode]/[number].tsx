@@ -19,6 +19,8 @@ import { AddToBuyList } from "../../../components/AddToBuyList";
 import { CardPriceAlert } from "../../../components/CardPriceAlert";
 import { CardPriceHistory } from "../../../components/CardPriceHistory";
 import { ErrorState } from "../../../components/ErrorState";
+import { ManaCost } from "../../../components/ManaCost";
+import { ManaText } from "../../../components/ManaText";
 import { useAuth } from "../../../lib/auth/AuthContext";
 import { useTheme, useThemedStyles } from "../../../lib/theme/ThemeContext";
 import type { ThemeColors } from "../../../lib/theme/colors";
@@ -75,7 +77,7 @@ export default function CardDetailScreen() {
       </View>
 
       <Text style={styles.name}>{card.name}</Text>
-      {card.manaCost ? <Text style={styles.meta}>{card.manaCost}</Text> : null}
+      <ManaCost manaCost={card.manaCost} size={18} textStyle={styles.meta} />
       <Text style={styles.meta}>
         {[card.type, card.rarity].filter(Boolean).join(" · ")}
       </Text>
@@ -143,9 +145,7 @@ export default function CardDetailScreen() {
         </Link>
       ) : null}
 
-      {card.oracleText ? (
-        <Text style={styles.oracle}>{card.oracleText}</Text>
-      ) : null}
+      <ManaText text={card.oracleText} style={styles.oracle} size={15} />
 
       {card.artist ? (
         <Text style={styles.artist}>Illustrated by {card.artist}</Text>
