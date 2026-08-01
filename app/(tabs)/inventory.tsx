@@ -52,18 +52,23 @@ import type { ThemeColors } from "../../lib/theme/colors";
 
 type InventoryData = InfiniteData<Page<ApiInventoryItem>>;
 
-type SortKey = "name" | "price" | "qty";
+type SortKey = "name" | "value" | "qty";
 type Finish = "all" | "normal" | "foil";
 
 const GRID_COLUMNS = 3;
 const GRID_PADDING = 16;
 const GRID_GAP = 10;
 
-/** UI sort keys mapped to the backend's SortOptions values. */
-const SORTS: { key: SortKey; label: string; server: string }[] = [
-  { key: "name", label: "Name", server: "card.name" },
-  { key: "price", label: "Price", server: "prices.normal" },
-  { key: "qty", label: "Qty", server: "inventory.quantity" },
+/**
+ * UI sort keys mapped to the backend's SortOptions values. `asc` is the
+ * direction a key opens in when first picked — names read A-Z, but "sort by
+ * value" means the expensive cards first. Value's `server` is its normal-finish
+ * default; `sortServer` below swaps in the foil price when the foil filter is on.
+ */
+const SORTS: { key: SortKey; label: string; server: string; asc: boolean }[] = [
+  { key: "name", label: "Name", server: "card.name", asc: true },
+  { key: "value", label: "Value", server: "prices.normal", asc: false },
+  { key: "qty", label: "Qty", server: "inventory.quantity", asc: true },
 ];
 
 /**
@@ -111,10 +116,17 @@ function InventoryList() {
   // Search, sort, finish, and pagination all happen server-side now: the app
   // only holds the pages the user has scrolled through, not the whole
   // collection.
+  // Value ranks by the price of the finish you're looking at. The API coalesces
+  // to the other finish, so a card printed only one way still ranks by the
+  // price it has instead of falling to the bottom with the unpriced ones.
+  const sortServer =
+    sortKey === "value" && finish === "foil"
+      ? "prices.foil"
+      : SORTS.find((s) => s.key === sortKey)?.server;
   const listOpts = {
     filter: q || undefined,
     finish: finish === "all" ? undefined : finish,
-    sort: grouped ? GROUP_SORT : SORTS.find((s) => s.key === sortKey)?.server,
+    sort: grouped ? GROUP_SORT : sortServer,
     ascend: grouped ? false : sortAsc,
   };
   const listKey = inventoryListKey(listOpts);
@@ -355,7 +367,7 @@ function InventoryList() {
                   label={`${s.label}${active ? (sortAsc ? " ↑" : " ↓") : ""}`}
                   active={active}
                   onPress={() =>
-                    active ? setSortAsc((v) => !v) : (setSortKey(s.key), setSortAsc(true))
+                    active ? setSortAsc((v) => !v) : (setSortKey(s.key), setSortAsc(s.asc))
                   }
                 />
               );
