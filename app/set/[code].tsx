@@ -25,6 +25,7 @@ import {
   setKey,
   fetchSet,
   fetchSetCards,
+  type SetCardSort,
 } from "../../lib/api/catalog";
 import { firstParam } from "../../lib/params";
 import { nextPage } from "../../lib/pagination";
@@ -53,6 +54,18 @@ const CARD_SCOPES = [
   { label: "All cards", value: false },
 ];
 
+type SortKey = "number" | "value";
+
+/**
+ * Card ordering. `asc` is the direction a key starts in when you first pick it:
+ * collector number reads low-to-high, but "sort by value" means the chase
+ * rares first, so it opens descending.
+ */
+const CARD_SORTS: { key: SortKey; label: string; server: SetCardSort; asc: boolean }[] = [
+  { key: "number", label: "Number", server: "card.sortNumber", asc: true },
+  { key: "value", label: "Value", server: "prices.normal", asc: false },
+];
+
 export default function SetDetailScreen() {
   const { colors } = useTheme();
   const styles = useThemedStyles(createStyles);
@@ -71,6 +84,10 @@ export default function SetDetailScreen() {
   // art, the lot). Main is the default, which is what this list already showed:
   // the API reads an absent `baseOnly` as true.
   const [baseOnly, setBaseOnly] = useState(true);
+  // Collector number ascending is the API's own default for a set's cards, so
+  // the initial request matches what this list showed before the sort chips.
+  const [sortKey, setSortKey] = useState<SortKey>("number");
+  const [sortAsc, setSortAsc] = useState(true);
 
   // Multi-select state: cardId -> card, so we know each card's finish support.
   const [selectMode, setSelectMode] = useState(false);
@@ -87,7 +104,12 @@ export default function SetDetailScreen() {
   // this state is stuck at its `true` default. That is safe on two counts: the
   // API forces `baseOnly=false` for a set whose `isMain` is false, and omitting
   // the param would mean `true` anyway — it defaults to true, not to "all".
-  const cardOpts = { filter: q || undefined, baseOnly };
+  const cardOpts = {
+    filter: q || undefined,
+    baseOnly,
+    sort: CARD_SORTS.find((s) => s.key === sortKey)?.server,
+    ascend: sortAsc,
+  };
   const query = useInfiniteQuery({
     queryKey: setCardsKey(code, cardOpts),
     queryFn: ({ pageParam }) => fetchSetCards(code as string, pageParam, cardOpts),
@@ -252,7 +274,7 @@ export default function SetDetailScreen() {
         placeholder="Search this set"
       />
       {scopeToggleable ? (
-        <View style={styles.scopeRow}>
+        <View style={styles.chipRow}>
           {CARD_SCOPES.map((s) => (
             <Chip
               key={s.label}
@@ -264,6 +286,24 @@ export default function SetDetailScreen() {
           ))}
         </View>
       ) : null}
+      <View style={styles.chipRow}>
+        {CARD_SORTS.map((s) => {
+          const active = sortKey === s.key;
+          return (
+            <Chip
+              key={s.key}
+              label={`${s.label}${active ? (sortAsc ? " ↑" : " ↓") : ""}`}
+              active={active}
+              // Tapping the active chip flips direction; tapping the other one
+              // switches key and opens in that key's natural direction.
+              onPress={() =>
+                active ? setSortAsc((v) => !v) : (setSortKey(s.key), setSortAsc(s.asc))
+              }
+              size="small"
+            />
+          );
+        })}
+      </View>
     </View>
   );
 
@@ -397,7 +437,7 @@ const createStyles = (colors: ThemeColors) =>
     heroName: { fontSize: 18, fontWeight: "800", color: colors.textPrimary },
     heroSub: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
     heroOwned: { fontSize: 13, fontWeight: "600", color: colors.accent, marginTop: 2 },
-    scopeRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+    chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
     gridRow: { gap: GRID_GAP, paddingHorizontal: GRID_PADDING },
     gridContent: { paddingBottom: 24, gap: 14 },
   });

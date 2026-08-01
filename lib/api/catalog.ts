@@ -28,11 +28,21 @@ export interface SetListOptions {
   baseOnly?: boolean;
 }
 
+/**
+ * How a set's card list can be ordered. Both are in the backend's
+ * SET_CARD_SORTS allow-list; anything outside it 400s. `prices.normal`
+ * coalesces to the foil price, so a foil-only card ranks by the price it has,
+ * and unpriced cards sort last in either direction.
+ */
+export type SetCardSort = "card.sortNumber" | "prices.normal";
+
 export interface SetCardsOptions {
   /** Substring match on card name. */
   filter?: string;
   /** Base-set cards only — drops the showcase/borderless extras. Defaults true, as above. */
   baseOnly?: boolean;
+  sort?: SetCardSort;
+  ascend?: boolean;
 }
 
 /**
@@ -82,7 +92,7 @@ export async function fetchSets(
 export async function fetchSetCards(
   code: string,
   page = 1,
-  { filter, baseOnly }: SetCardsOptions = {},
+  { filter, baseOnly, sort, ascend }: SetCardsOptions = {},
 ): Promise<Page<ApiCard>> {
   const { data, error, response } = await api.GET("/api/v1/sets/{code}/cards", {
     params: {
@@ -92,6 +102,8 @@ export async function fetchSetCards(
         limit: PAGE_SIZE,
         ...(filter ? { filter } : {}),
         ...(baseOnly === undefined ? {} : { baseOnly }),
+        // As on the set list, `ascend` only means something alongside a sort.
+        ...(sort ? { sort, ascend } : {}),
       },
     },
   });
