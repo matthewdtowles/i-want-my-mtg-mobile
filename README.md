@@ -132,6 +132,24 @@ Auth (`lib/auth/`) calls `setAuthTokenGetter(...)` to attach the bearer token
 from secure storage on every request, and `setOnUnauthorized(...)` to sign out
 on a 401.
 
+## Mana symbols
+
+`<ManaCost>` renders a cost string (`{1}{br}{br}`) as Scryfall's symbol artwork;
+`<ManaText>` does the same for symbols embedded in prose, flowing them inline
+with wrapping oracle text (`{T}: Add {R}.`).
+
+The SVGs are inlined in `lib/mana/symbols.generated.ts` rather than fetched -
+a card list draws several per row, so remote requests would be slow and break
+offline. Regenerate when a new set introduces a symbol we don't have:
+
+```bash
+npm run gen:mana                # rewrites lib/mana/symbols.generated.ts
+```
+
+The API spells hybrids mana-font style, without the slash (`{ub}`, `{2w}`,
+`{rp}`), so `lib/mana/symbols.ts` aliases those onto Scryfall's `U/B`, `2/W`
+and `R/P` keys.
+
 ## Auth
 
 - `lib/auth/AuthContext.tsx` - session state (`useAuth()`): `signIn`, `signOut`,
