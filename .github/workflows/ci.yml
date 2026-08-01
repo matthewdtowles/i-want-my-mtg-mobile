@@ -80,10 +80,21 @@ jobs:
 
       - name: Check generated API client is up to date
         run: |
+          # Compare with comment lines stripped. The backend edits `description`
+          # and `summary` text often, and each edit rewrites comments in
+          # schema.ts without changing a single type - red for something no
+          # client can act on. Types are never comments, so a new endpoint,
+          # a new field, or a changed shape still fails here.
+          strip() { sed -E '/^[[:space:]]*(\/\*\*|\*|\*\/|\/\/)/d' "$1"; }
+          strip lib/api/schema.ts > /tmp/schema.before.ts
           npm run gen:api
-          if ! git diff --exit-code lib/api/schema.ts; then
-            echo "::error::lib/api/schema.ts is out of date. Run 'npm run gen:api' and commit the result."
+          strip lib/api/schema.ts > /tmp/schema.after.ts
+          if ! diff -u /tmp/schema.before.ts /tmp/schema.after.ts; then
+            echo "::error::lib/api/schema.ts is out of date - the spec's types changed. Run 'npm run gen:api' and commit the result."
             exit 1
+          fi
+          if ! git diff --quiet lib/api/schema.ts; then
+            echo "::notice::Doc-only drift in the spec (comment text). Not a failure; pick it up with the next regen."
           fi
 
   # On merge to main, compute the next version from the squash-merged PR title
