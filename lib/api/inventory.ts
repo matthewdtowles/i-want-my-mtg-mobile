@@ -44,6 +44,13 @@ export const inventoryQuantitiesKey = (cardId: string) =>
  */
 export const deckOwnedKey = (deckId: number, cardIds: string[]) =>
   ["inventory", "quantities", "deck", deckId, cardIds] as const;
+/**
+ * The owned quantities behind a set page's binder highlighting. Under the
+ * inventory prefix so adding a card re-dims the grid, and keyed by the cards
+ * loaded so far so scrolling in another page widens the answer.
+ */
+export const setOwnedKey = (code: string, cardIds: string[]) =>
+  ["inventory", "quantities", "set", code, cardIds] as const;
 
 export async function fetchInventory({
   page = 1,
@@ -86,10 +93,25 @@ export async function deleteInventory(cardId: string, isFoil: boolean): Promise<
   if (!response.ok) throw new Error(errMessage(error, "Failed to remove item."));
 }
 
+/**
+ * The ids travel in the query string, so a whole set's worth would overrun the
+ * URL length servers accept. Requests go out in batches of this size.
+ */
+const QUANTITY_BATCH = 100;
+
 export async function fetchQuantities(
   cardIds: string[],
 ): Promise<ApiInventoryQuantity[]> {
   if (cardIds.length === 0) return [];
+  const batches: string[][] = [];
+  for (let i = 0; i < cardIds.length; i += QUANTITY_BATCH) {
+    batches.push(cardIds.slice(i, i + QUANTITY_BATCH));
+  }
+  const results = await Promise.all(batches.map(fetchQuantityBatch));
+  return results.flat();
+}
+
+async function fetchQuantityBatch(cardIds: string[]): Promise<ApiInventoryQuantity[]> {
   const { data, error, response } = await api.GET("/api/v1/inventory/quantities", {
     params: { query: { cardIds: cardIds.join(",") } },
   });
