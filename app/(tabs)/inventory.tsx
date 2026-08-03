@@ -284,14 +284,27 @@ function InventoryList() {
 
   function renderEntry(entry: Entry<ApiInventoryItem>) {
     if (entry.kind === "header") {
+      // The header is the way into that set's binder: the full checklist with
+      // the cards you're missing faded in behind the ones you have.
       return (
-        <View style={styles.setHeader}>
+        <Pressable
+          style={styles.setHeader}
+          onPress={() =>
+            router.push({
+              pathname: "/set/[code]",
+              params: { code: entry.setCode, collection: "1" },
+            })
+          }
+          accessibilityRole="button"
+          accessibilityLabel={`Open the ${entry.setCode.toUpperCase()} binder`}
+        >
           <SetSymbol code={entry.keyruneCode || entry.setCode} size={20} />
           <Text style={styles.setHeaderText}>{entry.setCode.toUpperCase()}</Text>
           <Text style={styles.setHeaderCount}>
             {entry.count} loaded
           </Text>
-        </View>
+          <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
+        </Pressable>
       );
     }
     if (view === "list") {

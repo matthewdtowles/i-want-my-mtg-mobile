@@ -29,7 +29,13 @@ import {
 } from "../../lib/api/catalog";
 import { firstParam } from "../../lib/params";
 import { nextPage } from "../../lib/pagination";
-import { INVENTORY_KEY , bulkAddToInventory } from "../../lib/api/inventory";
+import {
+  INVENTORY_KEY,
+  bulkAddToInventory,
+  fetchQuantities,
+  setOwnedKey,
+} from "../../lib/api/inventory";
+import { ownedSnapshot } from "../../lib/ownedCards";
 import type { ApiCard } from "../../lib/api/types";
 import { CardGridCell } from "../../components/CardGridCell";
 import { CardListItem } from "../../components/CardListItem";
@@ -70,7 +76,10 @@ export default function SetDetailScreen() {
   const { colors } = useTheme();
   const styles = useThemedStyles(createStyles);
   const queryClient = useQueryClient();
-  const params = useLocalSearchParams<{ code: string | string[] }>();
+  const params = useLocalSearchParams<{
+    code: string | string[];
+    collection?: string | string[];
+  }>();
   const code = firstParam(params.code);
   const { isAuthenticated } = useAuth();
   const { width } = useWindowDimensions();
@@ -88,6 +97,11 @@ export default function SetDetailScreen() {
   // the initial request matches what this list showed before the sort chips.
   const [sortKey, setSortKey] = useState<SortKey>("number");
   const [sortAsc, setSortAsc] = useState(true);
+  // Collection mode turns the grid into a binder: cards you hold keep full
+  // opacity and gain a count, the rest fade back. Off by default — browsing a
+  // set you own little of should not open as a wall of ghosts — but arriving
+  // from a set's rows in the inventory opens straight into it.
+  const [collection, setCollection] = useState(firstParam(params.collection) === "1");
 
   // Multi-select state: cardId -> card, so we know each card's finish support.
   const [selectMode, setSelectMode] = useState(false);
@@ -125,6 +139,19 @@ export default function SetDetailScreen() {
     () => query.data?.pages.flatMap((p) => p.items) ?? [],
     [query.data],
   );
+  const cardIds = useMemo(() => cards.map((c) => c.id), [cards]);
+
+  // One owned-quantities read covering every card loaded so far (the client
+  // batches the ids). Scrolling in another page re-reads the widened list;
+  // keepPreviousData holds the current highlighting steady while it lands, and
+  // the snapshot's `requested` keeps the new cards undimmed until answered.
+  const ownedQuery = useQuery({
+    queryKey: setOwnedKey(code ?? "", cardIds),
+    queryFn: async () => ownedSnapshot(cardIds, await fetchQuantities(cardIds)),
+    enabled: collection && isAuthenticated && cardIds.length > 0,
+    placeholderData: keepPreviousData,
+  });
+  const snapshot = collection ? ownedQuery.data : undefined;
 
   const addMut = useMutation({
     mutationFn: ({
@@ -304,6 +331,20 @@ export default function SetDetailScreen() {
           );
         })}
       </View>
+      {/* Owned state is a binder-grid affordance and needs an inventory to read. */}
+      {isAuthenticated && !listMode ? (
+        <View style={styles.chipRow}>
+          <Chip
+            label="My collection"
+            active={collection}
+            onPress={() => setCollection((v) => !v)}
+            size="small"
+          />
+          {collection ? (
+            <Text style={styles.chipNote}>Cards you don’t own are faded.</Text>
+          ) : null}
+        </View>
+      ) : null}
     </View>
   );
 
@@ -381,6 +422,10 @@ export default function SetDetailScreen() {
             <CardGridCell
               card={item}
               width={cellWidth}
+              owned={snapshot?.owned.get(item.id)}
+              dim={
+                !!snapshot && snapshot.requested.has(item.id) && !snapshot.owned.has(item.id)
+              }
               onPeek={setPeek}
               onPeekEnd={() => setPeek(null)}
             />
@@ -437,7 +482,8 @@ const createStyles = (colors: ThemeColors) =>
     heroName: { fontSize: 18, fontWeight: "800", color: colors.textPrimary },
     heroSub: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
     heroOwned: { fontSize: 13, fontWeight: "600", color: colors.accent, marginTop: 2 },
-    chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+    chipRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 },
+    chipNote: { flex: 1, fontSize: 12, color: colors.textMuted },
     gridRow: { gap: GRID_GAP, paddingHorizontal: GRID_PADDING },
     gridContent: { paddingBottom: 24, gap: 14 },
   });
