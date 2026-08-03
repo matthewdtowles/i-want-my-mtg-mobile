@@ -54,7 +54,9 @@ export function CardGridCell({
 
   return (
     <Pressable
-      style={[styles.cell, { width }, dim && { opacity: UNOWNED_OPACITY }]}
+      // `owned` wins over `dim` here the same way it does in the label below,
+      // so a cell can never read as owned and missing at once.
+      style={[styles.cell, { width }, dim && !owned && { opacity: UNOWNED_OPACITY }]}
       onPressIn={() => squish(0.96)}
       onPressOut={() => {
         squish(1);
