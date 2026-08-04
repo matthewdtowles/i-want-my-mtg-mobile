@@ -18,6 +18,7 @@ import { AddToInventory } from "../../../components/AddToInventory";
 import { AddToBuyList } from "../../../components/AddToBuyList";
 import { CardPriceAlert } from "../../../components/CardPriceAlert";
 import { CardPriceHistory } from "../../../components/CardPriceHistory";
+import { CardPrintings } from "../../../components/CardPrintings";
 import { ErrorState } from "../../../components/ErrorState";
 import { ManaCost } from "../../../components/ManaCost";
 import { ManaText } from "../../../components/ManaText";
@@ -150,6 +151,8 @@ export default function CardDetailScreen() {
       {card.artist ? (
         <Text style={styles.artist}>Illustrated by {card.artist}</Text>
       ) : null}
+
+      <CardPrintings cardId={card.id} setCode={setCode} number={number} />
     </ScrollView>
   );
 }
