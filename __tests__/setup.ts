@@ -8,14 +8,15 @@
 
 // Backed by the iOS keychain / Android keystore — no JS fallback, so it has to
 // be faked. In-memory so a test can assert what a sign-in/sign-out persisted.
-jest.mock("expo-secure-store", () => {
-  const store = new Map<string, string>();
-  return {
-    getItemAsync: jest.fn(async (k: string) => store.get(k) ?? null),
-    setItemAsync: jest.fn(async (k: string, v: string) => void store.set(k, v)),
-    deleteItemAsync: jest.fn(async (k: string) => void store.delete(k)),
-  };
-});
+// The mock module is instantiated once per test file, so the store is cleared
+// between tests: a session left behind by one test must not sign the next one in.
+const mockSecureStore = new Map<string, string>();
+jest.mock("expo-secure-store", () => ({
+  getItemAsync: jest.fn(async (k: string) => mockSecureStore.get(k) ?? null),
+  setItemAsync: jest.fn(async (k: string, v: string) => void mockSecureStore.set(k, v)),
+  deleteItemAsync: jest.fn(async (k: string) => void mockSecureStore.delete(k)),
+}));
+beforeEach(() => mockSecureStore.clear());
 
 // Icons pull in expo-font's asset loader, which needs a native asset registry.
 // They are decorative here — every icon button carries its own

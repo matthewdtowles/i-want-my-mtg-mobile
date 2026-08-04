@@ -27,7 +27,7 @@ jest.mock("expo-router", () => {
       ),
     },
     useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() }),
-    Link: ({ children }: { children: React.ReactNode }) => <View>{children}</View>,
+    Link: ({ children }: { children: ReactNode }) => <View>{children}</View>,
   };
 });
 
