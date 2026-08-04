@@ -4,6 +4,7 @@ import { Animated, StyleSheet, Text, View } from "react-native";
 
 import type { ApiSet } from "../lib/api/types";
 import { formatPrice } from "../lib/format";
+import { effectiveSetSize } from "../lib/setSize";
 import { useThemedStyles } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
 import { SetSymbol } from "./SetSymbol";
@@ -67,7 +68,12 @@ export function SetPeekOverlay({ set }: { set: ApiSet | null }) {
         ) : null}
         <Stat
           label="Cards"
-          value={`${set.baseSize} base · ${set.totalSize} total`}
+          value={
+            // A bonus set has no base half, so "0 base" is noise there.
+            set.baseSize
+              ? `${set.baseSize} base · ${set.totalSize} total`
+              : `${effectiveSetSize(set) ?? 0} total`
+          }
         />
         {set.ownedTotal != null ? (
           <Stat

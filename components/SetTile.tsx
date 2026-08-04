@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { ApiSet } from "../lib/api/types";
 import { cardImageUrl, SCRYFALL_USER_AGENT } from "../lib/images";
+import { effectiveSetSize } from "../lib/setSize";
 import { useThemedStyles } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
 import { SetSymbol } from "./SetSymbol";
@@ -36,7 +37,8 @@ export function SetTile({
   const uri = cardImageUrl(set.coverImgSrc, "art_crop");
 
   const year = set.releaseDate ? set.releaseDate.slice(0, 4) : null;
-  const sub = [year, set.baseSize != null ? `${set.baseSize} cards` : null]
+  const size = effectiveSetSize(set);
+  const sub = [year, size != null ? `${size} cards` : null]
     .filter(Boolean)
     .join(" · ");
 
