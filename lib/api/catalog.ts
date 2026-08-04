@@ -82,9 +82,10 @@ const BLOCK_PAGE_SIZE = 15;
 
 export interface SetPage extends Page<ApiSet> {
   /**
-   * Block keys the server says hold more than one set. Present only when the
-   * request was actually grouped, so its absence is how a caller learns the
-   * API dropped grouping.
+   * Block keys the server says hold more than one set — only ever sent for a
+   * grouped request. It is optional even then, so absence does *not* mean the
+   * API dropped grouping: a caller wanting to know whether grouping applied
+   * has to track what it asked for.
    */
   multiSetBlockKeys?: string[];
 }

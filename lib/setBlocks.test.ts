@@ -61,6 +61,14 @@ test("only a headed block's sets are marked for indenting", () => {
   );
 });
 
+test("the header key is the block's, so loading the main set later doesn't change it", () => {
+  const satellite = set({ code: "PBLB", parentCode: "BLB", isMain: false });
+  const withoutMain = buildSetEntries([satellite], ["BLB"]);
+  const withMain = buildSetEntries([satellite, set({ code: "BLB" })], ["BLB"]);
+  assert.equal(withoutMain[0].key, "block-BLB");
+  assert.equal(withMain[0].key, "block-BLB");
+});
+
 test("blocks are ordered newest first", () => {
   const entries = buildSetEntries([
     set({ code: "OTJ", releaseDate: "2024-04-19" }),

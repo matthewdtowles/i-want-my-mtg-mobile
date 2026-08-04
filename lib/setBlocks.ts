@@ -13,6 +13,8 @@ export type SetEntry =
   | { kind: "set"; key: string; set: ApiSet; inBlock: boolean };
 
 interface Group {
+  /** The block's `parentCode`-or-own-code key, as the API groups by. */
+  key: string;
   blockName: string;
   sets: ApiSet[];
   isMultiSet: boolean;
@@ -36,9 +38,12 @@ export function buildSetEntries(
     // readable: a headed block's sets are inset, so the next unheaded set is
     // visibly its own thing rather than one more row under the last header.
     if (group.isMultiSet) {
+      // Keyed by the block, not by whichever set sorted first — the block key
+      // doesn't depend on which of the block's sets are loaded, so the header
+      // can't churn as a FlatList item.
       entries.push({
         kind: "header",
-        key: `block-${group.sets[0].code}`,
+        key: `block-${group.key}`,
         blockName: group.blockName,
       });
     }
@@ -68,6 +73,7 @@ function groupByBlock(sets: ApiSet[], multiSetKeys: Set<string>): Group[] {
       return (a.releaseDate ?? "").localeCompare(b.releaseDate ?? "");
     });
     groups.push({
+      key,
       blockName: ordered[0].block || ordered[0].name,
       sets: ordered,
       isMultiSet: ordered.length > 1 || multiSetKeys.has(key),
