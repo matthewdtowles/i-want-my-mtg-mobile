@@ -61,6 +61,25 @@ jobs:
 
       - run: npm test
 
+  # PR merge gate (#104). Renders screens and components (jest-expo +
+  # @testing-library/react-native) — the half of the codebase `npm test` cannot
+  # reach. Releases here are manual and un-OTA-able, so a UI regression caught
+  # pre-merge is worth days.
+  test-components:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run test:components
+
   # Informational only - never gates a PR (#64). Regenerating from the live spec
   # would otherwise red every open PR on any backend deploy or downtime. Runs on
   # main pushes + a weekly schedule so genuine drift is still surfaced, without
@@ -103,7 +122,7 @@ jobs:
   # placeholder and the EAS build (issue #8) stamps the real version + native
   # build numbers from the tag.
   version:
-    needs: [typecheck, test]
+    needs: [typecheck, test, test-components]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     outputs:

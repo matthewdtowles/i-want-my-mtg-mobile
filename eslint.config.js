@@ -12,4 +12,10 @@ module.exports = [
       "lib/api/schema.ts", // generated from the OpenAPI spec
     ],
   },
+  {
+    // `jest.mock` factories are hoisted above the imports, so they can only
+    // reach a module through `require()`.
+    files: ["__tests__/**"],
+    rules: { "@typescript-eslint/no-require-imports": "off" },
+  },
 ];
