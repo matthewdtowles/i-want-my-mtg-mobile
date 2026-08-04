@@ -165,10 +165,26 @@ profiles (#61); Android card images fixed via `expo-image` + custom User-Agent
   truth; `app.config.ts` resolves the version at build time and EAS manages
   build numbers remotely. Nothing version-related is ever committed.
 - **Install with `legacy-peer-deps`** (configured in `.npmrc`).
-- **Validate before a PR:** `npm run typecheck`, `npm run lint`, `npm test`
-  (node:test over `lib/**/*.test.ts`). Booting on a simulator/emulator still
-  needs a manual smoke test — `expo start --web` cannot stand in for it, since
-  `expo-secure-store` is native-only.
+- **Validate before a PR:** `npm run typecheck`, `npm run lint`, `npm test`,
+  `npm run test:components` — all four gate a PR in CI. Booting on a
+  simulator/emulator still needs a manual smoke test — `expo start --web`
+  cannot stand in for it, since `expo-secure-store` is native-only.
+- **Two test runners, and where a new test belongs (#104):**
+  - `npm test` — node:test via tsx, over `lib/**/*.test.ts`. Pure functions and
+    anything liftable out of a component. Fast, no transform, no config. Prefer
+    it: if the logic can move to `lib/`, move it and test it here.
+  - `npm run test:components` — jest (`jest-expo` preset) +
+    `@testing-library/react-native`, over `__tests__/**/*.test.tsx`. For
+    properties of the *tree* that no lifted function can express: which subtree
+    renders for a combination of auth and query state, what a provider does on
+    an auth transition, what a tap actually sends. Shared providers live in
+    `__tests__/support/renderScreen.tsx`; native modules the tree touches on
+    import (SecureStore, icons, push) are stubbed in `__tests__/setup.ts`.
+  - No snapshot tests — they churn on every style change without catching
+    anything. Assert on rendered text and accessibility labels instead.
+  - The three seed tests are regressions for real shipped bugs (#92, MB1, MB3)
+    and each was verified to fail with its fix reverted; the header comment in
+    each file says which line to revert to see it fail again.
 - **Releasing:** `npm run ship:ios` (→ TestFlight) and
   `npm run ship:android [internal|alpha]` (→ Play testing tracks). Both require
   a clean `main` and read the version from the highest SemVer git tag. Public
