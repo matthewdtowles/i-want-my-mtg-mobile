@@ -191,6 +191,38 @@ export async function fetchCard(
   return card;
 }
 
+/** Every printing of the card at this address, most valuable first. */
+export const cardPrintingsKey = (
+  setCode: string | undefined,
+  number: string | undefined,
+) => ["card", setCode, number, "printings"] as const;
+
+/**
+ * Printings per page. Small on purpose: the list sits inside the card page's
+ * scroll view behind a "Show more" tap, so a page is what fits on screen rather
+ * than what fills an endless list.
+ */
+const PRINTINGS_PAGE_SIZE = 10;
+
+export async function fetchCardPrintings(
+  setCode: string,
+  setNumber: string,
+  page = 1,
+): Promise<Page<ApiCard>> {
+  const { data, error, response } = await api.GET(
+    "/api/v1/cards/{setCode}/{setNumber}/printings",
+    {
+      params: {
+        path: { setCode, setNumber },
+        query: { page, limit: PRINTINGS_PAGE_SIZE },
+      },
+    },
+  );
+  if (response.status === 404) throw new Error("Card not found.");
+  if (!response.ok) throw new Error(errMessage(error, "Failed to load printings."));
+  return { items: data?.data ?? [], meta: data?.meta };
+}
+
 export async function fetchCardPriceHistory(
   cardId: string,
   days: number,
