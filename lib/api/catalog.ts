@@ -13,11 +13,17 @@ import type {
  * `SortOptions` strings, which `/api/v1/sets` validates against its SET_SORTS
  * allow-list — anything else 400s.
  */
-export type SetSort = "set.releaseDate" | "set.name";
+export type SetSort = "set.releaseDate" | "set.name" | "setPrice.basePrice";
 
 export interface SetListOptions {
   /** Substring match on set name. */
   filter?: string;
+  /**
+   * Block grouping. The API only honours it with no `filter` and no `sort` —
+   * with either present it silently returns a flat page instead — so callers
+   * must treat grouping and sorting as mutually exclusive.
+   */
+  group?: "block";
   sort?: SetSort;
   ascend?: boolean;
   /**
@@ -68,16 +74,32 @@ export interface Page<T> {
   meta?: ApiPaginationMeta;
 }
 
+/**
+ * Blocks per page when grouping. In grouped mode `limit` counts blocks, not
+ * sets, so the flat PAGE_SIZE would pull several hundred tiles in one request.
+ */
+const BLOCK_PAGE_SIZE = 15;
+
+export interface SetPage extends Page<ApiSet> {
+  /**
+   * Block keys the server says hold more than one set. Present only when the
+   * request was actually grouped, so its absence is how a caller learns the
+   * API dropped grouping.
+   */
+  multiSetBlockKeys?: string[];
+}
+
 export async function fetchSets(
   page = 1,
-  { filter, sort, ascend, baseOnly }: SetListOptions = {},
-): Promise<Page<ApiSet>> {
+  { filter, group, sort, ascend, baseOnly }: SetListOptions = {},
+): Promise<SetPage> {
   const { data, error, response } = await api.GET("/api/v1/sets", {
     params: {
       query: {
         page,
-        limit: PAGE_SIZE,
+        limit: group === "block" ? BLOCK_PAGE_SIZE : PAGE_SIZE,
         ...(filter ? { filter } : {}),
+        ...(group ? { group } : {}),
         // `ascend` only means something alongside a sort; without one the API
         // falls back to its default (newest first).
         ...(sort ? { sort, ascend } : {}),
@@ -86,7 +108,13 @@ export async function fetchSets(
     },
   });
   if (!response.ok) throw new Error(errMessage(error, "Failed to load sets."));
-  return { items: data?.data ?? [], meta: data?.meta };
+  const meta = data?.meta;
+  return {
+    items: data?.data ?? [],
+    meta,
+    multiSetBlockKeys:
+      meta && "multiSetBlockKeys" in meta ? meta.multiSetBlockKeys : undefined,
+  };
 }
 
 export async function fetchSetCards(

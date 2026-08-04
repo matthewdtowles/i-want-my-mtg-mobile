@@ -16,9 +16,11 @@ import {
   searchCards,
   type CardSearchMode,
   type Page,
+  type SetPage,
   type SetSort,
 } from "../../lib/api/catalog";
 import { nextPage } from "../../lib/pagination";
+import { buildSetEntries, type SetEntry } from "../../lib/setBlocks";
 import type { ApiCard, ApiSet } from "../../lib/api/types";
 import { CardListItem } from "../../components/CardListItem";
 import { Chip } from "../../components/Chip";
@@ -42,13 +44,29 @@ const SCOPES = [
 ];
 
 /**
+ * How the gallery is arranged: one of the API's sorts, or its block grouping.
+ * They are one control because the API refuses to combine them — `group=block`
+ * is silently dropped whenever a sort is sent — so a single choice is the only
+ * way a lit chip always describes what came back.
+ */
+type SetOrder = SetSort | "block";
+
+/**
  * Set orderings, each with the direction it should start in. Release date
- * defaults to newest-first (the gallery's long-standing order); name to A–Z.
+ * defaults to newest-first (the gallery's long-standing order); name to A–Z;
+ * value to most-valuable-first, which is the point of picking it.
  */
 const SET_SORTS: { key: SetSort; label: string; startAscending: boolean }[] = [
   { key: "set.releaseDate", label: "Release", startAscending: false },
   { key: "set.name", label: "Name", startAscending: true },
+  { key: "setPrice.basePrice", label: "Value", startAscending: false },
 ];
+
+/** The order the gallery falls back to when grouping can't apply. */
+const DEFAULT_SORT = SET_SORTS[0];
+
+/** How far a block's sets sit in from its header. */
+const BLOCK_INDENT = 12;
 
 /**
  * The set-list scope, matching the web app's "Main Only"/"Show All" toggle.
@@ -74,12 +92,26 @@ export default function BrowseScreen() {
   const [query, setQuery] = useState("");
   const q = useDebounce(query.trim(), 350);
 
-  const [sort, setSort] = useState<SetSort>("set.releaseDate");
-  const [ascend, setAscend] = useState(false);
+  const [order, setOrder] = useState<SetOrder>(DEFAULT_SORT.key);
+  const [ascend, setAscend] = useState(DEFAULT_SORT.startAscending);
   const [baseOnly, setBaseOnly] = useState(true);
   const [cardMode, setCardMode] = useState<CardSearchMode>("unique");
 
-  const setOpts = { filter: q || undefined, sort, ascend, baseOnly };
+  // The API also drops grouping once there's a search term, so searching falls
+  // back to the default sort — the Block chip goes dark rather than staying lit
+  // over a list the server flattened anyway. Clearing the search restores it.
+  const grouped = order === "block" && !q;
+  const sort: SetSort = order === "block" ? DEFAULT_SORT.key : order;
+
+  const setOpts = {
+    filter: q || undefined,
+    ...(grouped ? { group: "block" as const } : { sort, ascend }),
+    // A block is a main set plus its commander/promo satellites, so grouping
+    // has to show all sets — "Main only" filters the satellites out and leaves
+    // every block a single set with nothing to nest. The chip's value is kept
+    // for when the gallery goes back to a sort.
+    baseOnly: grouped ? false : baseOnly,
+  };
   const setsQuery = useInfiniteQuery({
     queryKey: setsKey(setOpts),
     queryFn: ({ pageParam }) => fetchSets(pageParam, setOpts),
@@ -105,11 +137,18 @@ export default function BrowseScreen() {
   // Tapping a sort chip that's already active flips its direction, matching
   // the inventory filter row.
   function pickSort(next: (typeof SET_SORTS)[number]) {
-    if (sort === next.key) setAscend((v) => !v);
+    if (order === next.key) setAscend((v) => !v);
     else {
-      setSort(next.key);
+      setOrder(next.key);
       setAscend(next.startAscending);
     }
+  }
+
+  // Grouping has no direction of its own; park `ascend` on the sort it falls
+  // back to under a search.
+  function pickBlocks() {
+    setOrder("block");
+    setAscend(DEFAULT_SORT.startAscending);
   }
 
   const controls = (
@@ -130,8 +169,14 @@ export default function BrowseScreen() {
       {scope === "sets" ? (
         <>
           <View style={styles.sortRow}>
+            <Chip
+              label="Block"
+              active={grouped}
+              onPress={pickBlocks}
+              size="small"
+            />
             {SET_SORTS.map((s) => {
-              const active = sort === s.key;
+              const active = !grouped && sort === s.key;
               return (
                 <Chip
                   key={s.key}
@@ -143,17 +188,19 @@ export default function BrowseScreen() {
               );
             })}
           </View>
-          <View style={styles.sortRow}>
-            {SET_SCOPES.map((s) => (
-              <Chip
-                key={s.label}
-                label={s.label}
-                active={baseOnly === s.value}
-                onPress={() => setBaseOnly(s.value)}
-                size="small"
-              />
-            ))}
-          </View>
+          {grouped ? null : (
+            <View style={styles.sortRow}>
+              {SET_SCOPES.map((s) => (
+                <Chip
+                  key={s.label}
+                  label={s.label}
+                  active={baseOnly === s.value}
+                  onPress={() => setBaseOnly(s.value)}
+                  size="small"
+                />
+              ))}
+            </View>
+          )}
         </>
       ) : (
         <View style={styles.sortRow}>
@@ -177,7 +224,12 @@ export default function BrowseScreen() {
       {scope === "cards" ? (
         <CardResults query={cardsQuery} q={q} styles={styles} accent={colors.accent} />
       ) : (
-        <SetGallery query={setsQuery} styles={styles} accent={colors.accent} />
+        <SetGallery
+          query={setsQuery}
+          grouped={grouped}
+          styles={styles}
+          accent={colors.accent}
+        />
       )}
     </View>
   );
@@ -185,19 +237,30 @@ export default function BrowseScreen() {
 
 function SetGallery({
   query,
+  grouped,
   styles,
   accent,
 }: {
-  query: ReturnType<typeof useInfiniteQuery<Page<ApiSet>>>;
+  query: ReturnType<typeof useInfiniteQuery<SetPage>>;
+  grouped: boolean;
   styles: ReturnType<typeof createStyles>;
   accent: string;
 }) {
   const { isAuthenticated } = useAuth();
   const [peek, setPeek] = useState<ApiSet | null>(null);
-  const sets = useMemo(
-    () => query.data?.pages.flatMap((p) => p.items) ?? [],
-    [query.data],
-  );
+  const entries = useMemo<SetEntry[]>(() => {
+    const pages = query.data?.pages ?? [];
+    const sets = pages.flatMap((p) => p.items);
+    if (!grouped) {
+      return sets.map((set) => ({ kind: "set", key: set.code, set, inBlock: false }));
+    }
+    // Each page is a whole run of blocks, so no block straddles a page and the
+    // accumulated list regroups cleanly.
+    return buildSetEntries(
+      sets,
+      pages.flatMap((p) => p.multiSetBlockKeys ?? []),
+    );
+  }, [query.data, grouped]);
 
   if (query.isPending) {
     return <ActivityIndicator style={styles.center} size="large" color={accent} />;
@@ -224,17 +287,23 @@ function SetGallery({
   return (
     <>
       <FlatList
-        data={sets}
-        keyExtractor={(s) => s.code}
+        data={entries}
+        keyExtractor={(e) => e.key}
         contentContainerStyle={styles.galleryContent}
-        renderItem={({ item }) => (
-          <SetTile
-            set={item}
-            hero
-            onPeek={setPeek}
-            onPeekEnd={() => setPeek(null)}
-          />
-        )}
+        renderItem={({ item }) =>
+          item.kind === "header" ? (
+            <Text style={styles.blockLabel}>{item.blockName}</Text>
+          ) : (
+            <View style={item.inBlock ? styles.blockChild : undefined}>
+              <SetTile
+                set={item.set}
+                hero
+                onPeek={setPeek}
+                onPeekEnd={() => setPeek(null)}
+              />
+            </View>
+          )
+        }
         ListHeaderComponent={header}
         ListEmptyComponent={<Text style={styles.message}>No sets match your search.</Text>}
         onEndReached={() => query.hasNextPage && query.fetchNextPage()}
@@ -330,5 +399,20 @@ const createStyles = (colors: ThemeColors) =>
       letterSpacing: 0.8,
       color: colors.textMuted,
       marginTop: 4,
+    },
+    blockLabel: {
+      fontSize: 13,
+      fontWeight: "800",
+      letterSpacing: 0.6,
+      color: colors.textPrimary,
+      marginTop: 8,
+    },
+    // The rail plus the inset are what make a block's sets read as belonging to
+    // the header above them, rather than merely following it.
+    blockChild: {
+      marginLeft: BLOCK_INDENT,
+      paddingLeft: BLOCK_INDENT,
+      borderLeftWidth: 2,
+      borderLeftColor: colors.border,
     },
   });
