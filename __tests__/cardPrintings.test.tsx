@@ -108,6 +108,21 @@ test("Show more appends the next page and then retires itself", async () => {
   expect(screen.queryByText("Show more")).toBeNull();
 });
 
+test("a response with no meta still lists the printings it did return", async () => {
+  // `meta` is optional on the envelope. Falling back to a total of 0 would hide
+  // a section whose rows are already in hand.
+  printings.mockResolvedValue({
+    items: [card("tmp-id", "tmp", "Tempest"), card("j22-id", "j22", "Jumpstart 2022")],
+  });
+
+  const screen = await renderScreen(
+    <CardPrintings cardId="tmp-id" setCode="tmp" number="160" />,
+  );
+
+  await waitFor(() => expect(screen.getByText("Jumpstart 2022 #160")).toBeTruthy());
+  expect(screen.getByText("1")).toBeTruthy();
+});
+
 test("a failed fetch offers a retry instead of silently showing nothing", async () => {
   printings.mockRejectedValue(new Error("boom"));
 

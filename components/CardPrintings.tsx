@@ -41,8 +41,11 @@ export function CardPrintings({ cardId, setCode, number }: Props) {
     [query.data, cardId],
   );
 
-  // `total` counts every printing, so one of them is the card on screen.
-  const otherCount = Math.max((query.data?.pages[0]?.meta?.total ?? 1) - 1, 0);
+  // `total` counts every printing, so one of them is the card on screen. `meta`
+  // is optional on the envelope, and without it the rows that did load are the
+  // honest answer — counting them beats hiding a section we can already render.
+  const total = query.data?.pages[0]?.meta?.total;
+  const otherCount = total == null ? others.length : Math.max(total - 1, 0);
 
   // Most cards have a single printing, so the section is usually about to
   // resolve to nothing — showing a spinning panel first would make the common
