@@ -5,6 +5,7 @@ import { Animated, StyleSheet, Text, View } from "react-native";
 import type { ApiSet } from "../lib/api/types";
 import { formatPrice } from "../lib/format";
 import { effectiveSetSize } from "../lib/setSize";
+import { effectiveSetValue } from "../lib/setValue";
 import { useThemedStyles } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
 import { SetSymbol } from "./SetSymbol";
@@ -38,8 +39,7 @@ export function SetPeekOverlay({ set }: { set: ApiSet | null }) {
 
   if (!set) return null;
 
-  const prices = set.prices;
-  const change = prices?.basePriceChangeWeekly;
+  const { price, change } = effectiveSetValue(set);
   const size = effectiveSetSize(set);
 
   return (
@@ -59,7 +59,7 @@ export function SetPeekOverlay({ set }: { set: ApiSet | null }) {
           </View>
         </View>
 
-        <Stat label="Set value" value={formatPrice(prices?.basePrice)} />
+        <Stat label="Set value" value={formatPrice(price)} />
         {change != null ? (
           <Stat
             label="Past week"
