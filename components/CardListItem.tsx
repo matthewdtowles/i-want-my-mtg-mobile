@@ -3,9 +3,9 @@ import { Link } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { ApiCard } from "../lib/api/types";
-import { formatPrice, listPrice } from "../lib/format";
 import { useTheme, useThemedStyles } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
+import { CardPrice } from "./CardPrice";
 import { CardThumb } from "./CardThumb";
 
 // Discriminated union: selection mode requires both `selected` and
@@ -18,7 +18,6 @@ type Props = { card: ApiCard } & (
 export function CardListItem({ card, selectable, selected, onToggleSelect }: Props) {
   const { colors } = useTheme();
   const styles = useThemedStyles(createStyles);
-  const price = listPrice(card.prices);
 
   const body = (
     <>
@@ -38,10 +37,7 @@ export function CardListItem({ card, selectable, selected, onToggleSelect }: Pro
           {card.setName ?? card.setCode.toUpperCase()} #{card.number}
         </Text>
       </View>
-      <View style={styles.priceCol}>
-        <Text style={styles.price}>{formatPrice(price.value)}</Text>
-        {price.isFoil ? <Text style={styles.priceFoil}>foil</Text> : null}
-      </View>
+      <CardPrice prices={card.prices} style={styles.price} />
     </>
   );
 
@@ -93,9 +89,5 @@ const createStyles = (colors: ThemeColors) =>
     body: { flex: 1 },
     name: { fontSize: 15, fontWeight: "600", color: colors.textPrimary },
     sub: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
-    priceCol: { alignItems: "flex-end" },
     price: { fontSize: 15, fontWeight: "600", color: colors.success },
-    // A foil-only card's price is not the price of the normal printing, so say
-    // which one it is rather than letting it read as the default finish.
-    priceFoil: { fontSize: 11, color: colors.textMuted, marginTop: 1 },
   });

@@ -18,10 +18,10 @@ import { nextPage } from "../../lib/pagination";
 import { firstParam } from "../../lib/params";
 import { DECKS_KEY, addDeckCard, deckKey } from "../../lib/api/decks";
 import type { ApiCard } from "../../lib/api/types";
+import { CardPrice } from "../../components/CardPrice";
 import { CardThumb } from "../../components/CardThumb";
 import { ErrorState } from "../../components/ErrorState";
 import { SegmentedControl } from "../../components/SegmentedControl";
-import { formatPrice, listPrice } from "../../lib/format";
 import { useDebounce } from "../../lib/useDebounce";
 import { useTheme, useThemedStyles } from "../../lib/theme/ThemeContext";
 import type { ThemeColors } from "../../lib/theme/colors";
@@ -141,7 +141,7 @@ export default function AddDeckCardScreen() {
                   {item.setName ?? item.setCode.toUpperCase()} #{item.number}
                 </Text>
               </View>
-              <Text style={styles.price}>{formatPrice(listPrice(item.prices).value)}</Text>
+              <CardPrice prices={item.prices} style={styles.price} />
               <Pressable
                 style={styles.addBtn}
                 onPress={() => add.mutate({ card: item, isSideboard: board === "side" })}

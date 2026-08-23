@@ -3,10 +3,10 @@ import { useRef, useState } from "react";
 import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { ApiCard } from "../lib/api/types";
-import { formatPrice, listPrice } from "../lib/format";
 import type { OwnedCounts } from "../lib/ownedCards";
 import { useThemedStyles } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
+import { CardPrice } from "./CardPrice";
 import { CardThumb } from "./CardThumb";
 
 /** How far a card the user doesn't own fades back in collection mode. */
@@ -98,7 +98,7 @@ export function CardGridCell({
           </View>
         ) : null}
       </Animated.View>
-      <Text style={styles.price}>{formatPrice(listPrice(card.prices).value)}</Text>
+      <CardPrice prices={card.prices} style={styles.price} />
     </Pressable>
   );
 }
