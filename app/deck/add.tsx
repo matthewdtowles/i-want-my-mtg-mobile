@@ -21,7 +21,7 @@ import type { ApiCard } from "../../lib/api/types";
 import { CardThumb } from "../../components/CardThumb";
 import { ErrorState } from "../../components/ErrorState";
 import { SegmentedControl } from "../../components/SegmentedControl";
-import { formatPrice } from "../../lib/format";
+import { formatPrice, listPrice } from "../../lib/format";
 import { useDebounce } from "../../lib/useDebounce";
 import { useTheme, useThemedStyles } from "../../lib/theme/ThemeContext";
 import type { ThemeColors } from "../../lib/theme/colors";
@@ -141,7 +141,7 @@ export default function AddDeckCardScreen() {
                   {item.setName ?? item.setCode.toUpperCase()} #{item.number}
                 </Text>
               </View>
-              <Text style={styles.price}>{formatPrice(item.prices?.normal)}</Text>
+              <Text style={styles.price}>{formatPrice(listPrice(item.prices).value)}</Text>
               <Pressable
                 style={styles.addBtn}
                 onPress={() => add.mutate({ card: item, isSideboard: board === "side" })}

@@ -3,7 +3,7 @@ import { useRef, useState } from "react";
 import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { ApiCard } from "../lib/api/types";
-import { formatPrice } from "../lib/format";
+import { formatPrice, listPrice } from "../lib/format";
 import type { OwnedCounts } from "../lib/ownedCards";
 import { useThemedStyles } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
@@ -98,7 +98,7 @@ export function CardGridCell({
           </View>
         ) : null}
       </Animated.View>
-      <Text style={styles.price}>{formatPrice(card.prices?.normal)}</Text>
+      <Text style={styles.price}>{formatPrice(listPrice(card.prices).value)}</Text>
     </Pressable>
   );
 }
