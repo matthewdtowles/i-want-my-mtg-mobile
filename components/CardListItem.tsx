@@ -3,9 +3,9 @@ import { Link } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { ApiCard } from "../lib/api/types";
-import { formatPrice } from "../lib/format";
 import { useTheme, useThemedStyles } from "../lib/theme/ThemeContext";
 import type { ThemeColors } from "../lib/theme/colors";
+import { CardPrice } from "./CardPrice";
 import { CardThumb } from "./CardThumb";
 
 // Discriminated union: selection mode requires both `selected` and
@@ -37,7 +37,7 @@ export function CardListItem({ card, selectable, selected, onToggleSelect }: Pro
           {card.setName ?? card.setCode.toUpperCase()} #{card.number}
         </Text>
       </View>
-      <Text style={styles.price}>{formatPrice(card.prices?.normal)}</Text>
+      <CardPrice prices={card.prices} style={styles.price} />
     </>
   );
 
