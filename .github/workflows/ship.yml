@@ -87,15 +87,18 @@ jobs:
       # eas.json points the Android submit profiles at this path. It is
       # gitignored, so CI writes it from a secret and removes it afterwards.
       - name: Write the Play service account
+        id: android
         if: steps.guard.outputs.ready == 'true' && inputs.platform != 'ios'
         env:
           PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
         run: |
           if [ -z "$PLAY_SERVICE_ACCOUNT_JSON" ]; then
-            echo "::error::PLAY_SERVICE_ACCOUNT_JSON is not set, so the Android submit cannot authenticate."
-            exit 1
+            echo "::warning::PLAY_SERVICE_ACCOUNT_JSON is not set; skipping Android. Add it in Settings, Secrets and variables, Actions."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
           printf '%s' "$PLAY_SERVICE_ACCOUNT_JSON" > play-service-account.json
+          echo "ready=true" >> "$GITHUB_OUTPUT"
 
       # iOS submits straight to TestFlight. Credentials live on EAS servers.
       - name: Build and submit iOS
@@ -105,11 +108,11 @@ jobs:
       # Android submits to the chosen track, which is selected by profile name
       # in eas.json rather than by a flag.
       - name: Build Android
-        if: steps.guard.outputs.ready == 'true' && inputs.platform != 'ios'
+        if: steps.android.outputs.ready == 'true'
         run: eas build --platform android --profile production --non-interactive
 
       - name: Submit Android to ${{ inputs.android_track }}
-        if: steps.guard.outputs.ready == 'true' && inputs.platform != 'ios'
+        if: steps.android.outputs.ready == 'true'
         run: eas submit --platform android --profile "${{ inputs.android_track }}" --latest --non-interactive
 
       - name: Remove the service account key
