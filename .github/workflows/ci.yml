@@ -118,9 +118,10 @@ jobs:
 
   # On merge to main, compute the next version from the squash-merged PR title
   # (feat -> minor, ! -> major, anything else -> patch) and cut a tag + GitHub
-  # release. Git tags are the source of truth for the version; app.json stays a
-  # placeholder and the EAS build (issue #8) stamps the real version + native
-  # build numbers from the tag.
+  # release. Git tags are the source of truth for the version; app.json carries
+  # no version at all, and app.config.ts stamps it from the tag at build time.
+  # Shipping a build is separate and deliberate: scripts/ship-*.sh locally, or
+  # the ship workflow from the Actions tab.
   version:
     needs: [typecheck, test, test-components]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'

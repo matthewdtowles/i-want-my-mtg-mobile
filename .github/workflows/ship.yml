@@ -1,0 +1,120 @@
+# Manual ship. Deliberately not triggered by a merge: the ship scripts treat
+# releasing as a decision, and this only removes the need for a local machine,
+# not the decision itself. Same inputs and same version source as
+# scripts/ship-ios.sh and scripts/ship-android.sh.
+name: ship
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: Platform to build and submit
+        type: choice
+        options: [ios, android, all]
+        default: all
+      android_track:
+        description: Play track for the Android submit
+        type: choice
+        options: [internal, alpha]
+        default: internal
+
+concurrency:
+  group: ship
+  cancel-in-progress: false
+
+jobs:
+  ship:
+    runs-on: ubuntu-latest
+    steps:
+      # Skips cleanly rather than failing when the project has no Expo token,
+      # so the workflow can land before the secrets do.
+      - name: Check for an Expo token
+        id: guard
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::warning::EXPO_TOKEN is not set; nothing to ship. Add it in Settings, Secrets and variables, Actions."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - if: steps.guard.outputs.ready == 'true'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - if: steps.guard.outputs.ready == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - if: steps.guard.outputs.ready == 'true'
+        run: npm ci
+
+      # The highest SemVer tag is the single source of truth, the same one the
+      # ship scripts and app.config.ts read.
+      - name: Resolve version from the latest tag
+        if: steps.guard.outputs.ready == 'true'
+        id: version
+        run: |
+          version="$(git tag --list --sort=-v:refname | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | head -1 || true)"
+          if [ -z "$version" ]; then
+            echo "::error::No SemVer tag found. CI tags releases on merge to main; nothing to ship."
+            exit 1
+          fi
+          echo "APP_VERSION=$version" >> "$GITHUB_ENV"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Shipping $version"
+
+      # A failed build wastes EAS minutes, so check before spending them.
+      - name: Preflight
+        if: steps.guard.outputs.ready == 'true'
+        run: |
+          npm run typecheck
+          npm test
+          npm run test:components
+
+      - if: steps.guard.outputs.ready == 'true'
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      # eas.json points the Android submit profiles at this path. It is
+      # gitignored, so CI writes it from a secret and removes it afterwards.
+      - name: Write the Play service account
+        id: android
+        if: steps.guard.outputs.ready == 'true' && inputs.platform != 'ios'
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -z "$PLAY_SERVICE_ACCOUNT_JSON" ]; then
+            echo "::warning::PLAY_SERVICE_ACCOUNT_JSON is not set; skipping Android. Add it in Settings, Secrets and variables, Actions."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          printf '%s' "$PLAY_SERVICE_ACCOUNT_JSON" > play-service-account.json
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+
+      # iOS submits straight to TestFlight. Credentials live on EAS servers.
+      - name: Build and submit iOS
+        if: steps.guard.outputs.ready == 'true' && inputs.platform != 'android'
+        run: eas build --platform ios --profile production --non-interactive --auto-submit
+
+      # Android submits to the chosen track, which is selected by profile name
+      # in eas.json rather than by a flag.
+      - name: Build Android
+        if: steps.android.outputs.ready == 'true'
+        run: eas build --platform android --profile production --non-interactive
+
+      - name: Submit Android to ${{ inputs.android_track }}
+        if: steps.android.outputs.ready == 'true'
+        run: eas submit --platform android --profile "${{ inputs.android_track }}" --latest --non-interactive
+
+      - name: Remove the service account key
+        if: always()
+        run: rm -f play-service-account.json
