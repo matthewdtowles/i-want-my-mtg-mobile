@@ -269,6 +269,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/cards/movers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The week's biggest price increases or decreases
+         * @description One row per printing and finish, ranked by the change over the last 7 days. Only cards worth at least `minPrice` before or after the move count, and a finish whose daily price jumped back and forth during the week is left out, since that comes from a missing vendor price rather than a real move.
+         */
+        get: operations["getPriceMovers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/cards/{cardId}/prices": {
         parameters: {
             query?: never;
@@ -1365,6 +1385,19 @@ export interface components {
              */
             allowedValues?: string[];
         };
+        PriceMoverApiResponseDto: {
+            card: components["schemas"]["CardApiResponseDto"];
+            /** @enum {string} */
+            finish: "normal" | "foil";
+            /** @description Today's price for this finish */
+            price: number;
+            /** @description The price a week ago */
+            previousPrice: number;
+            /** @description price - previousPrice */
+            change: number;
+            /** @description change as a percentage of previousPrice, to one decimal */
+            changePercent: number;
+        };
         BuylistOfferApiDto: {
             /**
              * @description Provider key (granular_price.provider)
@@ -2428,6 +2461,62 @@ export interface operations {
                 };
             };
             /** @description Invalid filter value (unknown rarity/format/legality, malformed setCode, or legality without format) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QueryValidationErrorDto"];
+                };
+            };
+        };
+    };
+    getPriceMovers: {
+        parameters: {
+            query?: {
+                limit?: number;
+                page?: number;
+                /** @description Legality status; only meaningful with format. Defaults to "legal". */
+                legality?: "legal" | "banned" | "restricted";
+                /** @description Filter by format legality (joins legality table; defaults legality=legal) */
+                format?: "standard" | "commander" | "modern" | "legacy" | "vintage" | "brawl" | "explorer" | "historic" | "oathbreaker" | "pauper" | "pioneer";
+                /** @description Substring match on card type line (e.g. "creature", "instant") */
+                type?: string;
+                /** @description Filter by rarity */
+                rarity?: "common" | "uncommon" | "rare" | "mythic";
+                /** @description Restrict to a single set (e.g. LEA, MH3) */
+                setCode?: string;
+                /** @description Only this finish. Both by default. */
+                finish?: "normal" | "foil";
+                /** @description Ignore cards worth less than this, in dollars, both before and after the move. Defaults to 5. */
+                minPrice?: number;
+                /** @description Rank by "percent" change (default) or dollar "amount" */
+                by?: "percent" | "amount";
+                /** @description "up" for the biggest increases (default), "down" for the biggest decreases */
+                direction?: "up" | "down";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Price moves, biggest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        data?: components["schemas"]["PriceMoverApiResponseDto"][];
+                        error?: string;
+                        message?: string;
+                        meta?: components["schemas"]["PaginationMeta"] | components["schemas"]["BlockPaginationMeta"];
+                    };
+                };
+            };
+            /** @description Invalid filter value (unknown direction/by/finish/rarity/format/legality, negative minPrice, malformed setCode, or legality without format) */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -4010,7 +4099,7 @@ export interface operations {
                 group?: string;
                 /** @description Search query */
                 q?: string;
-                /** @description Show only base/main sets */
+                /** @description Show only base/main sets. Defaults to true — pass false to include all sets. */
                 baseOnly?: boolean;
                 /** @description Filter sets by name */
                 filter?: string;
@@ -4097,7 +4186,7 @@ export interface operations {
                 type?: string;
                 /** @description Filter by rarity */
                 rarity?: "common" | "uncommon" | "rare" | "mythic";
-                /** @description Show only base set cards */
+                /** @description Show only base set cards. Defaults to true — pass false to include variant printings. */
                 baseOnly?: boolean;
                 /** @description Filter cards by name */
                 filter?: string;
